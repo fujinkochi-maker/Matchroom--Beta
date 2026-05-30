@@ -1,0 +1,442 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { motion } from "framer-motion";
+import { ArrowRight, Trophy, Calendar, Newspaper, Play } from "lucide-react";
+import heroArena from "@/assets/hero-arena.jpg";
+import faceoff from "@/assets/faceoff.jpg";
+import { ChampionCard } from "@/components/ChampionCard";
+import { Countdown } from "@/components/Countdown";
+import { FighterAvatar } from "@/components/FighterAvatar";
+import {
+  getChampions,
+  nextEvent,
+  FIGHTERS,
+  EVENTS,
+  ARTICLES,
+  VIDEOS,
+  getByUsername,
+  getRanked,
+  loadDataFromSupabase,
+} from "@/data/fighters";
+import { DIVISIONS } from "@/data/types";
+
+export const Route = createFileRoute("/")({
+  loader: async () => {
+    await loadDataFromSupabase();
+  },
+  head: () => ({
+    meta: [
+      { title: "Matchroom Boxing Beta — Home of Roblox Boxing" },
+      {
+        name: "description",
+        content:
+          "Cinematic championship boxing for the Roblox era. Champions, events, rankings, and the biggest fights in Boxing Beta.",
+      },
+      { property: "og:title", content: "Matchroom Boxing Beta — Home of Roblox Boxing" },
+      {
+        property: "og:description",
+        content: "The Ultimate Roblox Boxing Championship Experience.",
+      },
+      { property: "og:image", content: heroArena },
+    ],
+  }),
+  component: HomePage,
+});
+
+function HomePage() {
+  const champs = getChampions();
+  const event = nextEvent();
+  const latest = ARTICLES.slice(0, 3);
+  const featuredVideos = VIDEOS.slice(0, 4);
+  return (
+    <>
+      <Hero />
+      <ChampionsStrip champs={champs} />
+      {event && <NextEvent />}
+      <RankingsTeaser />
+      <LatestNews articles={latest} />
+      <FeaturedVideos videos={featuredVideos} />
+      <StoreTeaser />
+    </>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="relative isolate overflow-hidden bg-foreground text-background">
+      <img
+        src={heroArena}
+        alt="Matchroom Boxing Beta arena"
+        className="absolute inset-0 h-full w-full object-cover opacity-55"
+        width={1920}
+        height={1080}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/70 to-foreground/20" />
+      <div className="absolute inset-y-0 left-0 w-1 bg-primary md:w-2" />
+      <div className="container-x relative grid min-h-[78vh] items-center gap-10 py-20 lg:grid-cols-[1.2fr_1fr]">
+        <div>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="eyebrow text-primary"
+          >
+            <span className="h-px w-8 bg-primary" /> Matchroom Presents
+          </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mt-3 font-display text-[14vw] uppercase leading-[0.85] tracking-tight md:text-[7.5rem]"
+          >
+            Matchroom
+            <span className="block text-primary">Boxing Beta</span>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.25 }}
+            className="mt-5 max-w-xl text-base text-background/80 md:text-lg"
+          >
+            The Ultimate Roblox Boxing Championship Experience. Champions, contenders, world-class
+            events and the fights that define the era.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="mt-8 flex flex-wrap gap-3"
+          >
+            <Link
+              to="/champions"
+              className="group inline-flex items-center gap-2 bg-primary px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-dark"
+            >
+              View Champions{" "}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+            <Link
+              to="/events"
+              className="inline-flex items-center gap-2 border border-background/30 bg-background/5 px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-background backdrop-blur hover:bg-background/10"
+            >
+              Upcoming Events <Calendar className="h-4 w-4" />
+            </Link>
+          </motion.div>
+          <div className="mt-10 grid max-w-md grid-cols-3 gap-6 border-t border-background/15 pt-6">
+            <Stat n={String(DIVISIONS.length)} l="Divisions" />
+            <Stat n={String(FIGHTERS.length)} l="Pro Fighters" />
+            <Stat n={String(EVENTS.length)} l="Events" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Stat({ n, l }: { n: string; l: string }) {
+  return (
+    <div>
+      <p className="font-display text-3xl text-primary">{n}</p>
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-background/70">{l}</p>
+    </div>
+  );
+}
+
+function SectionHeader({
+  eyebrow,
+  title,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-8 flex items-end justify-between gap-4">
+      <div>
+        <p className="eyebrow">
+          <span className="h-px w-7 bg-primary" />
+          {eyebrow}
+        </p>
+        <h2 className="mt-2 font-display text-4xl uppercase tracking-tight md:text-5xl">{title}</h2>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function ChampionsStrip({ champs }: { champs: ReturnType<typeof getChampions> }) {
+  return (
+    <section className="container-x py-16 md:py-24">
+      <SectionHeader
+        eyebrow="Reigning Kings"
+        title="Current Champions"
+        action={
+          <Link
+            to="/champions"
+            className="hidden text-sm font-bold uppercase tracking-wider text-primary hover:underline md:inline-flex"
+          >
+            View All →
+          </Link>
+        }
+      />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3">
+        {champs.slice(0, 3).map((c) => (
+          <ChampionCard key={c.username} fighter={c} />
+        ))}
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        {champs.slice(3).map((c) => (
+          <ChampionCard key={c.username} fighter={c} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function NextEvent() {
+  const event = nextEvent();
+  const a = getByUsername(event.mainEvent.a)!;
+  const b = getByUsername(event.mainEvent.b)!;
+  return (
+    <section className="bg-foreground text-background">
+      <div className="container-x grid gap-10 py-16 md:py-20 lg:grid-cols-2 lg:items-center">
+        <div>
+          <p className="eyebrow text-primary">
+            <span className="h-px w-7 bg-primary" />
+            Next Event
+          </p>
+          <h2 className="mt-2 font-display text-4xl uppercase md:text-6xl">{event.name}</h2>
+          <p className="mt-3 max-w-lg text-background/70">{event.tagline}</p>
+          <p className="mt-2 text-sm text-background/60">
+            {new Date(event.date).toLocaleDateString(undefined, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}{" "}
+            • {event.arena}
+          </p>
+          <div className="mt-6 max-w-md">
+            <Countdown targetISO={event.date} />
+          </div>
+          <Link
+            to="/events"
+            className="mt-8 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark"
+          >
+            <Play className="h-4 w-4" /> View Fight Card
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {[a, b].map((f) => (
+            <div
+              key={f.username}
+              className="border border-background/20 bg-background/5 p-4 backdrop-blur"
+            >
+              <FighterAvatar name={f.displayName} src={f.image} />
+              <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+                {f.division}
+              </p>
+              <p className="font-display text-xl uppercase">{f.displayName}</p>
+              <p className="text-xs text-background/70">
+                @{f.username} • {f.wins}-{f.losses}-{f.draws}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RankingsTeaser() {
+  const featured = DIVISIONS.slice(0, 3);
+  return (
+    <section className="container-x py-16 md:py-24">
+      <SectionHeader
+        eyebrow="Pound for Pound"
+        title="Top Rankings"
+        action={
+          <Link
+            to="/rankings"
+            className="hidden text-sm font-bold uppercase tracking-wider text-primary hover:underline md:inline-flex"
+          >
+            All Divisions →
+          </Link>
+        }
+      />
+      <div className="grid gap-6 md:grid-cols-3">
+        {featured.map((div) => (
+          <div key={div} className="border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3">
+              <p className="font-display text-sm uppercase tracking-[0.2em]">{div}</p>
+              <Trophy className="h-4 w-4 text-primary" />
+            </div>
+            <ul className="divide-y divide-border">
+              {getRanked(div)
+                .slice(0, 5)
+                .map((f) => (
+                  <li key={f.username}>
+                    <Link
+                      to="/boxers/$username"
+                      params={{ username: f.username }}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-surface"
+                    >
+                      <span
+                        className={`w-6 font-mono text-sm font-bold ${f.rank === 0 ? "text-primary" : "text-muted-foreground"}`}
+                      >
+                        {f.rank === 0 ? "C" : f.rank}
+                      </span>
+                      <div className="h-9 w-9 shrink-0">
+                        <FighterAvatar name={f.displayName} square src={f.image} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{f.displayName}</p>
+                        <p className="truncate text-xs text-muted-foreground">@{f.username}</p>
+                      </div>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {f.wins}-{f.losses}-{f.draws}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LatestNews({ articles }: { articles: typeof ARTICLES }) {
+  return (
+    <section className="bg-surface">
+      <div className="container-x py-16 md:py-24">
+        <SectionHeader
+          eyebrow="Newsroom"
+          title="Latest News"
+          action={
+            <Link
+              to="/news"
+              className="hidden text-sm font-bold uppercase tracking-wider text-primary hover:underline md:inline-flex"
+            >
+              All News →
+            </Link>
+          }
+        />
+        <div className="grid gap-6 md:grid-cols-3">
+          {articles.map((a) => (
+            <Link
+              key={a.slug}
+              to="/news/$slug"
+              params={{ slug: a.slug }}
+              className="group flex flex-col border border-border bg-card transition-shadow hover:shadow-card"
+            >
+              <div
+                className="relative aspect-[16/10] overflow-hidden bg-foreground/10"
+                style={
+                  a.image
+                    ? {
+                        backgroundImage: `url(${a.image})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
+                    : undefined
+                }
+              >
+                <Newspaper className="absolute right-3 top-3 h-5 w-5 text-background/40" />
+                <p className="absolute bottom-3 left-3 bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                  {a.category}
+                </p>
+              </div>
+              <div className="flex-1 p-5">
+                <p className="text-xs text-muted-foreground">
+                  {new Date(a.date).toLocaleDateString()} • {a.author}
+                </p>
+                <h3 className="mt-2 font-display text-xl uppercase leading-tight transition-colors group-hover:text-primary">
+                  {a.title}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">{a.excerpt}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeaturedVideos({ videos }: { videos: typeof VIDEOS }) {
+  return (
+    <section className="container-x py-16 md:py-24">
+      <SectionHeader
+        eyebrow="Watch"
+        title="Featured Videos"
+        action={
+          <Link
+            to="/videos"
+            className="hidden text-sm font-bold uppercase tracking-wider text-primary hover:underline md:inline-flex"
+          >
+            All Videos →
+          </Link>
+        }
+      />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {videos.map((v) => (
+          <Link key={v.id} to="/videos" className="group block">
+            <div className="relative aspect-video overflow-hidden border border-border bg-foreground/10">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-110">
+                  <Play className="h-6 w-6 fill-current" />
+                </div>
+              </div>
+              <span className="absolute bottom-2 right-2 bg-foreground/80 px-1.5 py-0.5 font-mono text-xs text-background">
+                {v.duration}
+              </span>
+              <span className="absolute left-2 top-2 bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                {v.category}
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-semibold leading-snug group-hover:text-primary">
+              {v.title}
+            </p>
+            <p className="text-xs text-muted-foreground">{v.views} views</p>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StoreTeaser() {
+  return (
+    <section className="bg-foreground text-background">
+      <div className="container-x grid items-center gap-10 py-16 md:py-20 lg:grid-cols-2">
+        <div>
+          <p className="eyebrow text-primary">
+            <span className="h-px w-7 bg-primary" />
+            Official Merchandise
+          </p>
+          <h2 className="mt-2 font-display text-4xl uppercase md:text-6xl">Matchroom Store</h2>
+          <p className="mt-3 max-w-md text-background/70">
+            Hoodies, training gloves, championship collections and limited drops — straight from the
+            Boxing Beta locker room.
+          </p>
+          <Link
+            to="/store"
+            className="mt-6 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark"
+          >
+            Shop the Drop <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[10, 0, 164].map((h, i) => (
+            <div
+              key={i}
+              className="aspect-[3/4] border border-background/20"
+              style={{
+                background: `linear-gradient(135deg, hsl(${h} 70% 40%), hsl(${h} 70% 18%))`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -1,0 +1,50 @@
+import { Link } from "@tanstack/react-router";
+import { motion } from "framer-motion";
+import { FighterAvatar } from "./FighterAvatar";
+import type { Fighter } from "@/data/types";
+import { Trophy } from "lucide-react";
+
+export function ChampionCard({ fighter }: { fighter: Fighter }) {
+  const kos = Math.round((fighter.kos / Math.max(fighter.wins, 1)) * 100);
+  return (
+    <motion.div
+      whileHover={{ y: -6 }}
+      transition={{ type: "spring", stiffness: 240, damping: 22 }}
+      className="group relative overflow-hidden border border-border bg-card shadow-card transition-shadow hover:shadow-red"
+    >
+      <Link to="/boxers/$username" params={{ username: fighter.username }}>
+        <div className="relative">
+          <FighterAvatar name={fighter.displayName} src={fighter.image} />
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/95 via-foreground/30 to-transparent" />
+          <div className="absolute left-3 top-3 flex items-center gap-1 bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary-foreground">
+            <Trophy className="h-3 w-3" /> Champion
+          </div>
+          <div className="absolute inset-x-0 bottom-0 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+              {fighter.division}
+            </p>
+            <h3 className="mt-1 font-display text-2xl uppercase leading-none text-background">
+              {fighter.displayName}
+            </h3>
+            <p className="mt-1 text-xs italic text-background/70">"{fighter.nickname}"</p>
+
+            <div className="mt-3 grid grid-cols-3 gap-2 border-t border-background/20 pt-3">
+              <Stat label="Record" value={`${fighter.wins}-${fighter.losses}-${fighter.draws}`} />
+              <Stat label="KO %" value={`${kos}%`} />
+              <Stat label="Belts" value={`${fighter.belts}`} />
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[9px] font-bold uppercase tracking-wider text-background/60">{label}</p>
+      <p className="font-mono text-sm font-bold text-background">{value}</p>
+    </div>
+  );
+}

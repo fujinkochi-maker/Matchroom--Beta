@@ -1,0 +1,128 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { Play } from "lucide-react";
+import { VIDEOS, VIDEO_CATS, loadDataFromSupabase } from "@/data/fighters";
+
+export const Route = createFileRoute("/videos")({
+  loader: async () => {
+    await loadDataFromSupabase();
+  },
+  head: () => ({
+    meta: [
+      { title: "Videos — Matchroom Boxing Beta" },
+      {
+        name: "description",
+        content:
+          "Highlights, knockouts, full fights, training, faceoffs and press conferences from Boxing Beta.",
+      },
+      { property: "og:title", content: "Videos — Matchroom Boxing Beta" },
+      { property: "og:description", content: "Watch highlights, knockouts, full fights and more." },
+    ],
+  }),
+  component: VideosPage,
+});
+
+function VideosPage() {
+  const featured = VIDEOS[0];
+  if (!featured) {
+    return (
+      <>
+        <section className="bg-foreground text-background">
+          <div className="container-x py-14">
+            <p className="eyebrow text-primary">
+              <span className="h-px w-7 bg-primary" />
+              Videos
+            </p>
+            <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">No videos yet</h1>
+          </div>
+        </section>
+      </>
+    );
+  }
+  return (
+    <>
+      <section className="relative isolate bg-foreground/10 text-background">
+        <div className="container-x grid items-center gap-8 py-14 md:grid-cols-[1.4fr_1fr]">
+          <div>
+            <p className="eyebrow text-primary">
+              <span className="h-px w-7 bg-primary" />
+              Watch Now
+            </p>
+            <h1 className="mt-2 font-display text-5xl uppercase md:text-7xl">{featured.title}</h1>
+            <p className="mt-3 text-background/70">
+              {featured.category} • {featured.duration} • {featured.views} views
+            </p>
+            <button className="mt-6 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark">
+              <Play className="h-4 w-4 fill-current" /> Play Feature
+            </button>
+          </div>
+          <div className="relative aspect-video w-full overflow-hidden border border-background/20">
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="grid h-20 w-20 place-items-center rounded-full bg-primary">
+                <Play className="h-8 w-8 fill-current text-primary-foreground" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="container-x py-12">
+        {VIDEO_CATS.map((c) => (
+          <VideoRow key={c} category={c} />
+        ))}
+      </section>
+    </>
+  );
+}
+
+function VideoRow({ category }: { category: (typeof VIDEO_CATS)[number] }) {
+  const vids = VIDEOS.filter((v) => v.category === category);
+  if (vids.length === 0) return null;
+  return (
+    <div className="mb-10">
+      <h2 className="mb-4 font-display text-2xl uppercase">
+        <span className="red-bar" />
+        {category}
+      </h2>
+      <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
+        {vids.map((v) => (
+          <VideoCard key={v.id} v={v} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VideoCard({ v }: { v: (typeof VIDEOS)[number] }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className="group w-72 shrink-0 cursor-pointer"
+    >
+      <div className="relative aspect-video overflow-hidden border border-border bg-foreground/10">
+        <div
+          className={`absolute inset-0 transition-opacity ${hover ? "opacity-100" : "opacity-90"}`}
+        >
+          {hover && <div className="absolute inset-0 animate-pulse bg-primary/20" />}
+        </div>
+        <div className="absolute inset-0 grid place-items-center">
+          <div
+            className={`grid h-14 w-14 place-items-center rounded-full bg-primary transition-transform ${hover ? "scale-110" : ""}`}
+          >
+            <Play className="h-6 w-6 fill-current text-primary-foreground" />
+          </div>
+        </div>
+        <span className="absolute bottom-2 right-2 bg-foreground/80 px-1.5 py-0.5 font-mono text-xs text-background">
+          {v.duration}
+        </span>
+        <span className="absolute left-2 top-2 bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+          {v.category}
+        </span>
+      </div>
+      <p className="mt-2 text-sm font-semibold group-hover:text-primary">{v.title}</p>
+      <p className="text-xs text-muted-foreground">{v.views} views</p>
+    </div>
+  );
+}
