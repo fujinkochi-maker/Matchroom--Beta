@@ -81,17 +81,19 @@ function BoxersPage() {
         </div>
       </section>
 
-      <section className="container-x py-12">
-        <h2 className="mb-6 font-display text-2xl uppercase tracking-wider">
-          <span className="red-bar" />
-          Champions
-        </h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {champs.slice(0, 6).map((c) => (
-            <ChampionCard key={c.username} fighter={c} />
-          ))}
-        </div>
-      </section>
+      {champs.length > 0 && (
+        <section className="container-x py-12">
+          <h2 className="mb-6 font-display text-2xl uppercase tracking-wider">
+            <span className="red-bar" />
+            Champions
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {champs.slice(0, 6).map((c) => (
+              <ChampionCard key={c.username} fighter={c} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="container-x pb-16">
         <div className="sticky top-16 z-30 -mx-4 border-y border-border bg-background/95 px-4 py-4 backdrop-blur md:mx-0 md:px-0">

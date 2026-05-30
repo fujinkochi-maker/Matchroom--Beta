@@ -51,11 +51,15 @@ function EventsPage() {
           <span className="red-bar" />
           Upcoming
         </h2>
-        <div className="grid gap-6 lg:grid-cols-2">
-          {upcoming.map((e) => (
-            <EventCard key={e.slug} event={e} />
-          ))}
-        </div>
+        {upcoming.length > 0 ? (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {upcoming.map((e) => (
+              <EventCard key={e.slug} event={e} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground">No upcoming events.</p>
+        )}
       </section>
 
       <section className="container-x pb-16">
@@ -63,21 +67,25 @@ function EventsPage() {
           <span className="red-bar" />
           Past Events
         </h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {past.map((e) => (
-            <div key={e.slug} className="border border-border bg-card p-5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                {new Date(e.date).toLocaleDateString()}
-              </p>
-              <h3 className="mt-1 font-display text-xl uppercase">{e.name}</h3>
-              <p className="text-sm text-muted-foreground">{e.tagline}</p>
-              <p className="mt-2 text-xs">
-                <MapPin className="mr-1 inline h-3 w-3" />
-                {e.arena}
-              </p>
-            </div>
-          ))}
-        </div>
+        {past.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {past.map((e) => (
+              <div key={e.slug} className="border border-border bg-card p-5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {new Date(e.date).toLocaleDateString()}
+                </p>
+                <h3 className="mt-1 font-display text-xl uppercase">{e.name}</h3>
+                <p className="text-sm text-muted-foreground">{e.tagline}</p>
+                <p className="mt-2 text-xs">
+                  <MapPin className="mr-1 inline h-3 w-3" />
+                  {e.arena}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground">No past events.</p>
+        )}
       </section>
     </>
   );

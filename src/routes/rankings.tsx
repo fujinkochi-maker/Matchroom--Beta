@@ -70,6 +70,13 @@ function RankingsPage() {
 
 function RankingTable({ division }: { division: Division }) {
   const ranked = getRanked(division);
+  if (ranked.length === 0) {
+    return (
+      <p className="py-8 text-center text-muted-foreground">
+        No fighters in {division} division yet.
+      </p>
+    );
+  }
   return (
     <div className="overflow-hidden border border-border">
       <table className="w-full text-sm">

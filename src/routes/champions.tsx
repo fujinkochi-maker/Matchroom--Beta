@@ -51,13 +51,19 @@ function ChampionsPage() {
           </p>
         </div>
       </section>
-      <section className="container-x py-12 md:py-16">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {champs.map((c) => (
-            <ChampionCard key={c.username} fighter={c} />
-          ))}
-        </div>
-      </section>
+      {champs.length > 0 ? (
+        <section className="container-x py-12 md:py-16">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {champs.map((c) => (
+              <ChampionCard key={c.username} fighter={c} />
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="container-x py-16 text-center">
+          <p className="text-muted-foreground">No champions yet.</p>
+        </section>
+      )}
     </>
   );
 }

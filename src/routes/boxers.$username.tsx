@@ -255,27 +255,31 @@ function FighterProfilePage() {
                 <span className="red-bar" />
                 Rivals
               </h3>
-              <ul className="mt-3 grid grid-cols-2 gap-2">
-                {opponents.map((o) => (
-                  <li key={o.username}>
-                    <Link
-                      to="/boxers/$username"
-                      params={{ username: o.username }}
-                      className="group block border border-border bg-card p-2 hover:border-primary"
-                    >
-                      <div className="aspect-square">
-                        <FighterAvatar name={o.displayName} square src={o.image} />
-                      </div>
-                      <p className="mt-2 truncate text-xs font-semibold group-hover:text-primary">
-                        {o.displayName}
-                      </p>
-                      <p className="font-mono text-[10px] text-muted-foreground">
-                        {o.wins}-{o.losses}-{o.draws}
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {opponents.length > 0 ? (
+                <ul className="mt-3 grid grid-cols-2 gap-2">
+                  {opponents.map((o) => (
+                    <li key={o.username}>
+                      <Link
+                        to="/boxers/$username"
+                        params={{ username: o.username }}
+                        className="group block border border-border bg-card p-2 hover:border-primary"
+                      >
+                        <div className="aspect-square">
+                          <FighterAvatar name={o.displayName} square src={o.image} />
+                        </div>
+                        <p className="mt-2 truncate text-xs font-semibold group-hover:text-primary">
+                          {o.displayName}
+                        </p>
+                        <p className="font-mono text-[10px] text-muted-foreground">
+                          {o.wins}-{o.losses}-{o.draws}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">No rivals in this division.</p>
+              )}
             </div>
           </aside>
         </div>

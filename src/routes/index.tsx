@@ -88,7 +88,7 @@ function Hero() {
             className="mt-3 font-display text-[14vw] uppercase leading-[0.85] tracking-tight md:text-[7.5rem]"
           >
             Matchroom
-            <span className="block text-primary">Boxing Beta</span>
+            <span className="block text-primary">EXCLUSIVES</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -163,6 +163,7 @@ function SectionHeader({
 }
 
 function ChampionsStrip({ champs }: { champs: ReturnType<typeof getChampions> }) {
+  if (champs.length === 0) return null;
   return (
     <section className="container-x py-16 md:py-24">
       <SectionHeader
@@ -305,6 +306,7 @@ function RankingsTeaser() {
 }
 
 function LatestNews({ articles }: { articles: typeof ARTICLES }) {
+  if (articles.length === 0) return null;
   return (
     <section className="bg-surface">
       <div className="container-x py-16 md:py-24">
@@ -363,6 +365,7 @@ function LatestNews({ articles }: { articles: typeof ARTICLES }) {
 }
 
 function FeaturedVideos({ videos }: { videos: typeof VIDEOS }) {
+  if (videos.length === 0) return null;
   return (
     <section className="container-x py-16 md:py-24">
       <SectionHeader
