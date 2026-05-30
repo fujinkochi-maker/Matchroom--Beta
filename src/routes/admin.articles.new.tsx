@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { createArticle } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { loadDataFromSupabase, FIGHTERS } from "@/data/fighters";
@@ -73,6 +74,7 @@ function NewArticle() {
           fighters: selectedFighters,
         },
       });
+      toast.success("Article created");
       router.navigate({ to: "/admin/articles" });
     } catch (err) {
       setError(err?.message ?? "Failed to create article");

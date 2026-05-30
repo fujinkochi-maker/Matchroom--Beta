@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { createEvent } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { loadDataFromSupabase, FIGHTERS } from "@/data/fighters";
@@ -79,6 +80,7 @@ function NewEvent() {
           imageUrl: imageUrl || undefined,
         },
       });
+      toast.success("Event created");
       router.navigate({ to: "/admin/events" });
     } catch (err) {
       setError(err?.message ?? "Failed to create event");

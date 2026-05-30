@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { createProduct } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ImageUpload } from "@/components/admin/ImageUpload";
@@ -55,6 +56,7 @@ function NewProduct() {
           imageUrl: imageUrl || undefined,
         },
       });
+      toast.success("Product created");
       router.navigate({ to: "/admin/products" });
     } catch (err) {
       setError(err?.message ?? "Failed to create product");

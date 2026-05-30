@@ -148,3 +148,18 @@ USING (bucket_id = 'article-images');
 DROP POLICY IF EXISTS "anon select product-images" ON storage.objects;
 CREATE POLICY "anon select product-images" ON storage.objects FOR SELECT TO anon
 USING (bucket_id = 'product-images');
+
+-- Migrate existing tables: add columns that may be missing from older schema
+ALTER TABLE fighters ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE fighters ADD COLUMN IF NOT EXISTS belts_held TEXT NOT NULL DEFAULT '';
+ALTER TABLE fighters ADD COLUMN IF NOT EXISTS discord_id TEXT UNIQUE;
+ALTER TABLE fighters DROP COLUMN IF EXISTS hue;
+
+ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE events DROP COLUMN IF EXISTS hue;
+
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE articles DROP COLUMN IF EXISTS hue;
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE products DROP COLUMN IF EXISTS hue;

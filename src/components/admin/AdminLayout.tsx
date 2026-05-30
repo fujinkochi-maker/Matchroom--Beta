@@ -10,6 +10,7 @@ import {
   Package,
   LogOut,
 } from "lucide-react";
+import { Toaster } from "@/components/ui/sonner";
 import { getAdminToken, clearAdminToken } from "@/lib/admin-auth";
 
 const SIDEBAR = [
@@ -88,6 +89,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }

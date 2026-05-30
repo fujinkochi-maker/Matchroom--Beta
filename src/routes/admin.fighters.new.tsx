@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { FighterForm, type FighterFormData } from "@/components/admin/FighterForm";
 import { createFighter, upsertFightHistory } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
@@ -18,6 +19,7 @@ function NewFighter() {
     if (history && history.length > 0) {
       await upsertFightHistory({ data: { token, fighterUsername: payload.username, history } });
     }
+    toast.success("Fighter created");
     router.navigate({ to: "/admin/fighters" });
   };
 

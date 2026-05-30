@@ -1,8 +1,11 @@
 import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack/react-router";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { loadDataFromSupabase, ARTICLES } from "@/data/fighters";
 import { deleteArticle } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
+import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
+import { useState } from "react";
 
 export const Route = createFileRoute("/admin/articles")({
   loader: async () => {
@@ -15,16 +18,17 @@ function AdminArticles() {
   const router = useRouter();
   const location = useLocation();
   const articles = ARTICLES;
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   if (location.pathname !== "/admin/articles") return <Outlet />;
 
   const handleDelete = async (slug: string) => {
-    if (!confirm(`Delete ${slug}?`)) return;
     const token = getAdminToken();
     if (!token) return;
     await deleteArticle({ data: { token, slug } });
     await loadDataFromSupabase();
     router.invalidate();
+    toast.success("Article deleted");
   };
 
   return (
@@ -79,7 +83,7 @@ function AdminArticles() {
                       <Pencil className="h-4 w-4" />
                     </Link>
                     <button
-                      onClick={() => handleDelete(a.slug)}
+                      onClick={() => setDeleteTarget(a.slug)}
                       className="rounded p-1 text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -98,6 +102,17 @@ function AdminArticles() {
           </tbody>
         </table>
       </div>
+      <ConfirmDelete
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget);
+        }}
+        title="Delete Article"
+        description={`Are you sure you want to delete "${deleteTarget}"? This cannot be undone.`}
+      />
     </div>
   );
 }

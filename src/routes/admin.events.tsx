@@ -1,8 +1,11 @@
 import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack/react-router";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { loadDataFromSupabase, EVENTS } from "@/data/fighters";
 import { deleteEvent } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
+import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
+import { useState } from "react";
 
 export const Route = createFileRoute("/admin/events")({
   loader: async () => {
@@ -15,16 +18,17 @@ function AdminEvents() {
   const router = useRouter();
   const location = useLocation();
   const events = EVENTS;
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   if (location.pathname !== "/admin/events") return <Outlet />;
 
   const handleDelete = async (slug: string) => {
-    if (!confirm(`Delete ${slug}?`)) return;
     const token = getAdminToken();
     if (!token) return;
     await deleteEvent({ data: { token, slug } });
     await loadDataFromSupabase();
     router.invalidate();
+    toast.success("Event deleted");
   };
 
   return (
@@ -83,7 +87,7 @@ function AdminEvents() {
                       <Pencil className="h-4 w-4" />
                     </Link>
                     <button
-                      onClick={() => handleDelete(e.slug)}
+                      onClick={() => setDeleteTarget(e.slug)}
                       className="rounded p-1 text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -102,6 +106,17 @@ function AdminEvents() {
           </tbody>
         </table>
       </div>
+      <ConfirmDelete
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget);
+        }}
+        title="Delete Event"
+        description={`Are you sure you want to delete "${deleteTarget}"? This cannot be undone.`}
+      />
     </div>
   );
 }
