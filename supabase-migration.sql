@@ -105,3 +105,46 @@ CREATE INDEX IF NOT EXISTS idx_fighters_division ON fighters(division);
 CREATE INDEX IF NOT EXISTS idx_fighters_rank ON fighters(rank);
 CREATE INDEX IF NOT EXISTS idx_articles_featured ON articles(featured) WHERE featured = true;
 CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+
+-- Storage buckets (create if not exist)
+INSERT INTO storage.buckets (id, name, public)
+VALUES
+  ('fighter-images', 'fighter-images', true),
+  ('event-images', 'event-images', true),
+  ('article-images', 'article-images', true),
+  ('product-images', 'product-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage RLS: allow anon uploads
+DROP POLICY IF EXISTS "anon insert fighter-images" ON storage.objects;
+CREATE POLICY "anon insert fighter-images" ON storage.objects FOR INSERT TO anon
+WITH CHECK (bucket_id = 'fighter-images');
+
+DROP POLICY IF EXISTS "anon insert event-images" ON storage.objects;
+CREATE POLICY "anon insert event-images" ON storage.objects FOR INSERT TO anon
+WITH CHECK (bucket_id = 'event-images');
+
+DROP POLICY IF EXISTS "anon insert article-images" ON storage.objects;
+CREATE POLICY "anon insert article-images" ON storage.objects FOR INSERT TO anon
+WITH CHECK (bucket_id = 'article-images');
+
+DROP POLICY IF EXISTS "anon insert product-images" ON storage.objects;
+CREATE POLICY "anon insert product-images" ON storage.objects FOR INSERT TO anon
+WITH CHECK (bucket_id = 'product-images');
+
+-- Storage RLS: allow anon reads (required to serve images)
+DROP POLICY IF EXISTS "anon select fighter-images" ON storage.objects;
+CREATE POLICY "anon select fighter-images" ON storage.objects FOR SELECT TO anon
+USING (bucket_id = 'fighter-images');
+
+DROP POLICY IF EXISTS "anon select event-images" ON storage.objects;
+CREATE POLICY "anon select event-images" ON storage.objects FOR SELECT TO anon
+USING (bucket_id = 'event-images');
+
+DROP POLICY IF EXISTS "anon select article-images" ON storage.objects;
+CREATE POLICY "anon select article-images" ON storage.objects FOR SELECT TO anon
+USING (bucket_id = 'article-images');
+
+DROP POLICY IF EXISTS "anon select product-images" ON storage.objects;
+CREATE POLICY "anon select product-images" ON storage.objects FOR SELECT TO anon
+USING (bucket_id = 'product-images');
