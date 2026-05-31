@@ -2,7 +2,6 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { handleDiscordInteraction } from "./lib/discord-bot";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -38,10 +37,25 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
+async function tryHandleDiscord(request: Request): Promise<Response | null> {
+  const url = new URL(request.url);
+
+  if (request.method === "GET" && url.pathname === "/discord") {
+    return Response.redirect("https://discord.gg/PB8vesEaTs", 302);
+  }
+
+  if (request.method === "POST" && url.pathname === "/discord-interaction") {
+    const { handleDiscordInteraction } = await import("./lib/discord-bot");
+    return handleDiscordInteraction(request);
+  }
+
+  return null;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      const discordResponse = await handleDiscordInteraction(request);
+      const discordResponse = await tryHandleDiscord(request);
       if (discordResponse) return discordResponse;
 
       const handler = await getServerEntry();

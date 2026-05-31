@@ -82,25 +82,26 @@ async function main() {
     process.exit(1);
   }
 
-  for (const cmd of commands) {
-    const url = `https://discord.com/api/v10/applications/${appId}/commands`;
+  // Bulk overwrite all commands using PUT (removes any commands not in the array)
+  const url = `https://discord.com/api/v10/applications/${appId}/commands`;
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bot ${botToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(cmd),
-    });
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(commands),
+  });
 
-    if (res.ok) {
-      const data = await res.json();
-      console.log(`Registered /${cmd.name} (id: ${data.id})`);
-    } else {
-      const text = await res.text();
-      console.error(`Failed to register /${cmd.name}: ${res.status} ${text}`);
+  if (res.ok) {
+    const data = await res.json();
+    for (const cmd of data) {
+      console.log(`Registered /${cmd.name} (id: ${cmd.id})`);
     }
+  } else {
+    const text = await res.text();
+    console.error(`Failed to register commands: ${res.status} ${text}`);
   }
 }
 

@@ -4,8 +4,6 @@ import {
   InteractionResponseType,
 } from "discord-api-types/v10";
 import { createClient } from "@supabase/supabase-js";
-import satori from "satori";
-import sharp from "sharp";
 
 const DIVISIONS = [
   "Flyweight",
@@ -41,6 +39,8 @@ function getSupabaseAdmin() {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function generateStatCard(fighter: any): Promise<Buffer> {
   const font = await getFont();
+  const satori = (await import("satori")).default;
+  const sharp = (await import("sharp")).default;
 
   const svg = await satori(
     {
