@@ -37,32 +37,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
-async function tryHandleDiscord(request: Request): Promise<Response | null> {
-  const url = new URL(request.url);
-
-  if (request.method === "GET") {
-    if (url.pathname === "/discord") {
-      return Response.redirect("https://discord.gg/PB8vesEaTs", 302);
-    }
-    if (url.pathname === "/keep-warm") {
-      return new Response("OK", { status: 200 });
-    }
-  }
-
-  if (request.method === "POST" && url.pathname === "/discord-interaction") {
-    const { handleDiscordInteraction } = await import("./lib/discord-bot");
-    return handleDiscordInteraction(request);
-  }
-
-  return null;
-}
-
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      const discordResponse = await tryHandleDiscord(request);
-      if (discordResponse) return discordResponse;
-
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

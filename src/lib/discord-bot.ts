@@ -433,93 +433,93 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         const division = getOptionValue(interaction.data.options, "division");
         if (!division) return ephemeral("Please choose a division.");
 
-        (async () => {
-          try {
-            const supabase = getSupabaseAdmin();
-            const { data: fighters, error } = await supabase
-              .from("fighters")
-              .select("*")
-              .eq("division", division)
-              .order("rank", { ascending: true })
-              .limit(10);
+        const supabase = getSupabaseAdmin();
+        const { data: fighters, error } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("division", division)
+          .order("rank", { ascending: true })
+          .limit(10);
 
-            if (error || !fighters?.length) {
-              await sendFollowUp(interaction, { content: `No fighters found in **${division}**.`, flags: 64 });
-              return;
-            }
+        if (error || !fighters?.length) {
+          return ephemeral(`No fighters found in **${division}**.`);
+        }
 
-            const lines = fighters.map((f: any) => {
-              const rank = f.rank === 0 ? "👑" : `#${f.rank}`;
-              const record = `${f.wins}-${f.losses}-${f.draws}`;
-              return `${rank} **${f.displayName}** — ${record} (${f.username})`;
-            });
+        const lines = fighters.map((f: any) => {
+          const rank = f.rank === 0 ? "👑" : `#${f.rank}`;
+          const record = `${f.wins}-${f.losses}-${f.draws}`;
+          return `${rank} **${f.displayName}** — ${record} (${f.username})`;
+        });
 
-            await sendFollowUp(interaction, {
-              embeds: [{ title: `🏆 ${division} Rankings`, description: lines.join("\n"), color: 0xdc2626 }],
-              flags: 64,
-            });
-          } catch (err) {
-            await sendFollowUp(interaction, { content: `Error: ${(err as Error).message}`, flags: 64 });
-          }
-        })();
-
-        return deferred();
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            embeds: [
+              {
+                title: `🏆 ${division} Rankings`,
+                description: lines.join("\n"),
+                color: 0xdc2626,
+              },
+            ],
+            flags: 64,
+          },
+        });
       }
 
       if (commandName === "champions") {
-        (async () => {
-          try {
-            const supabase = getSupabaseAdmin();
-            const { data: champs, error } = await supabase
-              .from("fighters")
-              .select("*")
-              .eq("rank", 0)
-              .order("division", { ascending: true });
+        const supabase = getSupabaseAdmin();
+        const { data: champs, error } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("rank", 0)
+          .order("division", { ascending: true });
 
-            if (error || !champs?.length) {
-              await sendFollowUp(interaction, { content: "No champions found.", flags: 64 });
-              return;
-            }
+        if (error || !champs?.length) {
+          return ephemeral("No champions found.");
+        }
 
-            const lines = champs.map((c: any) => `👑 **${c.displayName}** — ${c.division}`);
+        const lines = champs.map((c: any) => `👑 **${c.displayName}** — ${c.division}`);
 
-            await sendFollowUp(interaction, {
-              embeds: [{ title: "Current Champions", description: lines.join("\n"), color: 0xdc2626 }],
-              flags: 64,
-            });
-          } catch (err) {
-            await sendFollowUp(interaction, { content: `Error: ${(err as Error).message}`, flags: 64 });
-          }
-        })();
-
-        return deferred();
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            embeds: [
+              {
+                title: "Current Champions",
+                description: lines.join("\n"),
+                color: 0xdc2626,
+              },
+            ],
+            flags: 64,
+          },
+        });
       }
 
       if (commandName === "fighter") {
         const username = getOptionValue(interaction.data.options, "username");
         if (!username) return ephemeral("Please provide a username.");
 
-        (async () => {
-          try {
-            const supabase = getSupabaseAdmin();
-            const { data: fighter, error } = await supabase
-              .from("fighters")
-              .select("*")
-              .eq("username", username)
-              .single();
+        const supabase = getSupabaseAdmin();
+        const { data: fighter, error } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("username", username)
+          .single();
 
-            if (error || !fighter) {
-              await sendFollowUp(interaction, { content: `Fighter **${username}** not found.`, flags: 64 });
-              return;
-            }
+        if (error || !fighter) {
+          return ephemeral(`Fighter **${username}** not found.`);
+        }
 
-            const rank = fighter.rank === 0 ? "**★ Champion**" : `Ranked #${fighter.rank}`;
-            const record = formatRecord(fighter);
-            const belts = fighter.belts_held ? `\n**Belts Held:** ${fighter.belts_held}` : "";
+        const rank = fighter.rank === 0 ? "**★ Champion**" : `Ranked #${fighter.rank}`;
+        const record = formatRecord(fighter);
+        const belts = fighter.belts_held ? `\n**Belts Held:** ${fighter.belts_held}` : "";
 
-            await sendFollowUp(interaction, {
-              embeds: [{
-                title: fighter.displayName,
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            embeds: [
+              {
+                title: `${fighter.displayName}`,
                 description: [
                   `**Division:** ${fighter.division}`,
                   `**Rank:** ${rank}`,
@@ -530,15 +530,11 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
                 ].join("\n"),
                 color: 0xdc2626,
                 footer: { text: `@${fighter.username}` },
-              }],
-              flags: 64,
-            });
-          } catch (err) {
-            await sendFollowUp(interaction, { content: `Error: ${(err as Error).message}`, flags: 64 });
-          }
-        })();
-
-        return deferred();
+              },
+            ],
+            flags: 64,
+          },
+        });
       }
     }
 
