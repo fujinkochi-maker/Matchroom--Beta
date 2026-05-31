@@ -351,7 +351,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
                   {
                     type: 4,
                     custom_id: "display_name",
-                    label: "Display Name",
+                    label: "Fighter Name",
                     style: 1,
                     placeholder: "e.g. Mike Tyson",
                     min_length: 1,
@@ -379,14 +379,12 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
                 type: 1,
                 components: [
                   {
-                    type: 4,
+                    type: 3,
                     custom_id: "division",
-                    label: "Division",
-                    style: 1,
-                    placeholder: "e.g. Heavyweight",
-                    min_length: 1,
-                    max_length: 50,
-                    required: true,
+                    placeholder: "Choose your division",
+                    min_values: 1,
+                    max_values: 1,
+                    options: DIVISIONS.map((d) => ({ label: d, value: d })),
                   },
                 ],
               },
