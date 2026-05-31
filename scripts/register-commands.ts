@@ -71,6 +71,12 @@ const commands: Command[] = [
       },
     ],
   },
+  {
+    name: "unregister",
+    description: "Delete your fighter permanently",
+    type: 1,
+    contexts: [0, 1, 2],
+  },
 ];
 
 async function main() {

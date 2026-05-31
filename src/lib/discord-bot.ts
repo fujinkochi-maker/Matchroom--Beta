@@ -81,7 +81,7 @@ async function generateStatCard(fighter: any): Promise<Buffer> {
                       type: "span",
                       props: {
                         style: { fontSize: 48, fontWeight: 700, color: "#a1a1a1" },
-                        children: fighter.displayName
+                        children: fighter.display_name
                           .split(/\s+/)
                           .map((p: string) => p[0])
                           .slice(0, 2)
@@ -105,7 +105,7 @@ async function generateStatCard(fighter: any): Promise<Buffer> {
                             letterSpacing: "0.02em",
                             lineHeight: 1.1,
                           },
-                          children: fighter.displayName,
+                          children: fighter.display_name,
                         },
                       },
                       {
@@ -550,7 +550,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         const lines = fighters.map((f: any) => {
           const rank = f.rank === 0 ? "👑" : `#${f.rank}`;
           const record = `${f.wins}-${f.losses}-${f.draws}`;
-          return `${rank} **${f.displayName}** — ${record} (${f.username})`;
+          return `${rank} **${f.display_name}** — ${record} (${f.username})`;
         });
 
         return jsonResponse({
@@ -580,7 +580,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           return ephemeral("No champions found.");
         }
 
-        const lines = champs.map((c: any) => `👑 **${c.displayName}** — ${c.division}`);
+        const lines = champs.map((c: any) => `👑 **${c.display_name}** — ${c.division}`);
 
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
@@ -621,7 +621,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           data: {
             embeds: [
               {
-                title: `${fighter.displayName}`,
+                title: `${fighter.display_name}`,
                 description: [
                   `**Division:** ${fighter.division}`,
                   `**Rank:** ${rank}`,
@@ -634,6 +634,40 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
                 footer: { text: `@${fighter.username}` },
               },
             ],
+            flags: 64,
+          },
+        });
+      }
+
+      if (commandName === "unregister") {
+        const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+        if (!discordId) return ephemeral("Could not identify you.");
+
+        const supabase = getSupabaseAdmin();
+
+        const { data: fighter } = await supabase
+          .from("fighters")
+          .select("display_name")
+          .eq("discord_id", discordId)
+          .single();
+
+        if (!fighter) {
+          return ephemeral("You're not registered! Use `/register` to create a fighter.");
+        }
+
+        const { error } = await supabase.from("fighters").delete().eq("discord_id", discordId);
+
+        if (error) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: { content: `Failed to unregister: ${error.message}`, flags: 64 },
+          });
+        }
+
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: `✅ **${fighter.display_name}** has been retired. Use \`/register\` to create a new fighter anytime.`,
             flags: 64,
           },
         });
