@@ -827,6 +827,18 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           });
         }
 
+        // Auto-rank: count non-champion fighters in this division
+        const { count } = await supabase
+          .from("fighters")
+          .select("*", { count: "exact", head: true })
+          .eq("division", division)
+          .gt("rank", 0);
+
+        await supabase
+          .from("fighters")
+          .update({ rank: (count ?? 0) + 1 })
+          .eq("discord_id", discordId);
+
         // Acknowledge the button click
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
