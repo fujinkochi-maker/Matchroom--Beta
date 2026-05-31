@@ -1,8 +1,5 @@
 import { verifyKey } from "discord-interactions";
-import {
-  InteractionType,
-  InteractionResponseType,
-} from "discord-api-types/v10";
+import { InteractionType, InteractionResponseType } from "discord-api-types/v10";
 import { createClient } from "@supabase/supabase-js";
 
 const DISCORD_API = "https://discord.com/api/v10";
@@ -306,6 +303,87 @@ function formatRecord(f: { wins: number; losses: number; draws: number; kos: num
   return `${f.wins}-${f.losses}-${f.draws} (${Math.round((f.kos / Math.max(f.wins, 1)) * 100)}% KO)`;
 }
 
+/* DM helpers for Matchroom Promoter flow */
+const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+
+function discordHeaders() {
+  return {
+    Authorization: `Bot ${BOT_TOKEN}`,
+    "Content-Type": "application/json",
+  };
+}
+
+async function createDM(userId: string): Promise<string> {
+  const res = await fetch(`${DISCORD_API}/users/${userId}/channels`, {
+    method: "POST",
+    headers: discordHeaders(),
+    body: JSON.stringify({ recipient_id: userId }),
+  });
+  const { id } = await res.json();
+  return id;
+}
+
+async function sendMessage(channelId: string, content: string, components?: any[]) {
+  const body: any = { content };
+  if (components) body.components = components;
+  await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: "POST",
+    headers: discordHeaders(),
+    body: JSON.stringify(body),
+  });
+}
+
+async function editMessage(
+  channelId: string,
+  messageId: string,
+  content: string,
+  components?: any[],
+) {
+  const body: any = { content };
+  if (components) body.components = components;
+  await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
+    method: "PATCH",
+    headers: discordHeaders(),
+    body: JSON.stringify(body),
+  });
+}
+
+const DIVISION_BUTTONS = [
+  ["Flyweight", "Bantamweight", "Featherweight"].map((d) => ({
+    type: 2,
+    style: 2,
+    label: d,
+    custom_id: `div_${d.toLowerCase().replace(/\s+/g, "_")}`,
+  })),
+  ["Lightweight", "Welterweight", "Middleweight"].map((d) => ({
+    type: 2,
+    style: 2,
+    label: d,
+    custom_id: `div_${d.toLowerCase().replace(/\s+/g, "_")}`,
+  })),
+  ["Light Heavyweight", "Cruiserweight", "Heavyweight"].map((d) => ({
+    type: 2,
+    style: 2,
+    label: d,
+    custom_id: `div_${d.toLowerCase().replace(/\s+/g, "_")}`,
+  })),
+].map((row) => ({ type: 1, components: row }));
+
+async function sendPromoterDM(discordId: string, displayName: string) {
+  try {
+    const dmId = await createDM(discordId);
+    await sendMessage(
+      dmId,
+      `🥊 **Matchroom Promoter**\n\n` +
+        `"Welcome to the big leagues, **${displayName}**. I've seen potential in you.\n\n` +
+        `Now tell me — what division are you fighting in?"`,
+      DIVISION_BUTTONS,
+    );
+  } catch (err) {
+    console.error("Promoter DM failed:", err);
+  }
+}
+
 export async function handleDiscordInteraction(request: Request): Promise<Response | null> {
   const url = new URL(request.url);
 
@@ -372,19 +450,6 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
                     min_length: 1,
                     max_length: 50,
                     required: true,
-                  },
-                ],
-              },
-              {
-                type: 1,
-                components: [
-                  {
-                    type: 3,
-                    custom_id: "division",
-                    placeholder: "Choose your division",
-                    min_values: 1,
-                    max_values: 1,
-                    options: DIVISIONS.map((d) => ({ label: d, value: d })),
                   },
                 ],
               },
@@ -555,25 +620,11 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
 
       const displayName = getValue("display_name");
       const username = getValue("username");
-      const division = getValue("division");
 
-      if (!displayName || !username || !division) {
+      if (!displayName || !username) {
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
           data: { content: "All fields are required.", flags: 64 },
-        });
-      }
-
-      const matchedDivision = (DIVISIONS as readonly string[]).find(
-        (d) => d.toLowerCase() === division.toLowerCase(),
-      );
-      if (!matchedDivision) {
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            content: `"${division}" is not a valid division. Choose one: ${DIVISIONS.join(", ")}`,
-            flags: 64,
-          },
         });
       }
 
@@ -595,7 +646,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         username,
         display_name: displayName,
         nickname: "",
-        division: matchedDivision,
+        division: "",
         rank: 999,
         wins: 0,
         losses: 0,
@@ -617,13 +668,75 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         });
       }
 
+      // Fire promoter DM in background (long-lived Bun process)
+      sendPromoterDM(discordId, displayName);
+
       return jsonResponse({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-          content: `✅ Registered as **${displayName}** (${matchedDivision})! Use \`/stats\` to view your profile. An admin will add your photo and update your rank.`,
+          content: `📬 **Matchroom Promoter** is sliding into your DMs... Check your inbox!`,
           flags: 64,
         },
       });
+    }
+
+    // MessageComponent — division button click
+    if (interaction.type === InteractionType.MessageComponent) {
+      const customId = interaction.data.custom_id;
+      if (customId?.startsWith("div_")) {
+        const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+        if (!discordId) return jsonResponse({ error: "No user" }, 400);
+
+        // Map "div_flyweight" → "Flyweight"
+        const parts = customId.split("_");
+        parts.shift(); // remove "div"
+        const division = parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+
+        if (!(DIVISIONS as readonly string[]).includes(division)) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: { content: `Invalid division.`, flags: 64 },
+          });
+        }
+
+        const supabase = getSupabaseAdmin();
+
+        // Check fighter exists
+        const { data: fighter } = await supabase
+          .from("fighters")
+          .select("username, display_name")
+          .eq("discord_id", discordId)
+          .single();
+
+        if (!fighter) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: { content: "Register with `/register` first!", flags: 64 },
+          });
+        }
+
+        // Update division
+        const { error } = await supabase
+          .from("fighters")
+          .update({ division })
+          .eq("discord_id", discordId);
+
+        if (error) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: { content: `Failed to set division: ${error.message}`, flags: 64 },
+          });
+        }
+
+        // Acknowledge the button click
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: `✅ Division set to **${division}**. Good luck, **${fighter.display_name}**!`,
+            flags: 64,
+          },
+        });
+      }
     }
 
     return jsonResponse({ error: "Unknown interaction type" }, 400);
