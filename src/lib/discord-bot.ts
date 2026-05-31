@@ -314,11 +314,15 @@ function discordHeaders() {
 }
 
 async function createDM(userId: string): Promise<string> {
-  const res = await fetch(`${DISCORD_API}/users/${userId}/channels`, {
+  const res = await fetch(`${DISCORD_API}/users/@me/channels`, {
     method: "POST",
     headers: discordHeaders(),
     body: JSON.stringify({ recipient_id: userId }),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(`Discord createDM: ${res.status} ${err.message}`);
+  }
   const { id } = await res.json();
   return id;
 }
@@ -369,7 +373,11 @@ const DIVISION_BUTTONS = [
   })),
 ].map((row) => ({ type: 1, components: row }));
 
-async function sendPromoterDM(discordId: string, displayName: string) {
+async function sendPromoterDM(
+  discordId: string,
+  displayName: string,
+  interaction?: { token: string; application_id: string },
+) {
   try {
     const dmId = await createDM(discordId);
     await sendMessage(
@@ -381,6 +389,23 @@ async function sendPromoterDM(discordId: string, displayName: string) {
     );
   } catch (err) {
     console.error("Promoter DM failed:", err);
+    if (interaction) {
+      try {
+        await fetch(
+          `${DISCORD_API}/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content:
+                "❌ Couldn't send you a DM. Make sure **DMs from server members** are enabled, then use `/register` again.",
+            }),
+          },
+        );
+      } catch {
+        // fallback failed too, nothing more we can do
+      }
+    }
   }
 }
 
@@ -669,7 +694,10 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
       }
 
       // Fire promoter DM in background (long-lived Bun process)
-      sendPromoterDM(discordId, displayName);
+      sendPromoterDM(discordId, displayName, {
+        token: interaction.token,
+        application_id: interaction.application_id,
+      });
 
       return jsonResponse({
         type: InteractionResponseType.ChannelMessageWithSource,

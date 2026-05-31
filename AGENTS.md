@@ -3,226 +3,160 @@
 ## Quick Start
 
 ```bash
-# Setup
-bun install
-cp .env.example .env.local  # See Environment Setup below
-
-# Development
-bun dev          # http://localhost:5173 (Vite + SSR)
-bun lint
-bun format       # Prettier --write .
+bun install                # Setup
+bun dev                    # http://localhost:5173 (Vite + SSR)
+bun lint                   # ESLint check
+bun format                 # Prettier --write .
+bun run build:dev          # Dev-mode build (no minification)
+bun run seed               # Placeholder — use Supabase Studio instead
+bun run register-commands  # Register Discord slash commands
+bun run bot                # Start Discord bot (port 7860)
 ```
 
-**Before pushing**: `bun format && bun lint` (no tests; typecheck is not enforced).
+**Before pushing**: `bun format && bun lint` (no test suite; typecheck unenforced).
 
 ---
 
 ## Stack
 
-| Layer           | Tech                                                                                           |
-| --------------- | ---------------------------------------------------------------------------------------------- |
-| **Framework**   | TanStack Start v1 (React 19, SSR via Nitro/Cloudflare Workers)                                 |
-| **Routing**     | File-based: `src/routes/` (flat `.tsx` files, `$` for dynamic segs, `__root.tsx` is app shell) |
-| **Styling**     | Tailwind CSS v4 + semantic oklch tokens in `src/styles.css`, `cn()` from utils                 |
-| **UI**          | shadcn/ui (new-york), Radix primitives, lucide-react, framer-motion                            |
-| **Data**        | Supabase (Postgres), module-level caching with `loadDataFromSupabase()`                        |
-| **Package Mgr** | Bun; `bunfig.toml` enforces 24h supply-chain guard                                             |
-
----
-
-## Environment Setup
-
-### Client-Side (.env or .env.local)
-
-```env
-VITE_SUPABASE_URL=https://[project].supabase.co
-VITE_SUPABASE_ANON_KEY=[public-anon-key-safe-to-commit]
-```
-
-### Server-Side (.env.local, never commit)
-
-```env
-SUPABASE_URL=https://[project].supabase.co
-SUPABASE_ANON_KEY=[public-anon-key]
-SUPABASE_SERVICE_KEY=[admin-only-secret]  # Never share
-ADMIN_PASSWORD=[your-secret-password]
-SESSION_SECRET=[optional-hmac-secret]
-NODE_ENV=development
-NITRO_PRESET=cloudflare-module
-```
-
-Missing client keys → empty site. Missing admin keys → admin panel fails silently.
+| Layer           | Tech                                                                     |
+| --------------- | ------------------------------------------------------------------------ |
+| Framework       | TanStack Start v1 (React 19, SSR via Nitro/Cloudflare Workers)           |
+| Routing         | File-based: `src/routes/` (`$` dynamic, `$.tsx` splat, `__root.tsx` shell) |
+| Styling         | Tailwind CSS v4 + semantic oklch tokens (`src/styles.css`), `cn()` util  |
+| UI              | shadcn/ui (new-york), Radix, lucide-react, framer-motion, recharts       |
+| Data            | Supabase (Postgres) — module-level cache, no React Query fetching        |
+| Package Mgr     | Bun; `bunfig.toml` enforces 24h supply-chain guard                       |
+| Path alias      | `@/` → `./src/` (tsconfig paths + vite-tsconfig-paths)                   |
 
 ---
 
 ## Architecture
 
-| Path                        | Role                                                            |
-| --------------------------- | --------------------------------------------------------------- |
-| `src/server.ts`             | Nitro entrypoint — SSR error wrapper                            |
-| `src/start.ts`              | TanStack Start instance + error middleware                      |
-| `src/router.tsx`            | Router + QueryClient setup                                      |
-| `src/routeTree.gen.ts`      | **Auto-generated** — do not edit                                |
-| `src/data/fighters.ts`      | Data layer: `loadDataFromSupabase()` + module cache + selectors |
-| `src/lib/supabase.ts`       | Client singleton (anon key, safe for browser)                   |
-| `src/lib/supabase-admin.ts` | Server-only admin client (service key)                          |
-| `src/lib/admin-auth.ts`     | Token validation (HMAC-signed, 24h lifetime)                    |
-| `src/routes/admin.*.tsx`    | Admin CRUD routes (token-gated, server functions)               |
+| Path                          | Role                                                           |
+| ----------------------------- | -------------------------------------------------------------- |
+| `src/server.ts`               | Nitro entrypoint — SSR error wrapper (catches h3 swallows)      |
+| `src/start.ts`                | TanStack Start instance + error middleware                     |
+| `src/router.tsx`              | Router + QueryClient setup                                     |
+| `src/routeTree.gen.ts`        | **Auto-generated** — do not edit                               |
+| `src/data/fighters.ts`        | `loadDataFromSupabase()` + module-level caches + selectors      |
+| `src/lib/admin-auth.ts`       | Client-side token storage (localStorage)                       |
+| `src/lib/admin.server.ts`     | Server-only admin CRUD (login, fighters, events, articles, vids, products) |
+| `src/lib/supabase.ts`         | Client singleton (anon key, browser-safe)                      |
+| `src/lib/supabase-admin.ts`   | Server-only admin client (service key)                         |
+| `bot-worker.ts`               | Discord bot (discord.js gateway + HTTP on :7860)               |
+| `scripts/register-commands.ts`| Registers slash commands with Discord API                      |
 
 ### Data Flow
 
-1. **Routes load data**: `loader: async () => { await loadDataFromSupabase(); }`
-2. **Module cache fills**: `_fighters`, `_events`, etc. arrays refilled in-place
-3. **Components read cache**: `useMemo(() => FIGHTERS.filter(...))` — no re-fetch
-4. **After admin mutation**: Call `router.invalidate()` to trigger new load
+1. **Routes call** `await loadDataFromSupabase()` in a loader
+2. **Module caches** (`_fighters`, `_events`, etc.) fill in-place from Supabase
+3. **Components read** `FIGHTERS`, `EVENTS`, etc. directly — no React Query fetching
+4. **After admin mutation**, call `router.invalidate()` to re-trigger loaders
+
+### Server-only vs Client
+
+- Admin mutations live in `admin.server.ts` (imports `node:crypto`, uses service key)
+- Client data reads use `getSupabase()` (anon key, no server needed for reads)
+- Use `*.server.ts` naming (TanStack Start convention) for server-only modules
+- Do **not** use Next.js `server-only` package — blocked by ESLint
 
 ---
 
-## Key Patterns
+## Environment
 
-### Admin Authentication (Token-Based HMAC)
+Missing `VITE_SUPABASE_*` keys → empty site. Missing server keys → admin panel fails silently.
 
-- Token format: `"{expiry}.{signature}"` (24h lifetime)
-- Server validates: `validateToken(data.token)` before any mutation
-- Client stores in `localStorage` via `setAdminToken()`
-- **Critical**: Client check is UX only; real protection is server-side validation
-- After browser restart: User must login again (token lost)
+`.env` is committed (public anon key + dev service key). For production, use `.env.local` (gitignored) to override.
 
-**Example server function:**
+### All env vars
 
-```typescript
-export const createFighter = createServerFn({ method: "POST" })
-  .inputValidator(fighterSchema)
-  .handler(async ({ data }) => {
-    if (!validateToken(data.token)) throw new Error("Unauthorized");
-    const supabase = getAdminSupabase();
-    const { error } = await supabase.from("fighters").insert({
-      /* ... */
-    });
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-```
-
-### Data Fetching (Singleton + Module Cache)
-
-- `getSupabase()` returns client singleton (anon key, safe for browser)
-- `getAdminSupabase()` returns admin singleton (service key, server-only)
-- All data loaded in parallel via `Promise.all()`
-- Relations fetched separately (no joins; explicit queries for join tables)
-- Silent fail on error → empty arrays (graceful degradation)
-
-**Selectors available:**
-
-```
-getChampion(division)          // Get current champ for division
-getFighterByUsername(username) // Single fighter lookup
-getNewsForFighter(username)    // Articles tagged to fighter
-getVideosForFighter(username)  // Videos tagged to fighter
-getRanked(division)            // Fighters ranked 0-N for division
-```
-
-### Component Patterns
-
-- **Motion cards**: `motion.div` with `whileHover={{ y: -4 }}` + `AnimatePresence` for dialogs
-- **Forms**: Local state + server functions + Zod validation at boundary
-- **Filtering**: Client-side `useMemo()` over cached arrays (no server call)
-- **Images**: CSS vars only; `cn()` to merge Tailwind classes safely
+| Var                    | Scope    | Required for             |
+| ---------------------- | -------- | ------------------------ |
+| `VITE_SUPABASE_URL`    | client   | site rendering           |
+| `VITE_SUPABASE_ANON_KEY`| client  | site rendering           |
+| `SUPABASE_SERVICE_KEY` | server   | admin CRUD               |
+| `ADMIN_PASSWORD`       | server   | admin login              |
+| `SESSION_SECRET`       | server   | token HMAC (optional)    |
+| `DISCORD_BOT_TOKEN`    | server   | Discord bot              |
+| `DISCORD_PUBLIC_KEY`   | server   | interaction verification |
+| `DISCORD_APPLICATION_ID`| server  | register-commands        |
 
 ---
 
-## Conventions
+## Admin Panel
 
-### Division Spelling (Critical)
+- Token-based HMAC auth (`{expiry}.{signature}`, 24h lifetime)
+- `ADMIN_PASSWORD` in env → server creates token → stored in localStorage
+- All mutations gated by `validateToken(data.token)` server-side
+- **Client auth check is UX only** — real protection is server-side validation
+- Token lost on browser restart (not persisted across sessions)
+- Login at `/admin/login`, CMD panel at `/admin/fighters`, `/admin/events`, etc.
+- Use `router.invalidate()` after mutations to refresh cached data
 
-**Must use exact enum values:**
+---
 
+## Division Spelling
+
+Must match Supabase CHECK constraint exactly. **Case-sensitive**:
 ```
 Flyweight, Bantamweight, Featherweight, Lightweight,
 Welterweight, Middleweight, Light Heavyweight, Cruiserweight, Heavyweight
 ```
+Typo → `"violates check constraint"` error.
 
-Enforced by Supabase CHECK constraints. Typos → "violates check constraint" error.
+---
 
-### Code Style
+## Key Conventions
 
-- **Prettier**: `printWidth: 100`, `semi: true`, `singleQuote: false`, `trailingComma: "all"`
-- **TypeScript**: `noUnusedLocals: false`, `noUnusedParameters: false` (unused vars allowed)
-- **ESLint**: `@typescript-eslint/no-unused-vars: off` (no unused var errors)
+- **TS**: `noUnusedLocals/Parameters: false` (unused vars allowed), `strict: true`
+- **Colors**: semantic tokens only (`text-primary`, `bg-card`, `border-border`) — no raw hex
 - **Typography**: Anton (headings) + Inter (body) loaded in `__root.tsx`
-- **Colors**: Semantic tokens only — `text-primary`, `bg-card`, `border-border` (no raw hex)
+- **Images**: use CSS vars, not inline styles for hue/saturation
+- **`cn()`** from `@/lib/utils` for merging Tailwind classes
+- **`sideEffects: false`** in package.json — tree-shaking-aware
+- **Zod** schemas at every server function boundary (admin.server.ts)
+- **Division type** is a union string literal (not enum). See `src/data/types.ts`
 
-### Routing (TanStack Start File-Based)
+### vite.config.ts — Do Not Add Plugins Manually
 
-See [src/routes/README.md](src/routes/README.md) for full conventions. Quick reference:
+```ts
+// @lovable.dev/vite-tanstack-config already includes:
+// tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro (cloudflare-module default),
+// componentTagger (dev-only), VITE_* env injection, @ path alias,
+// React/TanStack dedupe, error loggers, sandbox detection (port/host/strictPort).
+// Adding them again causes duplicate-plugin errors.
+```
 
-- `index.tsx` → `/`
-- `boxers.$username.tsx` → `/boxers/:username`
-- `{-$category}.tsx` → optional segment
-- `$.tsx` → splat route (`_splat` param, not `*`)
-- `__root.tsx` → app shell (preserve `<Outlet />`)
+### Routing
 
----
-
-## Common Pitfalls
-
-| Issue                                  | Root Cause                                  | Fix                                                  |
-| -------------------------------------- | ------------------------------------------- | ---------------------------------------------------- |
-| Empty site on load                     | Missing or wrong Supabase keys              | Check `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` |
-| "Division violates check constraint"   | Typo in division name (e.g., "heavyweight") | Use exact case from enum list above                  |
-| Admin panel 403 after page refresh     | Token lost from localStorage                | User must login again; tokens are ephemeral          |
-| "SUPABASE_SERVICE_KEY is not set"      | Server env missing for admin operations     | Set `SUPABASE_SERVICE_KEY` in `.env.local`           |
-| Admin mutation doesn't show on refresh | Cache not invalidated                       | Call `router.invalidate()` + reload                  |
-| TypeScript errors on unused vars       | ESLint reporting false positives            | Error is expected; rule is disabled                  |
-| Wrong colors in production             | Using raw hex instead of CSS vars           | Replace with semantic token (e.g., `text-primary`)   |
+See `src/routes/README.md`. Key: `routeTree.gen.ts` is auto-generated.
 
 ---
 
-## Database Setup
+## Discord Bot
 
-1. Create Supabase project at [supabase.com](https://supabase.com)
-2. Run [supabase-migration.sql](supabase-migration.sql) in **Supabase Studio → SQL Editor**
-3. Add data via **Supabase Studio → Table Editor** (fighters, events, articles, videos, products)
-
-Tables auto-link: `fighters` PK = username, `fight_history` refs username, join tables `article_fighters` & `video_fighters` etc.
-
----
-
-## Style Conventions
-
-Palette in `src/styles.css` (oklch tokens):
-
-- **Neutral**: `background` (#FFF), `surface` (#F5F5F5), `foreground` (#111)
-- **Brand**: `primary` (#D71920 Matchroom Red), `primary-dark` (#A00000)
-- **Semantic**: `card`, `border`, `muted`, `destructive` — all oklch
-- **No raw hex in components** — use `className` with Tailwind semantic tokens
+- `bot-worker.ts` — standalone Bun HTTP server on port 7860
+- Discord gateway connection (discord.js) for status + interaction handling
+- Interaction handler at `src/lib/discord-bot.ts` (lazy-imported)
+- Slash commands registered via `bun run register-commands`
+- Containerized via Dockerfile for deployment (`bun run bot` CMD)
 
 ---
 
-## Project Scope
+## Database
 
-### In Scope (v1 — Current)
+Run `supabase-migration.sql` in Supabase Studio SQL Editor. Tables:
+- `fighters` (PK=username), `fight_history`, `events` (PK=slug), `event_cards`
+- `articles` (PK=slug), `article_fighters`, `videos`, `video_fighters`, `products`
+- Storage buckets: `fighter-images`, `event-images`, `article-images`, `product-images`
 
-- **Pages**: Home, Champions, Boxers, Boxer Profile, Events, Rankings, News, Videos, Store
-- **Data**: Fully populated Supabase tables (fighters, events, articles, videos, products + join tables)
-- **Admin Panel**: Create/read/update/delete for all content via Supabase Studio UI
-- **Auth**: Simple password-based admin login (token-gated server functions)
-- **Motion**: framer-motion for card hovers, hero parallax, dialog reveals
-- **Imagery**: Generated via imagegen (Roblox-style arenas, fighter avatars, merchandise)
-- **Search/Filter**: Client-side search + filter chips (no server call)
-- **Mobile**: Responsive grid + Sheet drawer nav
+---
 
-### Out of Scope (v1)
+## Deployment
 
-- Real user authentication or user profiles
-- Payment processing or shopping cart
-- Live data from Roblox API
-- Custom CMS — use Supabase Studio Table Editor
-- Video streaming — links to external providers
+- **Vercel**: custom build command in `vercel.json` (`bun build` + manual `.vercel/output/` assembly)
+- **Cloudflare Workers**: uses `cloudflare-module` Nitro preset (default in vite.config.ts)
+- **Bot**: `Dockerfile` for container deployment (discord.js gateway + HTTP)
 
-### Brand
-
-- Clean white + Matchroom red (#D71920)
-- Sport-broadcast typography (Anton + Inter)
-- Championship-quality visual hierarchy
-- Disclaimer: "Fan-made Roblox experience. Not affiliated with Matchroom Sport Ltd."
+No CI workflows configured (no `.github/` directory).
