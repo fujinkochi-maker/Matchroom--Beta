@@ -340,7 +340,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
 
       if (commandName === "register") {
         return jsonResponse({
-          type: InteractionResponseType.Modal,
+          type: 9,
           data: {
             title: "Register as a Fighter",
             custom_id: "register_modal",
@@ -379,12 +379,14 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
                 type: 1,
                 components: [
                   {
-                    type: 3,
+                    type: 4,
                     custom_id: "division",
-                    placeholder: "Choose a division",
-                    options: DIVISIONS.map((d) => ({ label: d, value: d })),
-                    min_values: 1,
-                    max_values: 1,
+                    label: "Division",
+                    style: 1,
+                    placeholder: "e.g. Heavyweight",
+                    min_length: 1,
+                    max_length: 50,
+                    required: true,
                   },
                 ],
               },
@@ -564,10 +566,16 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         });
       }
 
-      if (!(DIVISIONS as readonly string[]).includes(division)) {
+      const matchedDivision = (DIVISIONS as readonly string[]).find(
+        (d) => d.toLowerCase() === division.toLowerCase(),
+      );
+      if (!matchedDivision) {
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
-          data: { content: "Invalid division.", flags: 64 },
+          data: {
+            content: `"${division}" is not a valid division. Choose one: ${DIVISIONS.join(", ")}`,
+            flags: 64,
+          },
         });
       }
 
@@ -589,7 +597,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         username,
         display_name: displayName,
         nickname: "",
-        division,
+        division: matchedDivision,
         rank: 999,
         wins: 0,
         losses: 0,
@@ -614,7 +622,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
       return jsonResponse({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-          content: `✅ Registered as **${displayName}** (${division})! Use \`/stats\` to view your profile. An admin will add your photo and update your rank.`,
+          content: `✅ Registered as **${displayName}** (${matchedDivision})! Use \`/stats\` to view your profile. An admin will add your photo and update your rank.`,
           flags: 64,
         },
       });

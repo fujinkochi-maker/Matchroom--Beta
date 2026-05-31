@@ -10,7 +10,7 @@ let handleDiscordInteraction: (req: Request) => Promise<Response | null>;
 
 async function main() {
   // Lazy-import the Discord interaction handler (once, no cold start)
-  const mod = await import("./lib/discord-bot");
+  const mod = await import("./src/lib/discord-bot");
   handleDiscordInteraction = mod.handleDiscordInteraction;
 
   // Start gateway connection (discord.js keeps the bot online)
