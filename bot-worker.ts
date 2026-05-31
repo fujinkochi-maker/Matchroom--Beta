@@ -94,7 +94,8 @@ async function registerCommands() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(commands),
-    });
+      tls: { rejectUnauthorized: false },
+    } as any);
     if (res.ok) {
       const data = await res.json();
       console.log(`✅ Registered ${data.length} slash commands`);
