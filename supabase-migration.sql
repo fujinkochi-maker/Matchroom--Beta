@@ -163,3 +163,6 @@ ALTER TABLE articles DROP COLUMN IF EXISTS hue;
 
 ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE products DROP COLUMN IF EXISTS hue;
+
+-- Discord role management: guild_id stored per fighter for role assignment
+ALTER TABLE fighters ADD COLUMN IF NOT EXISTS guild_id TEXT NOT NULL DEFAULT '';

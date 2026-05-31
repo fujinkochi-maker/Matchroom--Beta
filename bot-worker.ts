@@ -111,17 +111,24 @@ async function main() {
   const mod = await import("./src/lib/discord-bot");
   handleDiscordInteraction = mod.handleDiscordInteraction;
 
-  // Start gateway connection (discord.js keeps the bot online)
-  const client = new Client({ intents: [] });
-  client.once("ready", () => {
-    console.log(`✅ Bot online as ${client.user?.tag}`);
-    client.user?.setPresence({
-      activities: [{ name: "Matchroom Boxing Beta", type: ActivityType.Playing }],
-      status: "online",
+  // HF Spaces blocks WebSocket connections — skip gateway, run HTTP-only
+  const isHfSpace = !!process.env.SPACE_ID;
+
+  if (!isHfSpace) {
+    // Start gateway connection (discord.js keeps the bot online)
+    const client = new Client({ intents: [] });
+    client.once("ready", () => {
+      console.log(`✅ Bot online as ${client.user?.tag}`);
+      client.user?.setPresence({
+        activities: [{ name: "Matchroom Boxing Beta", type: ActivityType.Playing }],
+        status: "online",
+      });
     });
-  });
-  client.on("error", (err) => console.error("❌ Client error:", err));
-  client.login(token).catch((err) => console.error("❌ Login failed:", err));
+    client.on("error", (err) => console.error("❌ Client error:", err));
+    client.login(token).catch((err) => console.error("❌ Login failed:", err));
+  } else {
+    console.log("✅ Gateway skipped (HF Spaces — HTTP-only mode)");
+  }
 
   // HTTP server: health check (GET) + Discord interactions (POST)
   Bun.serve({

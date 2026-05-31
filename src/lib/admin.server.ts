@@ -36,6 +36,32 @@ function formatNickname(f: {
   return `${f.display_name} | ${f.wins}-${f.losses}-${f.draws} | ${f.kos}KO${f.kos !== 1 ? "s" : ""}`;
 }
 
+/* ── Discord role helpers ── */
+const AMATEUR_ROLE = "1510667124006457496";
+const PRO_BOXER_ROLE = "1510665774052806780";
+
+async function discordAddRole(guildId: string, userId: string, roleId: string) {
+  try {
+    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+      method: "PUT",
+      headers: discordHeaders(),
+    });
+  } catch {
+    // best-effort
+  }
+}
+
+async function discordRemoveRole(guildId: string, userId: string, roleId: string) {
+  try {
+    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+      method: "DELETE",
+      headers: discordHeaders(),
+    });
+  } catch {
+    // best-effort
+  }
+}
+
 const SESSION_SECRET =
   process.env.SESSION_SECRET ?? process.env.ADMIN_PASSWORD ?? "matchroom-admin-secret";
 
@@ -159,11 +185,16 @@ export const updateFighter = createServerFn({ method: "POST" })
     // Update Discord nickname with new record
     const { data: updated } = await supabase
       .from("fighters")
-      .select("discord_id, display_name, wins, losses, draws, kos")
+      .select("discord_id, display_name, wins, losses, draws, kos, guild_id")
       .eq("username", data.username)
       .single();
     if (updated?.discord_id) {
       updateDiscordNickname(updated.discord_id, formatNickname(updated));
+      // Check promotion (fire-and-forget)
+      if (updated.guild_id && updated.wins >= 3) {
+        discordAddRole(updated.guild_id, updated.discord_id, PRO_BOXER_ROLE);
+        discordRemoveRole(updated.guild_id, updated.discord_id, AMATEUR_ROLE);
+      }
     }
 
     return { ok: true };

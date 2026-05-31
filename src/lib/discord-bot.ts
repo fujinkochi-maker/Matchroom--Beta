@@ -458,6 +458,51 @@ const DIVISION_BUTTONS = [
   })),
 ].map((row) => ({ type: 1, components: row }));
 
+/* ── Role constants ── */
+const DIVISION_ROLES: Record<string, string> = {
+  Flyweight: "1510667123549147136",
+  Bantamweight: "1510667122932449552",
+  Featherweight: "1510667122219421716",
+  Lightweight: "1510667121649123418",
+  Welterweight: "1510667120562929854",
+  Middleweight: "1510667119560364196",
+  "Light Heavyweight": "1510665783037137017",
+  Cruiserweight: "1510665779912114428",
+  Heavyweight: "1510665777106387025",
+};
+const AMATEUR_ROLE = "1510667124006457496";
+const PRO_BOXER_ROLE = "1510665774052806780";
+
+async function addRole(guildId: string, userId: string, roleId: string) {
+  try {
+    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+      method: "PUT",
+      headers: discordHeaders(),
+    });
+  } catch (err) {
+    console.error(`Failed to add role ${roleId}:`, err);
+  }
+}
+
+async function removeRole(guildId: string, userId: string, roleId: string) {
+  try {
+    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+      method: "DELETE",
+      headers: discordHeaders(),
+    });
+  } catch (err) {
+    console.error(`Failed to remove role ${roleId}:`, err);
+  }
+}
+
+async function checkPromotion(guildId: string | undefined | null, discordId: string, wins: number) {
+  if (!guildId) return;
+  if (wins >= 3) {
+    await addRole(guildId, discordId, PRO_BOXER_ROLE);
+    await removeRole(guildId, discordId, AMATEUR_ROLE);
+  }
+}
+
 async function sendPromoterDM(
   discordId: string,
   displayName: string,
@@ -579,6 +624,9 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         if (!fighter) {
           return ephemeral("You're not registered yet! Use `/register` to create your fighter.");
         }
+
+        // Check promotion (fire-and-forget)
+        checkPromotion(interaction.guild_id, discordId, fighter.wins);
 
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
@@ -845,6 +893,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         });
       }
 
+      const registerGuildId = interaction.guild_id ?? "";
       const { error } = await supabase.from("fighters").insert({
         username,
         display_name: displayName,
@@ -862,6 +911,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         streak: "",
         bio: "",
         discord_id: discordId,
+        guild_id: registerGuildId,
       });
 
       if (error) {
@@ -915,7 +965,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         // Check fighter exists
         const { data: fighter } = await supabase
           .from("fighters")
-          .select("username, display_name")
+          .select("username, display_name, guild_id")
           .eq("discord_id", discordId)
           .single();
 
@@ -950,6 +1000,14 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           .from("fighters")
           .update({ rank: (count ?? 0) + 1 })
           .eq("discord_id", discordId);
+
+        // Assign division role + Amateur role
+        const roleGuildId = fighter.guild_id || interaction.guild_id;
+        if (roleGuildId) {
+          const roleId = DIVISION_ROLES[division];
+          if (roleId) addRole(roleGuildId, discordId, roleId);
+          addRole(roleGuildId, discordId, AMATEUR_ROLE);
+        }
 
         // Refresh nickname with record
         const guildId = interaction.guild_id;
