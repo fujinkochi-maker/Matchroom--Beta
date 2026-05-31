@@ -1,5 +1,6 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { Trophy, ArrowLeft, Play } from "lucide-react";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
+import { Trophy, ArrowLeft, Play, RefreshCw } from "lucide-react";
 import { FighterAvatar } from "@/components/FighterAvatar";
 import {
   getByUsername,
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/boxers/$username")({
 });
 
 function FighterProfilePage() {
+  const router = useRouter();
   const { fighter: f } = Route.useLoaderData();
   const news = getNewsForFighter(f.username);
   const videos = getVideosForFighter(f.username);
@@ -59,6 +61,13 @@ function FighterProfilePage() {
   const opponents = FIGHTERS.filter(
     (x) => x.division === f.division && x.username !== f.username,
   ).slice(0, 4);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    await router.invalidate();
+    setRefreshing(false);
+  };
 
   return (
     <>
@@ -75,12 +84,22 @@ function FighterProfilePage() {
             <FighterAvatar name={f.displayName} src={f.image} />
           </div>
           <div>
-            <Link
-              to="/boxers"
-              className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-background/60 hover:text-primary"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Boxers
-            </Link>
+            <div className="flex items-center justify-between">
+              <Link
+                to="/boxers"
+                className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-background/60 hover:text-primary"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Boxers
+              </Link>
+              <button
+                onClick={refresh}
+                disabled={refreshing}
+                className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-background/60 hover:text-primary disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+            </div>
             <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
               {f.division}
             </p>

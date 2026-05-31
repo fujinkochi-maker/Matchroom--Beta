@@ -412,10 +412,11 @@ async function sendMessage(channelId: string, content: string, components?: any[
 async function editMessage(
   channelId: string,
   messageId: string,
-  content: string,
+  content?: string,
   components?: any[],
 ) {
-  const body: any = { content };
+  const body: any = {};
+  if (content !== undefined) body.content = content;
   if (components) body.components = components;
   await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
     method: "PATCH",
@@ -883,6 +884,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         application_id: interaction.application_id,
       });
 
+      const profileUrl = `https://matchroom-beta.vercel.app/boxers/${username}`;
       return jsonResponse({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
@@ -895,6 +897,13 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
                   "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
               },
               description: `"Welcome to the big leagues, **${displayName}**. I've seen potential in you.\n\nCheck your DMs — the **Matchroom Promoter** has an offer you can't refuse."`,
+              fields: [
+                {
+                  name: "View Profile",
+                  value: profileUrl,
+                  inline: true,
+                },
+              ],
               footer: {
                 text: "Matchroom Boxing Beta • Fan-made",
                 icon_url:
@@ -979,6 +988,13 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           if (full) {
             setNickname(guildId, discordId, formatNickname(full));
           }
+        }
+
+        // Remove division buttons from the DM
+        const msgChannelId = interaction.message?.channel_id;
+        const msgId = interaction.message?.id;
+        if (msgChannelId && msgId) {
+          editMessage(msgChannelId, msgId, undefined, []);
         }
 
         // Acknowledge the button click
