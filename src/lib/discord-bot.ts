@@ -800,7 +800,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
 
         const { data: fighter } = await supabase
           .from("fighters")
-          .select("display_name")
+          .select("display_name, guild_id")
           .eq("discord_id", discordId)
           .single();
 
@@ -818,9 +818,9 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         }
 
         // Set nickname to [ Retired ]
-        const guildId = interaction.guild_id;
-        if (guildId) {
-          setNickname(guildId, discordId, `${fighter.display_name} [ Retired ]`);
+        const unregGuildId = fighter.guild_id || interaction.guild_id;
+        if (unregGuildId) {
+          setNickname(unregGuildId, discordId, `${fighter.display_name} [ Retired ]`);
         }
 
         return jsonResponse({
