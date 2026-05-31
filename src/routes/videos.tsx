@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { Play } from "lucide-react";
-import { VIDEOS, VIDEO_CATS, loadDataFromSupabase } from "@/data/fighters";
+import { VIDEOS, VIDEO_CATS, ensureVideosLoaded } from "@/data/fighters";
 
 export const Route = createFileRoute("/videos")({
   loader: async () => {
-    await loadDataFromSupabase();
+    await ensureVideosLoaded();
   },
   head: () => ({
     meta: [
@@ -94,23 +93,14 @@ function VideoRow({ category }: { category: (typeof VIDEO_CATS)[number] }) {
 }
 
 function VideoCard({ v }: { v: (typeof VIDEOS)[number] }) {
-  const [hover, setHover] = useState(false);
   return (
-    <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      className="group w-72 shrink-0 cursor-pointer"
-    >
+    <div className="group w-72 shrink-0 cursor-pointer">
       <div className="relative aspect-video overflow-hidden border border-border bg-foreground/10">
-        <div
-          className={`absolute inset-0 transition-opacity ${hover ? "opacity-100" : "opacity-90"}`}
-        >
-          {hover && <div className="absolute inset-0 animate-pulse bg-primary/20" />}
+        <div className="absolute inset-0 opacity-90 transition-opacity group-hover:opacity-100">
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-pulse bg-primary/20" />
         </div>
         <div className="absolute inset-0 grid place-items-center">
-          <div
-            className={`grid h-14 w-14 place-items-center rounded-full bg-primary transition-transform ${hover ? "scale-110" : ""}`}
-          >
+          <div className="grid h-14 w-14 place-items-center rounded-full bg-primary transition-transform group-hover:scale-110">
             <Play className="h-6 w-6 fill-current text-primary-foreground" />
           </div>
         </div>

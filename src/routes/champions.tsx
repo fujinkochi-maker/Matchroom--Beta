@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ChampionCard } from "@/components/ChampionCard";
-import { getChampions, loadDataFromSupabase } from "@/data/fighters";
+import { getChampions, ensureFightersLoaded } from "@/data/fighters";
 import beltImg from "@/assets/belt.jpg";
 
 export const Route = createFileRoute("/champions")({
   loader: async () => {
-    await loadDataFromSupabase();
+    await ensureFightersLoaded();
   },
   head: () => ({
     meta: [

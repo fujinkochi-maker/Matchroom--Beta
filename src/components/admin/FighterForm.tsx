@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import type { Fighter } from "@/data/types";
 import { ImageUpload } from "./ImageUpload";
 import { Plus, Trash2 } from "lucide-react";
+import { ADMIN_INPUT, ADMIN_LABEL, ADMIN_BTN_PRIMARY, ADMIN_ERROR } from "@/lib/admin-styles";
 
 const DIVISIONS = [
   "Flyweight",
@@ -44,7 +44,7 @@ export interface FighterFormData {
 }
 
 function inp(extra?: string) {
-  return `h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${extra ?? ""}`;
+  return `${ADMIN_INPUT} ${extra ?? ""}`;
 }
 
 export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFormProps) {
@@ -66,25 +66,23 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
     imageUrl: defaultValues?.image ?? "",
     history: defaultValues?.history ? defaultValues.history.map((h) => ({ ...h })) : [],
   });
-  const [beltWbc, setBeltWbc] = useState(false);
-  const [beltWba, setBeltWba] = useState(false);
-  const [beltWbo, setBeltWbo] = useState(false);
-  const [beltIbf, setBeltIbf] = useState(false);
+  const [activeBelts, setActiveBelts] = useState<string[]>(() => {
+    const held = defaultValues?.beltsHeld;
+    return held ? held.split(",").filter(Boolean) : [];
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const set = (key: keyof FighterFormData, value: any) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key: keyof FighterFormData, value: FighterFormData[keyof FighterFormData]) =>
+    setForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setBusy(true);
     try {
-      const beltNames = ["WBC", "WBA", "WBO", "IBF"].filter(
-        (_, i) => [beltWbc, beltWba, beltWbo, beltIbf][i],
-      );
-      const beltCount = beltNames.length;
-      await onSubmit({ ...form, belts: beltCount, beltsHeld: beltNames.join(",") });
+      const beltCount = activeBelts.length;
+      await onSubmit({ ...form, belts: beltCount, beltsHeld: activeBelts.join(",") });
     } catch (err) {
       setError((err as Error).message || "Save failed");
     } finally {
@@ -94,9 +92,7 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className={ADMIN_ERROR}>{error}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Username" required>
           <input
@@ -192,41 +188,22 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
         </Field>
         <Field label="Belts Held">
           <div className="flex flex-wrap gap-4">
-            {(["WBC", "WBA", "WBO", "IBF"] as const).map((b) => {
-              const checked =
-                b === "WBC" ? beltWbc : b === "WBA" ? beltWba : b === "WBO" ? beltWbo : beltIbf;
-              const toggle =
-                b === "WBC"
-                  ? () => {
-                      setBeltWbc((x) => !x);
-                      if (!beltWbc) set("rank", 0);
-                    }
-                  : b === "WBA"
-                    ? () => {
-                        setBeltWba((x) => !x);
-                        if (!beltWba) set("rank", 0);
-                      }
-                    : b === "WBO"
-                      ? () => {
-                          setBeltWbo((x) => !x);
-                          if (!beltWbo) set("rank", 0);
-                        }
-                      : () => {
-                          setBeltIbf((x) => !x);
-                          if (!beltIbf) set("rank", 0);
-                        };
-              return (
-                <label key={b} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={toggle}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  {b}
-                </label>
-              );
-            })}
+            {["WBC", "WBA", "WBO", "IBF"].map((b) => (
+              <label key={b} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={activeBelts.includes(b)}
+                  onChange={() => {
+                    setActiveBelts((prev) =>
+                      prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b],
+                    );
+                    if (!activeBelts.includes(b)) set("rank", 0);
+                  }}
+                  className="h-4 w-4 accent-primary"
+                />
+                {b}
+              </label>
+            ))}
           </div>
         </Field>
         <Field label="Debut" required>
@@ -259,7 +236,7 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
       </Field>
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Fight History</label>
+        <label className={ADMIN_LABEL}>Fight History</label>
         <div className="space-y-2">
           {(form.history ?? []).map((h, i) => (
             <div
@@ -348,11 +325,7 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
         </button>
       </div>
 
-      <button
-        type="submit"
-        disabled={busy}
-        className="rounded-md bg-primary px-6 py-2 text-sm font-bold uppercase tracking-wider text-primary-foreground hover:bg-primary-dark disabled:opacity-50"
-      >
+      <button type="submit" disabled={busy} className={ADMIN_BTN_PRIMARY}>
         {busy ? "Saving..." : submitLabel}
       </button>
     </form>
@@ -370,7 +343,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium">
+      <label className={ADMIN_LABEL}>
         {label}
         {required && <span className="text-destructive">*</span>}
       </label>

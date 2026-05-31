@@ -1,11 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Newspaper } from "lucide-react";
 import { useState } from "react";
-import { CATEGORIES, ARTICLES, featuredArticle, loadDataFromSupabase } from "@/data/fighters";
+import {
+  CATEGORIES,
+  ARTICLES,
+  featuredArticle,
+  ensureArticlesLoaded,
+  ensureFightersLoaded,
+} from "@/data/fighters";
 
 export const Route = createFileRoute("/news/")({
   loader: async () => {
-    await loadDataFromSupabase();
+    await Promise.all([ensureArticlesLoaded(), ensureFightersLoaded()]);
   },
   head: () => ({
     meta: [

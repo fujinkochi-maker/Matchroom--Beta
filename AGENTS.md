@@ -19,33 +19,33 @@ bun run bot                # Start Discord bot (port 7860)
 
 ## Stack
 
-| Layer           | Tech                                                                     |
-| --------------- | ------------------------------------------------------------------------ |
-| Framework       | TanStack Start v1 (React 19, SSR via Nitro/Cloudflare Workers)           |
-| Routing         | File-based: `src/routes/` (`$` dynamic, `$.tsx` splat, `__root.tsx` shell) |
-| Styling         | Tailwind CSS v4 + semantic oklch tokens (`src/styles.css`), `cn()` util  |
-| UI              | shadcn/ui (new-york), Radix, lucide-react, framer-motion, recharts       |
-| Data            | Supabase (Postgres) — module-level cache, no React Query fetching        |
-| Package Mgr     | Bun; `bunfig.toml` enforces 24h supply-chain guard                       |
-| Path alias      | `@/` → `./src/` (tsconfig paths + vite-tsconfig-paths)                   |
+| Layer       | Tech                                                                       |
+| ----------- | -------------------------------------------------------------------------- |
+| Framework   | TanStack Start v1 (React 19, SSR via Nitro/Cloudflare Workers)             |
+| Routing     | File-based: `src/routes/` (`$` dynamic, `$.tsx` splat, `__root.tsx` shell) |
+| Styling     | Tailwind CSS v4 + semantic oklch tokens (`src/styles.css`), `cn()` util    |
+| UI          | shadcn/ui (new-york), Radix, lucide-react, framer-motion, recharts         |
+| Data        | Supabase (Postgres) — module-level cache, no React Query fetching          |
+| Package Mgr | Bun; `bunfig.toml` enforces 24h supply-chain guard                         |
+| Path alias  | `@/` → `./src/` (tsconfig paths + vite-tsconfig-paths)                     |
 
 ---
 
 ## Architecture
 
-| Path                          | Role                                                           |
-| ----------------------------- | -------------------------------------------------------------- |
-| `src/server.ts`               | Nitro entrypoint — SSR error wrapper (catches h3 swallows)      |
-| `src/start.ts`                | TanStack Start instance + error middleware                     |
-| `src/router.tsx`              | Router + QueryClient setup                                     |
-| `src/routeTree.gen.ts`        | **Auto-generated** — do not edit                               |
-| `src/data/fighters.ts`        | `loadDataFromSupabase()` + module-level caches + selectors      |
-| `src/lib/admin-auth.ts`       | Client-side token storage (localStorage)                       |
-| `src/lib/admin.server.ts`     | Server-only admin CRUD (login, fighters, events, articles, vids, products) |
-| `src/lib/supabase.ts`         | Client singleton (anon key, browser-safe)                      |
-| `src/lib/supabase-admin.ts`   | Server-only admin client (service key)                         |
-| `bot-worker.ts`               | Discord bot (discord.js gateway + HTTP on :7860)               |
-| `scripts/register-commands.ts`| Registers slash commands with Discord API                      |
+| Path                           | Role                                                                       |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `src/server.ts`                | Nitro entrypoint — SSR error wrapper (catches h3 swallows)                 |
+| `src/start.ts`                 | TanStack Start instance + error middleware                                 |
+| `src/router.tsx`               | Router + QueryClient setup                                                 |
+| `src/routeTree.gen.ts`         | **Auto-generated** — do not edit                                           |
+| `src/data/fighters.ts`         | `loadDataFromSupabase()` + module-level caches + selectors                 |
+| `src/lib/admin-auth.ts`        | Client-side token storage (localStorage)                                   |
+| `src/lib/admin.server.ts`      | Server-only admin CRUD (login, fighters, events, articles, vids, products) |
+| `src/lib/supabase.ts`          | Client singleton (anon key, browser-safe)                                  |
+| `src/lib/supabase-admin.ts`    | Server-only admin client (service key)                                     |
+| `bot-worker.ts`                | Discord bot (discord.js gateway + HTTP on :7860)                           |
+| `scripts/register-commands.ts` | Registers slash commands with Discord API                                  |
 
 ### Data Flow
 
@@ -71,16 +71,16 @@ Missing `VITE_SUPABASE_*` keys → empty site. Missing server keys → admin pan
 
 ### All env vars
 
-| Var                    | Scope    | Required for             |
-| ---------------------- | -------- | ------------------------ |
-| `VITE_SUPABASE_URL`    | client   | site rendering           |
-| `VITE_SUPABASE_ANON_KEY`| client  | site rendering           |
-| `SUPABASE_SERVICE_KEY` | server   | admin CRUD               |
-| `ADMIN_PASSWORD`       | server   | admin login              |
-| `SESSION_SECRET`       | server   | token HMAC (optional)    |
-| `DISCORD_BOT_TOKEN`    | server   | Discord bot              |
-| `DISCORD_PUBLIC_KEY`   | server   | interaction verification |
-| `DISCORD_APPLICATION_ID`| server  | register-commands        |
+| Var                      | Scope  | Required for             |
+| ------------------------ | ------ | ------------------------ |
+| `VITE_SUPABASE_URL`      | client | site rendering           |
+| `VITE_SUPABASE_ANON_KEY` | client | site rendering           |
+| `SUPABASE_SERVICE_KEY`   | server | admin CRUD               |
+| `ADMIN_PASSWORD`         | server | admin login              |
+| `SESSION_SECRET`         | server | token HMAC (optional)    |
+| `DISCORD_BOT_TOKEN`      | server | Discord bot              |
+| `DISCORD_PUBLIC_KEY`     | server | interaction verification |
+| `DISCORD_APPLICATION_ID` | server | register-commands        |
 
 ---
 
@@ -99,10 +99,12 @@ Missing `VITE_SUPABASE_*` keys → empty site. Missing server keys → admin pan
 ## Division Spelling
 
 Must match Supabase CHECK constraint exactly. **Case-sensitive**:
+
 ```
 Flyweight, Bantamweight, Featherweight, Lightweight,
 Welterweight, Middleweight, Light Heavyweight, Cruiserweight, Heavyweight
 ```
+
 Typo → `"violates check constraint"` error.
 
 ---
@@ -147,6 +149,7 @@ See `src/routes/README.md`. Key: `routeTree.gen.ts` is auto-generated.
 ## Database
 
 Run `supabase-migration.sql` in Supabase Studio SQL Editor. Tables:
+
 - `fighters` (PK=username), `fight_history`, `events` (PK=slug), `event_cards`
 - `articles` (PK=slug), `article_fighters`, `videos`, `video_fighters`, `products`
 - Storage buckets: `fighter-images`, `event-images`, `article-images`, `product-images`

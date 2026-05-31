@@ -2,12 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MapPin, Play } from "lucide-react";
 import { Countdown } from "@/components/Countdown";
 import { FighterAvatar } from "@/components/FighterAvatar";
-import { EVENTS, getByUsername, loadDataFromSupabase } from "@/data/fighters";
+import { EVENTS, getByUsername, ensureEventsLoaded, ensureFightersLoaded } from "@/data/fighters";
 import { hashHue } from "@/lib/utils";
 
 export const Route = createFileRoute("/events")({
   loader: async () => {
-    await loadDataFromSupabase();
+    await Promise.all([ensureEventsLoaded(), ensureFightersLoaded()]);
   },
   head: () => ({
     meta: [
@@ -92,8 +92,9 @@ function EventsPage() {
 }
 
 function EventCard({ event }: { event: (typeof EVENTS)[number] }) {
-  const a = getByUsername(event.mainEvent.a)!;
-  const b = getByUsername(event.mainEvent.b)!;
+  const a = getByUsername(event.mainEvent.a);
+  const b = getByUsername(event.mainEvent.b);
+  if (!a || !b) return null;
   return (
     <article className="overflow-hidden border border-border bg-card shadow-card">
       <div className="relative bg-foreground p-6 text-background">

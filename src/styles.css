@@ -170,4 +170,33 @@
   .clip-slant {
     clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%);
   }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out both;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out both;
+  }
+  .animate-delay-100 {
+    animation-delay: 0.1s;
+  }
+  .animate-delay-200 {
+    animation-delay: 0.2s;
+  }
+  .animate-delay-300 {
+    animation-delay: 0.3s;
+  }
+  .animate-delay-350 {
+    animation-delay: 0.35s;
+  }
 }

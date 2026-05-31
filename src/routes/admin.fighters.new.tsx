@@ -3,14 +3,10 @@ import { toast } from "sonner";
 import { FighterForm, type FighterFormData } from "@/components/admin/FighterForm";
 import { createFighter, upsertFightHistory } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
-
-export const Route = createFileRoute("/admin/fighters/new")({
-  component: NewFighter,
-});
-
+import { ADMIN_HEADING, adminCard } from "@/lib/admin-styles";
+export const Route = createFileRoute("/admin/fighters/new")({ component: NewFighter });
 function NewFighter() {
   const router = useRouter();
-
   const handleSubmit = async (data: FighterFormData) => {
     const token = getAdminToken();
     if (!token) throw new Error("Not authenticated");
@@ -22,13 +18,14 @@ function NewFighter() {
     toast.success("Fighter created");
     router.navigate({ to: "/admin/fighters" });
   };
-
   return (
     <div>
-      <h1 className="font-display text-2xl uppercase tracking-wider">New Fighter</h1>
-      <div className="mt-6 max-w-2xl rounded-lg border border-border bg-background p-6">
-        <FighterForm onSubmit={handleSubmit} submitLabel="Create Fighter" />
-      </div>
+      {" "}
+      <h1 className={ADMIN_HEADING}>New Fighter</h1>{" "}
+      <div className={adminCard("2xl")}>
+        {" "}
+        <FighterForm onSubmit={handleSubmit} submitLabel="Create Fighter" />{" "}
+      </div>{" "}
     </div>
   );
 }

@@ -1,16 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { memo } from "react";
 import { FighterAvatar } from "./FighterAvatar";
 import type { Fighter } from "@/data/types";
 
-export function FighterCard({ fighter }: { fighter: Fighter }) {
+export const FighterCard = memo(function FighterCard({ fighter }: { fighter: Fighter }) {
   const kos = Math.round((fighter.kos / Math.max(fighter.wins, 1)) * 100);
   return (
-    <motion.div
-      whileHover={{ y: -4 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="group relative overflow-hidden border border-border bg-card shadow-card transition-shadow hover:shadow-red"
-    >
+    <div className="group relative overflow-hidden border border-border bg-card shadow-card transition-shadow duration-200 hover:-translate-y-1 hover:shadow-red">
       <Link to="/boxers/$username" params={{ username: fighter.username }} className="block">
         <div className="relative">
           <FighterAvatar name={fighter.displayName} src={fighter.image} />
@@ -52,6 +48,6 @@ export function FighterCard({ fighter }: { fighter: Fighter }) {
           <span className="font-mono text-primary">{kos}% KO</span>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
-}
+});

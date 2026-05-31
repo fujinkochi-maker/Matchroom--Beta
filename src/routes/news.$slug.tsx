@@ -1,10 +1,16 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { ARTICLES, getArticleBySlug, getByUsername, loadDataFromSupabase } from "@/data/fighters";
+import {
+  ARTICLES,
+  getArticleBySlug,
+  getByUsername,
+  ensureArticlesLoaded,
+  ensureFightersLoaded,
+} from "@/data/fighters";
 
 export const Route = createFileRoute("/news/$slug")({
   loader: async ({ params }) => {
-    await loadDataFromSupabase();
+    await Promise.all([ensureArticlesLoaded(), ensureFightersLoaded()]);
     const article = getArticleBySlug(params.slug);
     if (!article) throw notFound();
     return { article };

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 export function useCountdown(targetISO: string) {
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(Date.now);
   useEffect(() => {
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);

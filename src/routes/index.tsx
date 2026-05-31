@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
 import { ArrowRight, Trophy, Calendar, Newspaper, Play } from "lucide-react";
 import heroArena from "@/assets/hero-arena.jpg";
 import faceoff from "@/assets/faceoff.jpg";
@@ -15,13 +14,21 @@ import {
   VIDEOS,
   getByUsername,
   getRanked,
-  loadDataFromSupabase,
+  ensureFightersLoaded,
+  ensureEventsLoaded,
+  ensureArticlesLoaded,
+  ensureVideosLoaded,
 } from "@/data/fighters";
 import { DIVISIONS } from "@/data/types";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
-    await loadDataFromSupabase();
+    await Promise.all([
+      ensureFightersLoaded(),
+      ensureEventsLoaded(),
+      ensureArticlesLoaded(),
+      ensureVideosLoaded(),
+    ]);
   },
   head: () => ({
     meta: [
@@ -74,37 +81,18 @@ function Hero() {
       <div className="absolute inset-y-0 left-0 w-1 bg-primary md:w-2" />
       <div className="container-x relative grid min-h-[78vh] items-center gap-10 py-20 lg:grid-cols-[1.2fr_1fr]">
         <div>
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="eyebrow text-primary"
-          >
+          <p className="eyebrow text-primary animate-fade-in">
             <span className="h-px w-8 bg-primary" /> Matchroom Presents
-          </motion.p>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mt-3 font-display text-[14vw] uppercase leading-[0.85] tracking-tight md:text-[7.5rem]"
-          >
+          </p>
+          <h1 className="mt-3 font-display text-[14vw] uppercase leading-[0.85] tracking-tight md:text-[7.5rem] animate-slide-up animate-delay-100">
             Matchroom
             <span className="block text-primary">EXCLUSIVES</span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.25 }}
-            className="mt-5 max-w-xl text-base text-background/80 md:text-lg"
-          >
+          </h1>
+          <p className="mt-5 max-w-xl text-base text-background/80 md:text-lg animate-fade-in animate-delay-200">
             The Ultimate Roblox Boxing Championship Experience. Champions, contenders, world-class
             events and the fights that define the era.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="mt-8 flex flex-wrap gap-3"
-          >
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3 animate-slide-up animate-delay-300">
             <Link
               to="/champions"
               className="group inline-flex items-center gap-2 bg-primary px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-dark"
@@ -118,7 +106,7 @@ function Hero() {
             >
               Upcoming Events <Calendar className="h-4 w-4" />
             </Link>
-          </motion.div>
+          </div>
           <div className="mt-10 grid max-w-md grid-cols-3 gap-6 border-t border-background/15 pt-6">
             <Stat n={String(DIVISIONS.length)} l="Divisions" />
             <Stat n={String(FIGHTERS.length)} l="Pro Fighters" />
@@ -194,8 +182,10 @@ function ChampionsStrip({ champs }: { champs: ReturnType<typeof getChampions> })
 
 function NextEvent() {
   const event = nextEvent();
-  const a = getByUsername(event.mainEvent.a)!;
-  const b = getByUsername(event.mainEvent.b)!;
+  if (!event) return null;
+  const a = getByUsername(event.mainEvent.a);
+  const b = getByUsername(event.mainEvent.b);
+  if (!a || !b) return null;
   return (
     <section className="bg-foreground text-background">
       <div className="container-x grid gap-10 py-16 md:py-20 lg:grid-cols-2 lg:items-center">

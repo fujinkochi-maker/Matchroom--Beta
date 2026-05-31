@@ -6,13 +6,15 @@ import {
   getNewsForFighter,
   getVideosForFighter,
   FIGHTERS,
-  loadDataFromSupabase,
+  ensureFightersLoaded,
+  ensureArticlesLoaded,
+  ensureVideosLoaded,
 } from "@/data/fighters";
 import { hashHue } from "@/lib/utils";
 
 export const Route = createFileRoute("/boxers/$username")({
   loader: async ({ params }) => {
-    await loadDataFromSupabase();
+    await Promise.all([ensureFightersLoaded(), ensureArticlesLoaded(), ensureVideosLoaded()]);
     const fighter = getByUsername(params.username);
     if (!fighter) throw notFound();
     return { fighter };

@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import {
   Shield,
@@ -23,20 +23,17 @@ const SIDEBAR = [
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {
-  const [ready, setReady] = useState(false);
   const router = useRouter();
   const location = useLocation();
+  const token = getAdminToken();
 
   useEffect(() => {
-    const token = getAdminToken();
     if (!token && location.pathname !== "/admin/login") {
       router.navigate({ to: "/admin/login" });
-      return;
     }
-    setReady(true);
-  }, [location.pathname, router]);
+  }, [token, location.pathname, router]);
 
-  if (!ready) return null;
+  if (!token && location.pathname !== "/admin/login") return null;
 
   const handleLogout = () => {
     clearAdminToken();

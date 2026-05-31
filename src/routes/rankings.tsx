@@ -4,11 +4,11 @@ import { useState } from "react";
 
 import { FighterAvatar } from "@/components/FighterAvatar";
 import { DIVISIONS, type Division } from "@/data/types";
-import { getRanked, loadDataFromSupabase } from "@/data/fighters";
+import { getRanked, ensureFightersLoaded } from "@/data/fighters";
 
 export const Route = createFileRoute("/rankings")({
   loader: async () => {
-    await loadDataFromSupabase();
+    await ensureFightersLoaded();
   },
   head: () => ({
     meta: [

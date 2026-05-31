@@ -3,12 +3,12 @@ import { useMemo, useState } from "react";
 import { Search, RefreshCw } from "lucide-react";
 import { ChampionCard } from "@/components/ChampionCard";
 import { FighterCard } from "@/components/FighterCard";
-import { FIGHTERS, getChampions, loadDataFromSupabase } from "@/data/fighters";
+import { FIGHTERS, getChampions, ensureFightersLoaded } from "@/data/fighters";
 import { DIVISIONS, type Division } from "@/data/types";
 
 export const Route = createFileRoute("/boxers/")({
   loader: async () => {
-    await loadDataFromSupabase();
+    await ensureFightersLoaded();
   },
   head: () => ({
     meta: [

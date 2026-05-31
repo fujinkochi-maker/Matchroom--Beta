@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ShoppingBag, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { PRODUCTS, CATS, loadDataFromSupabase } from "@/data/fighters";
+import { PRODUCTS, CATS, ensureProductsLoaded } from "@/data/fighters";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/store")({
   loader: async () => {
-    await loadDataFromSupabase();
+    await ensureProductsLoaded();
   },
   head: () => ({
     meta: [

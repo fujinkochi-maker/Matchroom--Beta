@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
   src?: string;
 }
 
-export function FighterAvatar({ name, className, square, src }: Props) {
+export const FighterAvatar = memo(function FighterAvatar({ name, className, square, src }: Props) {
   if (src) {
     return (
       <div
@@ -41,4 +42,4 @@ export function FighterAvatar({ name, className, square, src }: Props) {
       <span className="text-lg font-bold uppercase text-muted-foreground">{initials}</span>
     </div>
   );
-}
+});

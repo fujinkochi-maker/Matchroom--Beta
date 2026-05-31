@@ -1,17 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { memo } from "react";
 import { FighterAvatar } from "./FighterAvatar";
 import type { Fighter } from "@/data/types";
 import { Trophy } from "lucide-react";
 
-export function ChampionCard({ fighter }: { fighter: Fighter }) {
+export const ChampionCard = memo(function ChampionCard({ fighter }: { fighter: Fighter }) {
   const kos = Math.round((fighter.kos / Math.max(fighter.wins, 1)) * 100);
   return (
-    <motion.div
-      whileHover={{ y: -6 }}
-      transition={{ type: "spring", stiffness: 240, damping: 22 }}
-      className="group relative overflow-hidden border border-border bg-card shadow-card transition-shadow hover:shadow-red"
-    >
+    <div className="group relative overflow-hidden border border-border bg-card shadow-card transition-shadow duration-200 hover:-translate-y-1.5 hover:shadow-red">
       <Link to="/boxers/$username" params={{ username: fighter.username }}>
         <div className="relative">
           <FighterAvatar name={fighter.displayName} src={fighter.image} />
@@ -36,9 +32,9 @@ export function ChampionCard({ fighter }: { fighter: Fighter }) {
           </div>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
-}
+});
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

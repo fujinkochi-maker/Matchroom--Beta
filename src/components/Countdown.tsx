@@ -1,6 +1,13 @@
+import { memo } from "react";
 import { useCountdown } from "@/hooks/use-countdown";
 
-export function Countdown({ targetISO, compact }: { targetISO: string; compact?: boolean }) {
+export const Countdown = memo(function Countdown({
+  targetISO,
+  compact,
+}: {
+  targetISO: string;
+  compact?: boolean;
+}) {
   const { d, h, m, s } = useCountdown(targetISO);
   const items = [
     { v: d, l: "Days" },
@@ -27,4 +34,4 @@ export function Countdown({ targetISO, compact }: { targetISO: string; compact?:
       ))}
     </div>
   );
-}
+});
