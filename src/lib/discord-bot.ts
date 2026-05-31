@@ -655,42 +655,72 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
 
       const supabase = getSupabaseAdmin();
 
-      const { data: existing } = await supabase
+      // Check if this Discord user already has a fighter
+      const { data: existingFighter } = await supabase
         .from("fighters")
         .select("username")
-        .eq("username", username)
+        .eq("discord_id", discordId)
         .maybeSingle();
-      if (existing) {
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: { content: `Username "${username}" is already taken. Choose another.`, flags: 64 },
-        });
-      }
 
-      const { error } = await supabase.from("fighters").insert({
-        username,
-        display_name: displayName,
-        nickname: "",
-        division: "",
-        rank: 999,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        kos: 0,
-        stance: "Orthodox",
-        belts: 0,
-        belts_held: "",
-        debut: new Date().toISOString().split("T")[0],
-        streak: "",
-        bio: "",
-        discord_id: discordId,
-      });
+      if (existingFighter) {
+        // Re-registration: update existing fighter, reset division for DM flow
+        const { error } = await supabase
+          .from("fighters")
+          .update({
+            username,
+            display_name: displayName,
+            division: "",
+          })
+          .eq("discord_id", discordId);
 
-      if (error) {
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: { content: `Registration failed: ${error.message}`, flags: 64 },
+        if (error) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: { content: `Update failed: ${error.message}`, flags: 64 },
+          });
+        }
+      } else {
+        // Check username uniqueness
+        const { data: usernameTaken } = await supabase
+          .from("fighters")
+          .select("username")
+          .eq("username", username)
+          .maybeSingle();
+        if (usernameTaken) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+              content: `Username "${username}" is already taken. Choose another.`,
+              flags: 64,
+            },
+          });
+        }
+
+        const { error } = await supabase.from("fighters").insert({
+          username,
+          display_name: displayName,
+          nickname: "",
+          division: "",
+          rank: 999,
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          kos: 0,
+          stance: "Orthodox",
+          belts: 0,
+          belts_held: "",
+          debut: new Date().toISOString().split("T")[0],
+          streak: "",
+          bio: "",
+          discord_id: discordId,
         });
+
+        if (error) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: { content: `Registration failed: ${error.message}`, flags: 64 },
+          });
+        }
       }
 
       // Fire promoter DM in background (long-lived Bun process)
