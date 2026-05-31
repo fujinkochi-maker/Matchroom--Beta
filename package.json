@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "seed": "bun scripts/seed.ts",
-    "register-commands": "bun scripts/register-commands.ts"
+    "register-commands": "bun scripts/register-commands.ts",
+    "bot": "bun run bot-worker.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -54,6 +55,7 @@
     "date-fns": "^4.1.0",
     "discord-api-types": "^0.38.48",
     "discord-interactions": "^4.4.0",
+    "discord.js": "^14.26.4",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.40.0",
     "input-otp": "^1.4.2",
