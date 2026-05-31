@@ -467,10 +467,7 @@ async function sendPromoterDM(
     const dmId = await createDM(discordId);
     await sendMessage(
       dmId,
-      `🥊 **Matchroom Promoter**\n\n` +
-        `"Welcome to the big leagues, **${displayName}**. I've seen potential in you.\n\n` +
-        `Now tell me — what division are you fighting in?"`,
-      DIVISION_BUTTONS,
+      `🥊 **Matchroom Promoter**\n\n"Welcome to the big leagues, **${displayName}**. I've seen potential in you.\n\nBest of luck in your career — make us proud."`,
     );
   } catch (err) {
     console.error("Promoter DM failed:", err);
@@ -884,34 +881,11 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         application_id: interaction.application_id,
       });
 
-      const profileUrl = `https://matchroom-beta.vercel.app/boxers/${username}`;
       return jsonResponse({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-          embeds: [
-            {
-              color: BRAND_COLOR,
-              author: {
-                name: "Matchroom Boxing",
-                icon_url:
-                  "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
-              },
-              description: `"Welcome to the big leagues, **${displayName}**. I've seen potential in you.\n\nCheck your DMs — the **Matchroom Promoter** has an offer you can't refuse."`,
-              fields: [
-                {
-                  name: "View Profile",
-                  value: profileUrl,
-                  inline: true,
-                },
-              ],
-              footer: {
-                text: "Matchroom Boxing Beta • Fan-made",
-                icon_url:
-                  "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
-              },
-              timestamp: new Date().toISOString(),
-            },
-          ],
+          content: `🥊 **Welcome to the big leagues, ${displayName}!**\n\n"Now tell me — what division are you fighting in?"`,
+          components: DIVISION_BUTTONS,
           flags: 64,
         },
       });
