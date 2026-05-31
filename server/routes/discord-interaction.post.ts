@@ -279,6 +279,29 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
+function ephemeral(content: string) {
+  return jsonResponse({
+    type: InteractionResponseType.ChannelMessageWithSource,
+    data: { content, flags: 64 },
+  });
+}
+
+function getOptionValue(
+  options: { name: string; value: string }[] | undefined,
+  name: string,
+): string | undefined {
+  return options?.find((o) => o.name === name)?.value;
+}
+
+function formatRecord(f: {
+  wins: number;
+  losses: number;
+  draws: number;
+  kos: number;
+}): string {
+  return `${f.wins}-${f.losses}-${f.draws} (${Math.round((f.kos / Math.max(f.wins, 1)) * 100)}% KO)`;
+}
+
 /* ---------- Main handler ---------- */
 
 export default defineEventHandler(async (event) => {
@@ -405,6 +428,118 @@ export default defineEventHandler(async (event) => {
         });
       }
     }
+
+    if (commandName === "rankings") {
+      const division = getOptionValue(interaction.data.options, "division");
+      if (!division) return ephemeral("Please choose a division.");
+
+      const supabase = getSupabaseAdmin();
+      const { data: fighters, error } = await supabase
+        .from("fighters")
+        .select("*")
+        .eq("division", division)
+        .order("rank", { ascending: true })
+        .limit(10);
+
+      if (error || !fighters?.length) {
+        return ephemeral(`No fighters found in **${division}**.`);
+      }
+
+      const lines = fighters.map((f: any) => {
+        const rank = f.rank === 0 ? "👑" : `#${f.rank}`;
+        const record = `${f.wins}-${f.losses}-${f.draws}`;
+        return `${rank} **${f.displayName}** — ${record} (${f.username})`;
+      });
+
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          embeds: [
+            {
+              title: `🏆 ${division} Rankings`,
+              description: lines.join("\n"),
+              color: 0xdc2626,
+            },
+          ],
+          flags: 64,
+        },
+      });
+    }
+
+    if (commandName === "champions") {
+      const supabase = getSupabaseAdmin();
+      const { data: champs, error } = await supabase
+        .from("fighters")
+        .select("*")
+        .eq("rank", 0)
+        .order("division", { ascending: true });
+
+      if (error || !champs?.length) {
+        return ephemeral("No champions found.");
+      }
+
+      const lines = champs.map((c: any) => `👑 **${c.displayName}** — ${c.division}`);
+
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          embeds: [
+            {
+              title: "Current Champions",
+              description: lines.join("\n"),
+              color: 0xdc2626,
+            },
+          ],
+          flags: 64,
+        },
+      });
+    }
+
+    if (commandName === "fighter") {
+      const username = getOptionValue(interaction.data.options, "username");
+      if (!username) return ephemeral("Please provide a username.");
+
+      const supabase = getSupabaseAdmin();
+      const { data: fighter, error } = await supabase
+        .from("fighters")
+        .select("*")
+        .eq("username", username)
+        .single();
+
+      if (error || !fighter) {
+        return ephemeral(`Fighter **${username}** not found.`);
+      }
+
+      const rank = fighter.rank === 0 ? "**★ Champion**" : `Ranked #${fighter.rank}`;
+      const record = formatRecord(fighter);
+      const belts = fighter.belts_held
+        ? `\n**Belts Held:** ${fighter.belts_held}`
+        : "";
+
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          embeds: [
+            {
+              title: `${fighter.displayName}`,
+              description: [
+                `**Division:** ${fighter.division}`,
+                `**Rank:** ${rank}`,
+                `**Record:** ${record}`,
+                `**Stance:** ${fighter.stance}`,
+                `**Streak:** ${fighter.streak || "N/A"}`,
+                belts,
+              ].join("\n"),
+              color: 0xdc2626,
+              footer: { text: `@${fighter.username}` },
+            },
+          ],
+          flags: 64,
+        },
+      });
+    }
+
+
   }
 
   // Modal submit

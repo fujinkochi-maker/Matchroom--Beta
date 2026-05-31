@@ -10,19 +10,17 @@ const DIVISIONS = [
   "Heavyweight",
 ];
 
+const DIVISION_CHOICES = DIVISIONS.map((d) => ({ name: d, value: d }));
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 type Command = {
   name: string;
   description: string;
-  type: 1; // CHAT_INPUT
+  type: 1;
   integration_types?: [0, 1];
   contexts?: [0, 1, 2];
-  options?: {
-    type: number;
-    name: string;
-    description: string;
-    required?: boolean;
-    choices?: { name: string; value: string }[];
-  }[];
+  options?: any[];
 };
 
 const commands: Command[] = [
@@ -37,6 +35,41 @@ const commands: Command[] = [
     description: "View your fighter stats",
     type: 1,
     contexts: [0, 1, 2],
+  },
+  {
+    name: "rankings",
+    description: "Show top fighters in a division",
+    type: 1,
+    contexts: [0, 1, 2],
+    options: [
+      {
+        type: 3, // STRING
+        name: "division",
+        description: "Choose a weight division",
+        required: true,
+        choices: DIVISION_CHOICES,
+      },
+    ],
+  },
+  {
+    name: "champions",
+    description: "List all current division champions",
+    type: 1,
+    contexts: [0, 1, 2],
+  },
+  {
+    name: "fighter",
+    description: "Look up a fighter's profile and stats",
+    type: 1,
+    contexts: [0, 1, 2],
+    options: [
+      {
+        type: 3, // STRING
+        name: "username",
+        description: "The fighter's username (e.g. iron_mike)",
+        required: true,
+      },
+    ],
   },
 ];
 
