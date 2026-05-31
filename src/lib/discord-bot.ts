@@ -303,6 +303,68 @@ function formatRecord(f: { wins: number; losses: number; draws: number; kos: num
   return `${f.wins}-${f.losses}-${f.draws} (${Math.round((f.kos / Math.max(f.wins, 1)) * 100)}% KO)`;
 }
 
+/* ── Matchroom Promoter voice ── */
+
+const BRAND_COLOR = 0xd71920;
+
+const PROMOTER_LINES: Record<string, (name: string) => string> = {
+  champion: (n) =>
+    `"The king of the division, **${n}** — when you're at the top, there's nowhere to go but down... and I'll make sure they're coming for you."`,
+  contender: (n) =>
+    `"**${n}** is hungry. Ranked high, climbing fast — one more win and they're knocking on the champion's door."`,
+  undefeated: (n) =>
+    `"**${n}** — still perfect. That zero in the loss column? It's not just a number, it's a statement."`,
+  newcomer: (n) =>
+    `"New blood in the division. **${n}** steps into the ring with everything to prove — and I like what I see."`,
+  veteran: (n) =>
+    `"**${n}** has been through wars. The record speaks for itself — experience beats youth, nine times out of ten."`,
+  brawler: (n) =>
+    `"**${n}** doesn't go to decisions. If you're buying a ticket, better not blink — this one ends early."`,
+};
+
+function promoterLine(fighter: {
+  display_name: string;
+  wins: number;
+  losses: number;
+  kos: number;
+  rank: number;
+}): string {
+  const name = fighter.display_name;
+  if (fighter.rank === 0) return PROMOTER_LINES.champion(name);
+  if (fighter.losses === 0 && fighter.wins > 0) return PROMOTER_LINES.undefeated(name);
+  if (fighter.wins >= 15) return PROMOTER_LINES.veteran(name);
+  if (fighter.kos / Math.max(fighter.wins, 1) > 0.6 && fighter.wins > 0)
+    return PROMOTER_LINES.brawler(name);
+  if (fighter.wins <= 3) return PROMOTER_LINES.newcomer(name);
+  return PROMOTER_LINES.contender(name);
+}
+
+function promoterEmbed(fighter: {
+  image_url?: string;
+  display_name: string;
+  division: string;
+  username: string;
+}) {
+  const embed: any = {
+    color: BRAND_COLOR,
+    author: {
+      name: "Matchroom Boxing",
+      icon_url:
+        "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+    },
+    footer: {
+      text: "Matchroom Boxing Beta • Fan-made",
+      icon_url:
+        "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+    },
+    timestamp: new Date().toISOString(),
+  };
+  if (fighter.image_url) {
+    embed.thumbnail = { url: fighter.image_url };
+  }
+  return embed;
+}
+
 /* DM helpers for Matchroom Promoter flow */
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
@@ -510,26 +572,27 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           return ephemeral("You're not registered yet! Use `/register` to create your fighter.");
         }
 
-        const rank = fighter.rank === 0 ? "**★ Champion**" : `Ranked #${fighter.rank}`;
-        const record = formatRecord(fighter);
-        const belts = fighter.belts_held ? `\n**Belts Held:** ${fighter.belts_held}` : "";
-
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
           data: {
             embeds: [
               {
-                title: `${fighter.display_name}`,
-                description: [
-                  `**Division:** ${fighter.division}`,
-                  `**Rank:** ${rank}`,
-                  `**Record:** ${record}`,
-                  `**Stance:** ${fighter.stance}`,
-                  `**Streak:** ${fighter.streak || "N/A"}`,
-                  belts,
-                ].join("\n"),
-                color: 0xdc2626,
-                footer: { text: `@${fighter.username}` },
+                ...promoterEmbed(fighter),
+                fields: [
+                  { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
+                  { name: "Division", value: fighter.division || "TBD", inline: true },
+                  {
+                    name: "Rank",
+                    value: fighter.rank === 0 ? "🏆 Champion" : `#${fighter.rank}`,
+                    inline: true,
+                  },
+                  { name: "Record", value: formatRecord(fighter), inline: true },
+                  { name: "Stance", value: fighter.stance, inline: true },
+                  { name: "Streak", value: fighter.streak || "N/A", inline: true },
+                  ...(fighter.belts_held
+                    ? [{ name: "Belts Held", value: fighter.belts_held, inline: false }]
+                    : []),
+                ],
               },
             ],
             flags: 64,
@@ -553,20 +616,33 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           return ephemeral(`No fighters found in **${division}**.`);
         }
 
-        const lines = fighters.map((f: any) => {
-          const rank = f.rank === 0 ? "👑" : `#${f.rank}`;
-          const record = `${f.wins}-${f.losses}-${f.draws}`;
-          return `${rank} **${f.display_name}** — ${record} (${f.username})`;
-        });
-
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
           data: {
             embeds: [
               {
-                title: `🏆 ${division} Rankings`,
-                description: lines.join("\n"),
-                color: 0xdc2626,
+                color: BRAND_COLOR,
+                author: {
+                  name: "Matchroom Boxing",
+                  icon_url:
+                    "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+                },
+                title: `🥊 ${division} Rankings`,
+                description: `\`\`\`"Let's look at the **${division}** division. Some hungry fighters here..."\`\`\``,
+                fields: fighters.map((f: any, i: number) => {
+                  const icon = f.rank === 0 ? "👑" : `#${i + 1}`;
+                  return {
+                    name: `${icon} ${f.display_name} (@${f.username})`,
+                    value: `Record: ${f.wins}-${f.losses}-${f.draws} | Streak: ${f.streak || "N/A"}`,
+                    inline: false,
+                  };
+                }),
+                footer: {
+                  text: "Matchroom Boxing Beta • Fan-made",
+                  icon_url:
+                    "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+                },
+                timestamp: new Date().toISOString(),
               },
             ],
             flags: 64,
@@ -586,16 +662,30 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           return ephemeral("No champions found.");
         }
 
-        const lines = champs.map((c: any) => `👑 **${c.display_name}** — ${c.division}`);
-
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
           data: {
             embeds: [
               {
-                title: "Current Champions",
-                description: lines.join("\n"),
-                color: 0xdc2626,
+                color: BRAND_COLOR,
+                author: {
+                  name: "Matchroom Boxing",
+                  icon_url:
+                    "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+                },
+                title: "👑 Current Champions",
+                description: `\`\`\`"These are the men and women who run this circus. Champions don't wait — they take."\`\`\``,
+                fields: champs.map((c: any) => ({
+                  name: `${c.division} Champion`,
+                  value: `**${c.display_name}** — ${formatRecord(c)}`,
+                  inline: true,
+                })),
+                footer: {
+                  text: "Matchroom Boxing Beta • Fan-made",
+                  icon_url:
+                    "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+                },
+                timestamp: new Date().toISOString(),
               },
             ],
             flags: 64,
@@ -618,34 +708,32 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           return ephemeral(`Fighter **${username}** not found.`);
         }
 
-        const rank = fighter.rank === 0 ? "**★ Champion**" : `Ranked #${fighter.rank}`;
-        const record = formatRecord(fighter);
-        const belts = fighter.belts_held ? `\n**Belts Held:** ${fighter.belts_held}` : "";
-
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
           data: {
             embeds: [
               {
-                title: `${fighter.display_name}`,
-                description: [
-                  `**Division:** ${fighter.division}`,
-                  `**Rank:** ${rank}`,
-                  `**Record:** ${record}`,
-                  `**Stance:** ${fighter.stance}`,
-                  `**Streak:** ${fighter.streak || "N/A"}`,
-                  belts,
-                ].join("\n"),
-                color: 0xdc2626,
-                footer: { text: `@${fighter.username}` },
+                ...promoterEmbed(fighter),
+                fields: [
+                  { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
+                  { name: "Division", value: fighter.division, inline: true },
+                  {
+                    name: "Rank",
+                    value: fighter.rank === 0 ? "🏆 Champion" : `#${fighter.rank}`,
+                    inline: true,
+                  },
+                  { name: "Record", value: formatRecord(fighter), inline: true },
+                  { name: "Stance", value: fighter.stance, inline: true },
+                  { name: "Streak", value: fighter.streak || "N/A", inline: true },
+                  ...(fighter.belts_held
+                    ? [{ name: "Belts Held", value: fighter.belts_held, inline: false }]
+                    : []),
+                ],
               },
             ],
             flags: 64,
           },
         });
-      }
-
-      if (commandName === "unregister") {
         const discordId = interaction.member?.user?.id ?? interaction.user?.id;
         if (!discordId) return ephemeral("Could not identify you.");
 
@@ -779,7 +867,23 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
       return jsonResponse({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-          content: `📬 **Matchroom Promoter** is sliding into your DMs... Check your inbox!`,
+          embeds: [
+            {
+              color: BRAND_COLOR,
+              author: {
+                name: "Matchroom Boxing",
+                icon_url:
+                  "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+              },
+              description: `"Welcome to the big leagues, **${displayName}**. I've seen potential in you.\n\nCheck your DMs — the **Matchroom Promoter** has an offer you can't refuse."`,
+              footer: {
+                text: "Matchroom Boxing Beta • Fan-made",
+                icon_url:
+                  "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+              },
+              timestamp: new Date().toISOString(),
+            },
+          ],
           flags: 64,
         },
       });
@@ -849,7 +953,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
           data: {
-            content: `✅ Division set to **${division}**. Good luck, **${fighter.display_name}**!`,
+            content: `✅ Division locked in. **${fighter.display_name}** is now fighting at **${division}**. The Promoter is watching.`,
             flags: 64,
           },
         });
