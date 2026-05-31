@@ -1,3 +1,6 @@
+// HF Spaces Bun has SSL cert issues with discord.com — relax TLS for all bot fetch calls
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 import { Client, ActivityType } from "discord.js";
 
 const token = process.env.DISCORD_BOT_TOKEN;

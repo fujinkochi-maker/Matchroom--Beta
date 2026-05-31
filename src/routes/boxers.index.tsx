@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Filter } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import { ChampionCard } from "@/components/ChampionCard";
 import { FighterCard } from "@/components/FighterCard";
 import { FIGHTERS, getChampions, loadDataFromSupabase } from "@/data/fighters";
@@ -39,10 +39,18 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 function BoxersPage() {
+  const router = useRouter();
   const champs = getChampions();
   const [q, setQ] = useState("");
   const [division, setDivision] = useState<Division | "all">("all");
   const [filter, setFilter] = useState<Filter>("all");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    await router.invalidate();
+    setRefreshing(false);
+  };
 
   const results = useMemo(() => {
     const needle = q.toLowerCase();
@@ -97,7 +105,7 @@ function BoxersPage() {
 
       <section className="container-x pb-16">
         <div className="sticky top-16 z-30 -mx-4 border-y border-border bg-background/95 px-4 py-4 backdrop-blur md:mx-0 md:px-0">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -119,6 +127,14 @@ function BoxersPage() {
                 </option>
               ))}
             </select>
+            <button
+              onClick={refresh}
+              disabled={refreshing}
+              className="flex h-11 items-center gap-2 border border-border bg-background px-4 text-sm font-semibold uppercase tracking-wider outline-none transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {FILTERS.map((f) => (

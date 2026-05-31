@@ -771,6 +771,12 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           });
         }
 
+        // Set nickname to [ Retired ]
+        const guildId = interaction.guild_id;
+        if (guildId) {
+          setNickname(guildId, discordId, `${fighter.display_name} [ Retired ]`);
+        }
+
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
           data: {
