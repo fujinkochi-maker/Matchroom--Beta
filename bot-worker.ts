@@ -91,20 +91,35 @@ async function registerCommands() {
   ];
 
   try {
-    const res = await fetch(`https://discord.com/api/v10/applications/${appId}/commands`, {
+    const body = JSON.stringify(commands);
+    const options: any = {
+      hostname: "discord.com",
+      path: `/api/v10/applications/${appId}/commands`,
       method: "PUT",
       headers: {
         Authorization: `Bot ${botToken}`,
         "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(body),
       },
-      body: JSON.stringify(commands),
       agent: httpsAgent,
+    };
+
+    const resObj: any = await new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => resolve({ statusCode: res.statusCode, body: data }));
+      });
+      req.on("error", reject);
+      req.write(body);
+      req.end();
     });
-    if (res.ok) {
-      const data = await res.json();
+
+    if (resObj.statusCode >= 200 && resObj.statusCode < 300) {
+      const data = JSON.parse(resObj.body || "[]");
       console.log(`✅ Registered ${data.length} slash commands`);
     } else {
-      console.error("❌ Command registration failed:", await res.text());
+      console.error("❌ Command registration failed:", resObj.statusCode, resObj.body);
     }
   } catch (err) {
     console.error("❌ Command registration error:", err);
