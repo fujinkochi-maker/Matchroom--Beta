@@ -734,6 +734,9 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
             flags: 64,
           },
         });
+      }
+
+      if (commandName === "unregister") {
         const discordId = interaction.member?.user?.id ?? interaction.user?.id;
         if (!discordId) return ephemeral("Could not identify you.");
 
