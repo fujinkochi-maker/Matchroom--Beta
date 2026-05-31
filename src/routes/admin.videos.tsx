@@ -26,7 +26,6 @@ function AdminVideos() {
     const token = getAdminToken();
     if (!token) return;
     await deleteVideo({ data: { token, id } });
-    await loadDataFromSupabase();
     router.invalidate();
     toast.success("Video deleted");
   };

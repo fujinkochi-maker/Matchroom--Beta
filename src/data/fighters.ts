@@ -143,8 +143,8 @@ export async function loadDataFromSupabase() {
       supabase.from("products").select("*"),
     ]);
 
+    _fighters.length = 0;
     if (fr.data?.length) {
-      _fighters.length = 0;
       _fighters.push(...fr.data.map(rowToFighter));
 
       // Load fight history
@@ -164,9 +164,9 @@ export async function loadDataFromSupabase() {
       }
     }
 
+    _events.length = 0;
     if (ev.data?.length) {
       const { data: cards } = await supabase.from("event_cards").select("*");
-      _events.length = 0;
       _events.push(
         ...ev.data.map((e: any) =>
           rowToEvent(e, cards?.filter((c: any) => c.event_slug === e.slug) ?? []),
@@ -174,9 +174,9 @@ export async function loadDataFromSupabase() {
       );
     }
 
+    _articles.length = 0;
     if (ar.data?.length) {
       const { data: articleFighters } = await supabase.from("article_fighters").select("*");
-      _articles.length = 0;
       _articles.push(
         ...ar.data.map((a: any) =>
           rowToArticle(
@@ -189,9 +189,9 @@ export async function loadDataFromSupabase() {
       );
     }
 
+    _videos.length = 0;
     if (vi.data?.length) {
       const { data: videoFighters } = await supabase.from("video_fighters").select("*");
-      _videos.length = 0;
       _videos.push(
         ...vi.data.map((v: any) => ({
           id: v.id,
@@ -207,8 +207,8 @@ export async function loadDataFromSupabase() {
       );
     }
 
+    _products.length = 0;
     if (pr.data?.length) {
-      _products.length = 0;
       _products.push(...pr.data.map(rowToProduct));
     }
   } catch {

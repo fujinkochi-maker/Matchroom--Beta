@@ -26,7 +26,6 @@ function AdminFighters() {
     const token = getAdminToken();
     if (!token) return;
     await deleteFighter({ data: { token, username } });
-    await loadDataFromSupabase();
     router.invalidate();
     toast.success("Fighter deleted");
   };

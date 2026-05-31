@@ -26,7 +26,6 @@ function AdminEvents() {
     const token = getAdminToken();
     if (!token) return;
     await deleteEvent({ data: { token, slug } });
-    await loadDataFromSupabase();
     router.invalidate();
     toast.success("Event deleted");
   };

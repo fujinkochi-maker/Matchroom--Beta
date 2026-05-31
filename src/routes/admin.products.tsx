@@ -26,7 +26,6 @@ function AdminProducts() {
     const token = getAdminToken();
     if (!token) return;
     await deleteProduct({ data: { token, id } });
-    await loadDataFromSupabase();
     router.invalidate();
     toast.success("Product deleted");
   };

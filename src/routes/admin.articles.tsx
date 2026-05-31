@@ -26,7 +26,6 @@ function AdminArticles() {
     const token = getAdminToken();
     if (!token) return;
     await deleteArticle({ data: { token, slug } });
-    await loadDataFromSupabase();
     router.invalidate();
     toast.success("Article deleted");
   };
