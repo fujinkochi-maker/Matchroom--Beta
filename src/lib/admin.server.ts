@@ -3,6 +3,39 @@ import { z } from "zod";
 import crypto from "node:crypto";
 import { getAdminSupabase } from "./supabase-admin";
 
+const DISCORD_API = "https://discord.com/api/v10";
+
+function discordHeaders() {
+  return {
+    Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN ?? ""}`,
+    "Content-Type": "application/json",
+  };
+}
+
+async function updateDiscordNickname(discordId: string, nickname: string) {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId || !process.env.DISCORD_BOT_TOKEN) return;
+  try {
+    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordId}`, {
+      method: "PATCH",
+      headers: discordHeaders(),
+      body: JSON.stringify({ nick: nickname }),
+    });
+  } catch {
+    // nickname update is best-effort
+  }
+}
+
+function formatNickname(f: {
+  display_name: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  kos: number;
+}): string {
+  return `${f.display_name} | ${f.wins}-${f.losses}-${f.draws} | ${f.kos}KO${f.kos !== 1 ? "s" : ""}`;
+}
+
 const SESSION_SECRET =
   process.env.SESSION_SECRET ?? process.env.ADMIN_PASSWORD ?? "matchroom-admin-secret";
 
@@ -122,6 +155,17 @@ export const updateFighter = createServerFn({ method: "POST" })
     if (data.originalUsername !== data.username) {
       await supabase.from("fighters").delete().eq("username", data.originalUsername);
     }
+
+    // Update Discord nickname with new record
+    const { data: updated } = await supabase
+      .from("fighters")
+      .select("discord_id, display_name, wins, losses, draws, kos")
+      .eq("username", data.username)
+      .single();
+    if (updated?.discord_id) {
+      updateDiscordNickname(updated.discord_id, formatNickname(updated));
+    }
+
     return { ok: true };
   });
 

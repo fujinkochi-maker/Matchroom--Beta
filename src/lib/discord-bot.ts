@@ -303,6 +303,16 @@ function formatRecord(f: { wins: number; losses: number; draws: number; kos: num
   return `${f.wins}-${f.losses}-${f.draws} (${Math.round((f.kos / Math.max(f.wins, 1)) * 100)}% KO)`;
 }
 
+function formatNickname(f: {
+  display_name: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  kos: number;
+}): string {
+  return `${f.display_name} | ${f.wins}-${f.losses}-${f.draws} | ${f.kos}KO${f.kos !== 1 ? "s" : ""}`;
+}
+
 /* ── Matchroom Promoter voice ── */
 
 const BRAND_COLOR = 0xd71920;
@@ -860,7 +870,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
       // Auto-nick + promoter DM (fire-and-forget)
       const guildId = interaction.guild_id;
       if (guildId) {
-        setNickname(guildId, discordId, displayName);
+        setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
       }
       sendPromoterDM(discordId, displayName, {
         token: interaction.token,
@@ -951,6 +961,19 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           .from("fighters")
           .update({ rank: (count ?? 0) + 1 })
           .eq("discord_id", discordId);
+
+        // Refresh nickname with record
+        const guildId = interaction.guild_id;
+        if (guildId) {
+          const { data: full } = await supabase
+            .from("fighters")
+            .select("display_name, wins, losses, draws, kos")
+            .eq("discord_id", discordId)
+            .single();
+          if (full) {
+            setNickname(guildId, discordId, formatNickname(full));
+          }
+        }
 
         // Acknowledge the button click
         return jsonResponse({
