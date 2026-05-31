@@ -427,13 +427,22 @@ async function editMessage(
 
 async function setNickname(guildId: string, userId: string, nick: string) {
   try {
-    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
+    console.log(`[Nick] Setting ${userId} in ${guildId} to "${nick}"`);
+    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
       method: "PATCH",
       headers: discordHeaders(),
       body: JSON.stringify({ nick }),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      console.error(`[Nick] Failed (${res.status}):`, err);
+      return false;
+    }
+    console.log(`[Nick] Success`);
+    return true;
   } catch (err) {
-    console.error("Nickname change failed:", err);
+    console.error("[Nick] Error:", err);
+    return false;
   }
 }
 
@@ -475,23 +484,41 @@ const PRO_BOXER_ROLE = "1510665774052806780";
 
 async function addRole(guildId: string, userId: string, roleId: string) {
   try {
-    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+    console.log(`[Role] Adding ${roleId} to ${userId} in ${guildId}`);
+    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
       method: "PUT",
       headers: discordHeaders(),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      console.error(`[Role] Failed to add (${res.status}):`, err);
+      return false;
+    }
+    console.log(`[Role] Added successfully`);
+    return true;
   } catch (err) {
-    console.error(`Failed to add role ${roleId}:`, err);
+    console.error(`[Role] Error adding ${roleId}:`, err);
+    return false;
   }
 }
 
 async function removeRole(guildId: string, userId: string, roleId: string) {
   try {
-    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+    console.log(`[Role] Removing ${roleId} from ${userId} in ${guildId}`);
+    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
       method: "DELETE",
       headers: discordHeaders(),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      console.error(`[Role] Failed to remove (${res.status}):`, err);
+      return false;
+    }
+    console.log(`[Role] Removed successfully`);
+    return true;
   } catch (err) {
-    console.error(`Failed to remove role ${roleId}:`, err);
+    console.error(`[Role] Error removing ${roleId}:`, err);
+    return false;
   }
 }
 
@@ -625,8 +652,15 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           return ephemeral("You're not registered yet! Use `/register` to create your fighter.");
         }
 
-        // Check promotion (fire-and-forget)
-        checkPromotion(interaction.guild_id, discordId, fighter.wins);
+        // Check promotion
+        if (fighter.wins >= 3) {
+          console.log(`[Stats] Checking promotion for ${discordId}: ${fighter.wins} wins`);
+          const promoGuildId = fighter.guild_id || interaction.guild_id;
+          if (promoGuildId) {
+            await addRole(promoGuildId, discordId, PRO_BOXER_ROLE);
+            await removeRole(promoGuildId, discordId, AMATEUR_ROLE);
+          }
+        }
 
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
@@ -817,10 +851,19 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           });
         }
 
-        // Set nickname to [ Retired ]
+        // Set nickname to [ Retired ] + remove roles
         const unregGuildId = fighter.guild_id || interaction.guild_id;
         if (unregGuildId) {
           setNickname(unregGuildId, discordId, `${fighter.display_name} [ Retired ]`);
+          // Remove division role if set
+          if (fighter.division) {
+            const roleId = DIVISION_ROLES[fighter.division];
+            if (roleId) removeRole(unregGuildId, discordId, roleId);
+          }
+          // Remove Amateur role
+          removeRole(unregGuildId, discordId, AMATEUR_ROLE);
+          // Remove Pro Boxer role if present
+          removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
         }
 
         return jsonResponse({
@@ -921,11 +964,13 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         });
       }
 
-      // Auto-nick + promoter DM (fire-and-forget)
+      // Auto-nick + promoter DM
       const guildId = interaction.guild_id;
       if (guildId) {
-        setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
+        console.log(`[Register] Setting nickname for ${discordId} in guild ${guildId}`);
+        await setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
       }
+      console.log(`[Register] Sending promoter DM to ${discordId}`);
       sendPromoterDM(discordId, displayName, {
         token: interaction.token,
         application_id: interaction.application_id,
@@ -1004,9 +1049,14 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         // Assign division role + Amateur role
         const roleGuildId = fighter.guild_id || interaction.guild_id;
         if (roleGuildId) {
+          console.log(`[Division] Assigning roles for ${discordId} in guild ${roleGuildId}`);
           const roleId = DIVISION_ROLES[division];
-          if (roleId) addRole(roleGuildId, discordId, roleId);
-          addRole(roleGuildId, discordId, AMATEUR_ROLE);
+          if (roleId) {
+            console.log(`[Division] Adding division role: ${roleId}`);
+            await addRole(roleGuildId, discordId, roleId);
+          }
+          console.log(`[Division] Adding amateur role`);
+          await addRole(roleGuildId, discordId, AMATEUR_ROLE);
         }
 
         // Refresh nickname with record
@@ -1018,7 +1068,8 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
             .eq("discord_id", discordId)
             .single();
           if (full) {
-            setNickname(guildId, discordId, formatNickname(full));
+            console.log(`[Division] Updating nickname for ${discordId}`);
+            await setNickname(guildId, discordId, formatNickname(full));
           }
         }
 
