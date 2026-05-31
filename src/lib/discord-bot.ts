@@ -2,8 +2,6 @@ import { verifyKey } from "discord-interactions";
 import {
   InteractionType,
   InteractionResponseType,
-  type APIInteraction,
-  type APIModalInteractionResponseCallbackData,
 } from "discord-api-types/v10";
 import { createClient } from "@supabase/supabase-js";
 import satori from "satori";
@@ -21,8 +19,6 @@ const DIVISIONS = [
   "Heavyweight",
 ] as const;
 
-/* ---------- Font cache (fetched once) ---------- */
-
 let _interFont: ArrayBuffer | null = null;
 
 async function getFont(): Promise<ArrayBuffer> {
@@ -35,16 +31,12 @@ async function getFont(): Promise<ArrayBuffer> {
   return _interFont;
 }
 
-/* ---------- Supabase helpers ---------- */
-
 function getSupabaseAdmin() {
   const url = process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) throw new Error("Supabase env vars not set");
   return createClient(url, key);
 }
-
-/* ---------- Image generation ---------- */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function generateStatCard(fighter: any): Promise<Buffer> {
@@ -66,15 +58,12 @@ async function generateStatCard(fighter: any): Promise<Buffer> {
           overflow: "hidden",
         },
         children: [
-          // Accent bar
           { type: "div", props: { style: { height: 4, backgroundColor: "#dc2626" } } },
-          // Body
           {
             type: "div",
             props: {
               style: { flex: 1, display: "flex", padding: "24px 28px", gap: 28 },
               children: [
-                // Avatar placeholder
                 {
                   type: "div",
                   props: {
@@ -103,7 +92,6 @@ async function generateStatCard(fighter: any): Promise<Buffer> {
                     },
                   },
                 },
-                // Info
                 {
                   type: "div",
                   props: {
@@ -157,7 +145,6 @@ async function generateStatCard(fighter: any): Promise<Buffer> {
                           children: fighter.rank === 0 ? "★ Champion" : `Ranked #${fighter.rank}`,
                         },
                       },
-                      // Stats grid
                       {
                         type: "div",
                         props: {
@@ -209,7 +196,6 @@ async function generateStatCard(fighter: any): Promise<Buffer> {
                           })),
                         },
                       },
-                      // Belts
                       ...(fighter.belts_held
                         ? [
                             {
@@ -270,8 +256,6 @@ async function uploadStatCard(discordId: string, png: Buffer): Promise<string> {
   return urlData.publicUrl;
 }
 
-/* ---------- Discord response helpers ---------- */
-
 function jsonResponse(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -293,337 +277,334 @@ function getOptionValue(
   return options?.find((o) => o.name === name)?.value;
 }
 
-function formatRecord(f: {
-  wins: number;
-  losses: number;
-  draws: number;
-  kos: number;
-}): string {
+function formatRecord(f: { wins: number; losses: number; draws: number; kos: number }): string {
   return `${f.wins}-${f.losses}-${f.draws} (${Math.round((f.kos / Math.max(f.wins, 1)) * 100)}% KO)`;
 }
 
-/* ---------- Main handler ---------- */
+export async function handleDiscordInteraction(request: Request): Promise<Response | null> {
+  const url = new URL(request.url);
 
-export default defineEventHandler(async (event) => {
-  const publicKey = process.env.DISCORD_PUBLIC_KEY;
-  if (!publicKey) return jsonResponse({ error: "DISCORD_PUBLIC_KEY not set" }, 500);
-
-  // Verify signature
-  const signature = getHeader(event, "x-signature-ed25519") ?? "";
-  const timestamp = getHeader(event, "x-signature-timestamp") ?? "";
-  const rawBody = await readRawBody(event, "utf8");
-  if (!rawBody) return jsonResponse({ error: "Empty body" }, 400);
-
-  const isValid = await verifyKey(rawBody, signature, timestamp, publicKey);
-  if (!isValid) return jsonResponse({ error: "Invalid signature" }, 401);
-
-  const interaction: APIInteraction = JSON.parse(rawBody);
-
-  // PING
-  if (interaction.type === InteractionType.Ping) {
-    return jsonResponse({ type: InteractionResponseType.Pong });
+  // GET /discord → redirect to invite
+  if (request.method === "GET" && url.pathname === "/discord") {
+    return Response.redirect("https://discord.gg/PB8vesEaTs", 302);
   }
 
-  // Application command
-  if (interaction.type === InteractionType.ApplicationCommand) {
-    const commandName = interaction.data.name;
+  // POST /discord-interaction → handle interaction
+  if (request.method === "POST" && url.pathname === "/discord-interaction") {
+    const publicKey = process.env.DISCORD_PUBLIC_KEY;
+    if (!publicKey) return jsonResponse({ error: "DISCORD_PUBLIC_KEY not set" }, 500);
 
-    if (commandName === "register") {
-      const modal: APIModalInteractionResponseCallbackData = {
-        title: "Register as a Fighter",
-        custom_id: "register_modal",
-        components: [
-          {
-            type: 1,
+    const signature = request.headers.get("x-signature-ed25519") ?? "";
+    const timestamp = request.headers.get("x-signature-timestamp") ?? "";
+    const rawBody = await request.text();
+    if (!rawBody) return jsonResponse({ error: "Empty body" }, 400);
+
+    const isValid = await verifyKey(rawBody, signature, timestamp, publicKey);
+    if (!isValid) return jsonResponse({ error: "Invalid signature" }, 401);
+
+    const interaction = JSON.parse(rawBody);
+
+    // PING
+    if (interaction.type === InteractionType.Ping) {
+      return jsonResponse({ type: InteractionResponseType.Pong });
+    }
+
+    // Application command
+    if (interaction.type === InteractionType.ApplicationCommand) {
+      const commandName = interaction.data.name;
+
+      if (commandName === "register") {
+        return jsonResponse({
+          type: InteractionResponseType.Modal,
+          data: {
+            title: "Register as a Fighter",
+            custom_id: "register_modal",
             components: [
               {
-                type: 4,
-                custom_id: "display_name",
-                label: "Display Name",
-                style: 1,
-                placeholder: "e.g. Mike Tyson",
-                min_length: 1,
-                max_length: 100,
-                required: true,
+                type: 1,
+                components: [
+                  {
+                    type: 4,
+                    custom_id: "display_name",
+                    label: "Display Name",
+                    style: 1,
+                    placeholder: "e.g. Mike Tyson",
+                    min_length: 1,
+                    max_length: 100,
+                    required: true,
+                  },
+                ],
+              },
+              {
+                type: 1,
+                components: [
+                  {
+                    type: 4,
+                    custom_id: "username",
+                    label: "Username",
+                    style: 1,
+                    placeholder: "e.g. iron_mike",
+                    min_length: 1,
+                    max_length: 50,
+                    required: true,
+                  },
+                ],
+              },
+              {
+                type: 1,
+                components: [
+                  {
+                    type: 3,
+                    custom_id: "division",
+                    placeholder: "Choose a division",
+                    options: DIVISIONS.map((d) => ({ label: d, value: d })),
+                    min_values: 1,
+                    max_values: 1,
+                  },
+                ],
               },
             ],
           },
-          {
-            type: 1,
-            components: [
+        });
+      }
+
+      if (commandName === "stats") {
+        const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+        if (!discordId)
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: { content: "Could not identify you.", flags: 64 },
+          });
+
+        const supabase = getSupabaseAdmin();
+        const { data: fighter } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("discord_id", discordId)
+          .single();
+
+        if (!fighter) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+              content: "You're not registered yet! Use `/register` to create your fighter.",
+              flags: 64,
+            },
+          });
+        }
+
+        try {
+          const png = await generateStatCard(fighter);
+          const imageUrl = await uploadStatCard(discordId, png);
+
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+              embeds: [{ image: { url: imageUrl }, color: 0xdc2626 }],
+              flags: 64,
+            },
+          });
+        } catch (err) {
+          return jsonResponse({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: { content: `Error generating stats: ${(err as Error).message}`, flags: 64 },
+          });
+        }
+      }
+
+      if (commandName === "rankings") {
+        const division = getOptionValue(interaction.data.options, "division");
+        if (!division) return ephemeral("Please choose a division.");
+
+        const supabase = getSupabaseAdmin();
+        const { data: fighters, error } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("division", division)
+          .order("rank", { ascending: true })
+          .limit(10);
+
+        if (error || !fighters?.length) {
+          return ephemeral(`No fighters found in **${division}**.`);
+        }
+
+        const lines = fighters.map((f: any) => {
+          const rank = f.rank === 0 ? "👑" : `#${f.rank}`;
+          const record = `${f.wins}-${f.losses}-${f.draws}`;
+          return `${rank} **${f.displayName}** — ${record} (${f.username})`;
+        });
+
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            embeds: [
               {
-                type: 4,
-                custom_id: "username",
-                label: "Username",
-                style: 1,
-                placeholder: "e.g. iron_mike",
-                min_length: 1,
-                max_length: 50,
-                required: true,
+                title: `🏆 ${division} Rankings`,
+                description: lines.join("\n"),
+                color: 0xdc2626,
               },
             ],
+            flags: 64,
           },
-          {
-            type: 1,
-            components: [
+        });
+      }
+
+      if (commandName === "champions") {
+        const supabase = getSupabaseAdmin();
+        const { data: champs, error } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("rank", 0)
+          .order("division", { ascending: true });
+
+        if (error || !champs?.length) {
+          return ephemeral("No champions found.");
+        }
+
+        const lines = champs.map((c: any) => `👑 **${c.displayName}** — ${c.division}`);
+
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            embeds: [
               {
-                type: 3,
-                custom_id: "division",
-                placeholder: "Choose a division",
-                options: DIVISIONS.map((d) => ({ label: d, value: d })),
-                min_values: 1,
-                max_values: 1,
+                title: "Current Champions",
+                description: lines.join("\n"),
+                color: 0xdc2626,
               },
             ],
+            flags: 64,
           },
-        ],
+        });
+      }
+
+      if (commandName === "fighter") {
+        const username = getOptionValue(interaction.data.options, "username");
+        if (!username) return ephemeral("Please provide a username.");
+
+        const supabase = getSupabaseAdmin();
+        const { data: fighter, error } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("username", username)
+          .single();
+
+        if (error || !fighter) {
+          return ephemeral(`Fighter **${username}** not found.`);
+        }
+
+        const rank = fighter.rank === 0 ? "**★ Champion**" : `Ranked #${fighter.rank}`;
+        const record = formatRecord(fighter);
+        const belts = fighter.belts_held ? `\n**Belts Held:** ${fighter.belts_held}` : "";
+
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            embeds: [
+              {
+                title: `${fighter.displayName}`,
+                description: [
+                  `**Division:** ${fighter.division}`,
+                  `**Rank:** ${rank}`,
+                  `**Record:** ${record}`,
+                  `**Stance:** ${fighter.stance}`,
+                  `**Streak:** ${fighter.streak || "N/A"}`,
+                  belts,
+                ].join("\n"),
+                color: 0xdc2626,
+                footer: { text: `@${fighter.username}` },
+              },
+            ],
+            flags: 64,
+          },
+        });
+      }
+    }
+
+    // Modal submit
+    if (
+      interaction.type === InteractionType.ModalSubmit &&
+      interaction.data.custom_id === "register_modal"
+    ) {
+      const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+      if (!discordId) return jsonResponse({ error: "No user" }, 400);
+
+      const components = interaction.data.components;
+      const getValue = (customId: string) => {
+        const row = components.find((c) => c.components.some((cc) => cc.custom_id === customId));
+        const comp = row?.components.find((cc) => cc.custom_id === customId);
+        return comp && "value" in comp ? comp.value : "";
       };
 
-      return jsonResponse({
-        type: InteractionResponseType.Modal,
-        data: modal,
-      });
-    }
+      const displayName = getValue("display_name");
+      const username = getValue("username");
+      const division = getValue("division");
 
-    if (commandName === "stats") {
-      const discordId = interaction.member?.user?.id ?? interaction.user?.id;
-      if (!discordId)
+      if (!displayName || !username || !division) {
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
-          data: { content: "Could not identify you.", flags: 64 },
-        });
-
-      const supabase = getSupabaseAdmin();
-      const { data: fighter } = await supabase
-        .from("fighters")
-        .select("*")
-        .eq("discord_id", discordId)
-        .single();
-
-      if (!fighter) {
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            content: "You're not registered yet! Use `/register` to create your fighter.",
-            flags: 64,
-          },
+          data: { content: "All fields are required.", flags: 64 },
         });
       }
 
-      try {
-        const png = await generateStatCard(fighter);
-        const imageUrl = await uploadStatCard(discordId, png);
-
+      if (!(DIVISIONS as readonly string[]).includes(division)) {
         return jsonResponse({
           type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            embeds: [{ image: { url: imageUrl }, color: 0xdc2626 }],
-            flags: 64,
-          },
-        });
-      } catch (err) {
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: { content: `Error generating stats: ${(err as Error).message}`, flags: 64 },
+          data: { content: "Invalid division.", flags: 64 },
         });
       }
-    }
-
-    if (commandName === "rankings") {
-      const division = getOptionValue(interaction.data.options, "division");
-      if (!division) return ephemeral("Please choose a division.");
 
       const supabase = getSupabaseAdmin();
-      const { data: fighters, error } = await supabase
+
+      const { data: existing } = await supabase
         .from("fighters")
-        .select("*")
-        .eq("division", division)
-        .order("rank", { ascending: true })
-        .limit(10);
-
-      if (error || !fighters?.length) {
-        return ephemeral(`No fighters found in **${division}**.`);
-      }
-
-      const lines = fighters.map((f: any) => {
-        const rank = f.rank === 0 ? "👑" : `#${f.rank}`;
-        const record = `${f.wins}-${f.losses}-${f.draws}`;
-        return `${rank} **${f.displayName}** — ${record} (${f.username})`;
-      });
-
-      return jsonResponse({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: {
-          embeds: [
-            {
-              title: `🏆 ${division} Rankings`,
-              description: lines.join("\n"),
-              color: 0xdc2626,
-            },
-          ],
-          flags: 64,
-        },
-      });
-    }
-
-    if (commandName === "champions") {
-      const supabase = getSupabaseAdmin();
-      const { data: champs, error } = await supabase
-        .from("fighters")
-        .select("*")
-        .eq("rank", 0)
-        .order("division", { ascending: true });
-
-      if (error || !champs?.length) {
-        return ephemeral("No champions found.");
-      }
-
-      const lines = champs.map((c: any) => `👑 **${c.displayName}** — ${c.division}`);
-
-      return jsonResponse({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: {
-          embeds: [
-            {
-              title: "Current Champions",
-              description: lines.join("\n"),
-              color: 0xdc2626,
-            },
-          ],
-          flags: 64,
-        },
-      });
-    }
-
-    if (commandName === "fighter") {
-      const username = getOptionValue(interaction.data.options, "username");
-      if (!username) return ephemeral("Please provide a username.");
-
-      const supabase = getSupabaseAdmin();
-      const { data: fighter, error } = await supabase
-        .from("fighters")
-        .select("*")
+        .select("username")
         .eq("username", username)
-        .single();
-
-      if (error || !fighter) {
-        return ephemeral(`Fighter **${username}** not found.`);
+        .maybeSingle();
+      if (existing) {
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: { content: `Username "${username}" is already taken. Choose another.`, flags: 64 },
+        });
       }
 
-      const rank = fighter.rank === 0 ? "**★ Champion**" : `Ranked #${fighter.rank}`;
-      const record = formatRecord(fighter);
-      const belts = fighter.belts_held
-        ? `\n**Belts Held:** ${fighter.belts_held}`
-        : "";
+      const { error } = await supabase.from("fighters").insert({
+        username,
+        display_name: displayName,
+        nickname: "",
+        division,
+        rank: 999,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        kos: 0,
+        stance: "Orthodox",
+        belts: 0,
+        belts_held: "",
+        debut: new Date().toISOString().split("T")[0],
+        streak: "",
+        bio: "",
+        discord_id: discordId,
+      });
+
+      if (error) {
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: { content: `Registration failed: ${error.message}`, flags: 64 },
+        });
+      }
 
       return jsonResponse({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-          embeds: [
-            {
-              title: `${fighter.displayName}`,
-              description: [
-                `**Division:** ${fighter.division}`,
-                `**Rank:** ${rank}`,
-                `**Record:** ${record}`,
-                `**Stance:** ${fighter.stance}`,
-                `**Streak:** ${fighter.streak || "N/A"}`,
-                belts,
-              ].join("\n"),
-              color: 0xdc2626,
-              footer: { text: `@${fighter.username}` },
-            },
-          ],
+          content: `✅ Registered as **${displayName}** (${division})! Use \`/stats\` to view your profile. An admin will add your photo and update your rank.`,
           flags: 64,
         },
       });
     }
 
-
+    return jsonResponse({ error: "Unknown interaction type" }, 400);
   }
 
-  // Modal submit
-  if (
-    interaction.type === InteractionType.ModalSubmit &&
-    interaction.data.custom_id === "register_modal"
-  ) {
-    const discordId = interaction.member?.user?.id ?? interaction.user?.id;
-    if (!discordId) return jsonResponse({ error: "No user" }, 400);
-
-    const components = interaction.data.components;
-    const getValue = (customId: string) => {
-      const row = components.find((c) => c.components.some((cc) => cc.custom_id === customId));
-      const comp = row?.components.find((cc) => cc.custom_id === customId);
-      return comp && "value" in comp ? comp.value : "";
-    };
-
-    const displayName = getValue("display_name");
-    const username = getValue("username");
-    const division = getValue("division");
-
-    if (!displayName || !username || !division) {
-      return jsonResponse({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: { content: "All fields are required.", flags: 64 },
-      });
-    }
-
-    if (!(DIVISIONS as readonly string[]).includes(division)) {
-      return jsonResponse({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: { content: "Invalid division.", flags: 64 },
-      });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // Check if username already taken
-    const { data: existing } = await supabase
-      .from("fighters")
-      .select("username")
-      .eq("username", username)
-      .maybeSingle();
-    if (existing) {
-      return jsonResponse({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: { content: `Username "${username}" is already taken. Choose another.`, flags: 64 },
-      });
-    }
-
-    const { error } = await supabase.from("fighters").insert({
-      username,
-      display_name: displayName,
-      nickname: "",
-      division,
-      rank: 999,
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      kos: 0,
-      stance: "Orthodox",
-      belts: 0,
-      belts_held: "",
-      debut: new Date().toISOString().split("T")[0],
-      streak: "",
-      bio: "",
-      discord_id: discordId,
-    });
-
-    if (error) {
-      return jsonResponse({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: { content: `Registration failed: ${error.message}`, flags: 64 },
-      });
-    }
-
-    return jsonResponse({
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: {
-        content: `✅ Registered as **${displayName}** (${division})! Use \`/stats\` to view your profile. An admin will add your photo and update your rank.`,
-        flags: 64,
-      },
-    });
-  }
-
-  return jsonResponse({ error: "Unknown interaction type" }, 400);
-});
+  return null;
+}

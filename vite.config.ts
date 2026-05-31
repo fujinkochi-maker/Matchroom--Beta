@@ -10,8 +10,5 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
-  nitro: {
-    preset: process.env.NITRO_PRESET ?? "cloudflare-module",
-    serverDir: "server",
-  },
+  nitro: { preset: process.env.NITRO_PRESET ?? "cloudflare-module" },
 });
