@@ -499,36 +499,42 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         const discordId = interaction.member?.user?.id ?? interaction.user?.id;
         if (!discordId) return ephemeral("Could not identify you.");
 
-        (async () => {
-          try {
-            const supabase = getSupabaseAdmin();
-            const { data: fighter } = await supabase
-              .from("fighters")
-              .select("*")
-              .eq("discord_id", discordId)
-              .single();
-            if (!fighter) {
-              await sendFollowUp(interaction, {
-                content: "You're not registered yet! Use `/register` to create your fighter.",
-                flags: 64,
-              });
-              return;
-            }
-            const png = await generateStatCard(fighter);
-            const imageUrl = await uploadStatCard(discordId, png);
-            await sendFollowUp(interaction, {
-              embeds: [{ image: { url: imageUrl }, color: 0xdc2626 }],
-              flags: 64,
-            });
-          } catch (err) {
-            await sendFollowUp(interaction, {
-              content: `Error generating stats: ${(err as Error).message}`,
-              flags: 64,
-            });
-          }
-        })();
+        const supabase = getSupabaseAdmin();
+        const { data: fighter } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("discord_id", discordId)
+          .single();
 
-        return deferred();
+        if (!fighter) {
+          return ephemeral("You're not registered yet! Use `/register` to create your fighter.");
+        }
+
+        const rank = fighter.rank === 0 ? "**★ Champion**" : `Ranked #${fighter.rank}`;
+        const record = formatRecord(fighter);
+        const belts = fighter.belts_held ? `\n**Belts Held:** ${fighter.belts_held}` : "";
+
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            embeds: [
+              {
+                title: `${fighter.display_name}`,
+                description: [
+                  `**Division:** ${fighter.division}`,
+                  `**Rank:** ${rank}`,
+                  `**Record:** ${record}`,
+                  `**Stance:** ${fighter.stance}`,
+                  `**Streak:** ${fighter.streak || "N/A"}`,
+                  belts,
+                ].join("\n"),
+                color: 0xdc2626,
+                footer: { text: `@${fighter.username}` },
+              },
+            ],
+            flags: 64,
+          },
+        });
       }
 
       if (commandName === "rankings") {
