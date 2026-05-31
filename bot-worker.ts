@@ -1,7 +1,11 @@
 // HF Spaces Bun has SSL cert issues with discord.com — relax TLS for all bot fetch calls
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
+import https from "https";
 import { Client, ActivityType } from "discord.js";
+
+// HF Spaces: HTTPS agent that doesn't verify certs
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const token = process.env.DISCORD_BOT_TOKEN;
 if (!token) {
@@ -94,8 +98,8 @@ async function registerCommands() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(commands),
-      tls: { rejectUnauthorized: false },
-    } as any);
+      agent: httpsAgent,
+    });
     if (res.ok) {
       const data = await res.json();
       console.log(`✅ Registered ${data.length} slash commands`);

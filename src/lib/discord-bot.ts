@@ -1,8 +1,12 @@
 import { verifyKey } from "discord-interactions";
 import { InteractionType, InteractionResponseType } from "discord-api-types/v10";
 import { createClient } from "@supabase/supabase-js";
+import https from "https";
 
 const DISCORD_API = "https://discord.com/api/v10";
+
+// HF Spaces: HTTPS agent that doesn't verify certs
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const DIVISIONS = [
   "Flyweight",
@@ -390,8 +394,8 @@ async function createDM(userId: string): Promise<string> {
     method: "POST",
     headers: discordHeaders(),
     body: JSON.stringify({ recipient_id: userId }),
-    tls: { rejectUnauthorized: false },
-  } as any);
+    agent: httpsAgent,
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error(`Discord createDM: ${res.status} ${err.message}`);
@@ -407,8 +411,8 @@ async function sendMessage(channelId: string, content: string, components?: any[
     method: "POST",
     headers: discordHeaders(),
     body: JSON.stringify(body),
-    tls: { rejectUnauthorized: false },
-  } as any);
+    agent: httpsAgent,
+  });
 }
 
 async function editMessage(
@@ -424,8 +428,8 @@ async function editMessage(
     method: "PATCH",
     headers: discordHeaders(),
     body: JSON.stringify(body),
-    tls: { rejectUnauthorized: false },
-  } as any);
+    agent: httpsAgent,
+  });
 }
 
 async function setNickname(guildId: string, userId: string, nick: string) {
@@ -435,8 +439,8 @@ async function setNickname(guildId: string, userId: string, nick: string) {
       method: "PATCH",
       headers: discordHeaders(),
       body: JSON.stringify({ nick }),
-      tls: { rejectUnauthorized: false },
-    } as any);
+      agent: httpsAgent,
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
       console.error(`[Nick] Failed (${res.status}):`, err);
@@ -492,8 +496,8 @@ async function addRole(guildId: string, userId: string, roleId: string) {
     const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
       method: "PUT",
       headers: discordHeaders(),
-      tls: { rejectUnauthorized: false },
-    } as any);
+      agent: httpsAgent,
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
       console.error(`[Role] Failed to add (${res.status}):`, err);
@@ -513,8 +517,8 @@ async function removeRole(guildId: string, userId: string, roleId: string) {
     const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
       method: "DELETE",
       headers: discordHeaders(),
-      tls: { rejectUnauthorized: false },
-    } as any);
+      agent: httpsAgent,
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
       console.error(`[Role] Failed to remove (${res.status}):`, err);
