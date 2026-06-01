@@ -326,14 +326,89 @@ function rowToProduct(row: any): Product {
 
 export async function loadDataFromSupabase() {
   try {
+    for (const key of Object.keys(_lastLoaded)) delete _lastLoaded[key];
+
     await Promise.all([
-      ensureFightersLoaded(),
-      ensureEventsLoaded(),
-      ensureArticlesLoaded(),
-      ensureVideosLoaded(),
-      ensureProductsLoaded(),
+      _loadTable(
+        "fighters",
+        _fighters,
+        rowToFighter,
+        {
+          table: "fight_history",
+          on(history: any[]) {
+            for (const f of _fighters) {
+              f.history = history
+                .filter((h: any) => h.fighter_username === f.username)
+                .map((h: any) => ({
+                  opponent: h.opponent,
+                  result: h.result as "W" | "L" | "D",
+                  method: h.method,
+                  date: h.date,
+                  event: h.event,
+                }));
+            }
+          },
+        },
+        "fighters",
+      ),
+      _loadTable(
+        "events",
+        _events,
+        rowToEventFromRow,
+        {
+          table: "event_cards",
+          on(cards: any[]) {
+            for (let i = 0; i < _events.length; i++) {
+              const e = _events[i];
+              const ec = cards.filter((c: any) => c.event_slug === e.slug);
+              _events[i] = {
+                ...e,
+                card: ec.map((c: any) => ({ a: c.fighter_a, b: c.fighter_b, weight: c.weight })),
+              };
+            }
+          },
+        },
+        "events",
+      ),
+      _loadTable(
+        "articles",
+        _articles,
+        rowToArticleFromRow,
+        {
+          table: "article_fighters",
+          on(af: any[]) {
+            for (let i = 0; i < _articles.length; i++) {
+              const a = _articles[i];
+              const fighters = af
+                .filter((f: any) => f.article_slug === a.slug)
+                .map((f: any) => f.fighter_username);
+              _articles[i] = { ...a, fighters };
+            }
+          },
+        },
+        "articles",
+      ),
+      _loadTable(
+        "videos",
+        _videos,
+        rowToVideoFromRow,
+        {
+          table: "video_fighters",
+          on(vf: any[]) {
+            for (let i = 0; i < _videos.length; i++) {
+              const v = _videos[i];
+              const fighters = vf
+                .filter((f: any) => f.video_id === v.id)
+                .map((f: any) => f.fighter_username);
+              _videos[i] = { ...v, fighters };
+            }
+          },
+        },
+        "videos",
+      ),
+      _loadTable("products", _products, rowToProductFromRow, undefined, "products"),
     ]);
   } catch {
-    // Data will be loaded on next navigation if Supabase becomes available
+    // Data will load on next access if Supabase is unavailable
   }
 }

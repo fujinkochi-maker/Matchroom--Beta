@@ -1,4 +1,3 @@
-import https from "https";
 import http from "http";
 import { Client, ActivityType } from "discord.js";
 
@@ -9,39 +8,6 @@ if (!token) {
 }
 
 let handleDiscordInteraction: (req: Request) => Promise<Response | null>;
-
-function discordFetch(
-  url: string,
-  options: { method: string; headers?: Record<string, string>; body?: string },
-): Promise<Response> {
-  const u = new URL(url);
-  return new Promise((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: u.hostname,
-        path: u.pathname + u.search,
-        method: options.method,
-        headers: options.headers,
-        rejectUnauthorized: false,
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () =>
-          resolve(
-            new Response(data, {
-              status: res.statusCode,
-              statusText: res.statusMessage,
-            }),
-          ),
-        );
-      },
-    );
-    req.on("error", reject);
-    if (options.body) req.write(options.body);
-    req.end();
-  });
-}
 
 async function registerCommands() {
   const appId = process.env.DISCORD_APPLICATION_ID;
@@ -116,44 +82,49 @@ async function registerCommands() {
     },
   ];
 
-  try {
-    const body = JSON.stringify(commands);
-    const resObj = await new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
-      const req = https.request(
-        {
-          hostname: "discord.com",
-          path: `/api/v10/applications/${appId}/commands`,
-          method: "PUT",
-          headers: {
-            Authorization: `Bot ${botToken}`,
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(body),
-          },
-          rejectUnauthorized: false,
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const body = JSON.stringify(commands);
+      const res = await fetch(`https://discord.com/api/v10/applications/${appId}/commands`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bot ${botToken}`,
+          "Content-Type": "application/json",
         },
-        (res) => {
-          let data = "";
-          res.on("data", (chunk) => (data += chunk));
-          res.on("end", () => resolve({ statusCode: res.statusCode, body: data }));
-        },
+        body,
+      });
+      const data = await res.json().catch(() => []);
+      if (res.ok) {
+        console.log("Registered " + (Array.isArray(data) ? data.length : 0) + " slash commands");
+        return;
+      }
+      console.error("Command registration failed:", res.status, JSON.stringify(data));
+      return;
+    } catch (err) {
+      const isLast = attempt === maxRetries;
+      console.log(
+        `[Retry] registerCommands attempt ${attempt}/${maxRetries} failed: ${err instanceof Error ? err.message : err}${isLast ? "" : ", retrying in " + 1000 * 2 ** (attempt - 1) + "ms"}`,
       );
-      req.on("error", reject);
-      req.write(body);
-      req.end();
-    });
-
-    if (resObj.statusCode >= 200 && resObj.statusCode < 300) {
-      const data = JSON.parse(resObj.body || "[]");
-      console.log("Registered " + data.length + " slash commands");
-    } else {
-      console.error("Command registration failed:", resObj.statusCode, resObj.body);
+      if (isLast) {
+        console.error("Command registration error:", err);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
     }
-  } catch (err) {
-    console.error("Command registration error:", err);
   }
 }
 
 async function main() {
+  // Preload the fighter cache so read commands are instant
+  try {
+    const { loadDataFromSupabase } = await import("./src/data/fighters");
+    await loadDataFromSupabase();
+    console.log("Fighter cache loaded");
+  } catch (err) {
+    console.error("Failed to load fighter cache:", err);
+  }
+
   const mod = await import("./src/lib/discord-bot");
   handleDiscordInteraction = mod.handleDiscordInteraction;
 
