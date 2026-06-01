@@ -1,6 +1,8 @@
-FROM oven/bun:latest
+FROM node:22-bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates --fresh
+RUN npm install -g tsx
 WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+COPY package.json ./
+RUN npm install
 COPY . .
-CMD ["bun", "run", "bot"]
+CMD ["tsx", "bot-worker.ts"]

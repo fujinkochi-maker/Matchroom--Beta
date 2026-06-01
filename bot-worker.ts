@@ -1,4 +1,5 @@
 import https from "https";
+import http from "http";
 import { Client, ActivityType } from "discord.js";
 
 const token = process.env.DISCORD_BOT_TOKEN;
@@ -9,13 +10,44 @@ if (!token) {
 
 let handleDiscordInteraction: (req: Request) => Promise<Response | null>;
 
+function discordFetch(
+  url: string,
+  options: { method: string; headers?: Record<string, string>; body?: string },
+): Promise<Response> {
+  const u = new URL(url);
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        method: options.method,
+        headers: options.headers,
+        rejectUnauthorized: false,
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () =>
+          resolve(
+            new Response(data, {
+              status: res.statusCode,
+              statusText: res.statusMessage,
+            }),
+          ),
+        );
+      },
+    );
+    req.on("error", reject);
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
 async function registerCommands() {
   const appId = process.env.DISCORD_APPLICATION_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
   if (!appId || !botToken) {
-    console.error(
-      "⚠️ Cannot register commands: DISCORD_APPLICATION_ID or DISCORD_BOT_TOKEN not set",
-    );
+    console.error("Cannot register commands: DISCORD_APPLICATION_ID or DISCORD_BOT_TOKEN not set");
     return;
   }
   const commands = [
@@ -112,57 +144,66 @@ async function registerCommands() {
 
     if (resObj.statusCode >= 200 && resObj.statusCode < 300) {
       const data = JSON.parse(resObj.body || "[]");
-      console.log(`✅ Registered ${data.length} slash commands`);
+      console.log("Registered " + data.length + " slash commands");
     } else {
-      console.error("❌ Command registration failed:", resObj.statusCode, resObj.body);
+      console.error("Command registration failed:", resObj.statusCode, resObj.body);
     }
   } catch (err) {
-    console.error("❌ Command registration error:", err);
+    console.error("Command registration error:", err);
   }
 }
 
 async function main() {
-  // Lazy-import the Discord interaction handler (once, no cold start)
   const mod = await import("./src/lib/discord-bot");
   handleDiscordInteraction = mod.handleDiscordInteraction;
 
-  // HF Spaces blocks WebSocket connections — skip gateway, run HTTP-only
   const isHfSpace = !!process.env.SPACE_ID;
 
   if (!isHfSpace) {
-    // Start gateway connection (discord.js keeps the bot online)
     const client = new Client({ intents: [] });
     client.once("ready", () => {
-      console.log(`✅ Bot online as ${client.user?.tag}`);
+      console.log("Bot online as " + client.user?.tag);
       client.user?.setPresence({
         activities: [{ name: "Matchroom Boxing Beta", type: ActivityType.Playing }],
         status: "online",
       });
     });
-    client.on("error", (err) => console.error("❌ Client error:", err));
-    client.login(token).catch((err) => console.error("❌ Login failed:", err));
+    client.on("error", (err) => console.error("Client error:", err));
+    client.login(token).catch((err) => console.error("Login failed:", err));
   } else {
-    console.log("✅ Gateway skipped (HF Spaces — HTTP-only mode)");
+    console.log("Gateway skipped (HF Spaces -- HTTP-only mode)");
   }
 
-  // HTTP server: health check (GET) + Discord interactions (POST)
-  Bun.serve({
-    port: 7860,
-    async fetch(request) {
-      if (request.method === "POST") {
-        const response = await handleDiscordInteraction(request);
-        if (response) return response;
+  // HTTP server using Node.js http module (Bun.serve not available in Node.js)
+  const server = http.createServer(async (req, res) => {
+    if (req.method === "POST") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const body = Buffer.concat(chunks).toString();
+      const request = new Request("http://localhost" + req.url, {
+        method: req.method,
+        headers: Object.fromEntries(Object.entries(req.headers).map(([k, v]) => [k, String(v)])),
+        body: body || undefined,
+      });
+      const response = await handleDiscordInteraction(request);
+      if (response) {
+        res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+        res.end(await response.text());
+        return;
       }
-      return new Response("OK", { status: 200 });
-    },
+    }
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("OK");
   });
-  console.log("✅ Worker ready on :7860");
 
-  // Register slash commands on startup (fire-and-forget)
+  server.listen(7860, () => {
+    console.log("Worker ready on :7860");
+  });
+
   registerCommands();
 }
 
 main().catch((err) => {
-  console.error("❌ Fatal:", err);
+  console.error("Fatal:", err);
   process.exit(1);
 });

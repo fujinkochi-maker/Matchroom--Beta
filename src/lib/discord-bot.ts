@@ -512,8 +512,7 @@ function discordHeaders() {
   };
 }
 
-/* Use https.request() with rejectUnauthorized=false to bypass TLS cert issues in HF Spaces.
-   Note: Bun's fetch() + tls option and Node.js https.Agent approach both fail here. */
+/* Discord API calls via https.request with rejectUnauthorized=false for HF Spaces. */
 function discordFetch(
   url: string,
   options: { method: string; headers?: Record<string, string>; body?: string },
