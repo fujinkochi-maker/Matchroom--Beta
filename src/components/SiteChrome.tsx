@@ -40,7 +40,7 @@ function flatNav() {
 }
 
 function isActive(path: string, to: string) {
-  return to === "/" ? path === "/" : path.startsWith(to);
+  return to === "/" ? path === "/" : path === to || path.startsWith(to + "/");
 }
 
 export function SiteHeader() {
@@ -232,7 +232,7 @@ export function SiteFooter() {
             ["Feed", "/feed"],
             ["News", "/news"],
             ["Videos", "/videos"],
-            ["Press", "/news"],
+            ["Interviews", "/news"],
           ]}
         />
         <FooterCol

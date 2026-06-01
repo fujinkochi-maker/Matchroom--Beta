@@ -111,7 +111,7 @@ async function _loadPostsPage(page: number, replace: boolean) {
 
   const { data, error } = await supabase
     .from("posts")
-    .select("*", { count: "exact" })
+    .select("*")
     .order("created_at", { ascending: false })
     .range(from, to);
 

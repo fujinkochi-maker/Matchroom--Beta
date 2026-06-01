@@ -6,10 +6,8 @@ import {
   ensurePostsLoaded,
   loadMorePosts,
   hasMorePosts,
-  isLoadingMorePosts,
   clearPostCache,
   POSTS,
-  FIGHTERS,
 } from "@/data/fighters";
 import { getFighterSession, clearFighterSession, isFighterLoggedIn } from "@/lib/discord-auth";
 import { createPost, deletePost, likePost, unlikePost } from "@/lib/admin.server";
@@ -31,7 +29,7 @@ function FeedPage() {
   const session = getFighterSession();
   const loggedIn = isFighterLoggedIn();
   const posts = Route.useLoaderData();
-  const fighters = FIGHTERS;
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +37,6 @@ function FeedPage() {
   useEffect(() => {
     const handler = () => {
       if (document.visibilityState === "visible") {
-        clearPostCache();
         router.invalidate();
       }
     };
@@ -53,15 +50,18 @@ function FeedPage() {
     if (!el) return;
     const obs = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMorePosts() && !isLoadingMorePosts()) {
-          loadMorePosts().then(() => router.invalidate());
+        if (entries[0].isIntersecting && hasMorePosts() && !loadingMore) {
+          setLoadingMore(true);
+          loadMorePosts()
+            .then(() => router.invalidate())
+            .finally(() => setLoadingMore(false));
         }
       },
       { rootMargin: "400px" },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [router]);
+  }, [router, loadingMore]);
 
   return (
     <>
@@ -125,7 +125,7 @@ function FeedPage() {
                 </p>
               )}
               <div ref={sentinelRef} className="flex justify-center py-6">
-                {isLoadingMorePosts() ? (
+                {loadingMore ? (
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : !hasMorePosts() && posts.length > 0 ? (
                   <span className="text-xs text-muted-foreground">You've seen it all</span>
@@ -381,7 +381,8 @@ function PostCard({
     if (!session?.token) return;
     try {
       await deletePost({ data: { token: session.token, postId: post.id } });
-      router?.invalidate();
+      clearPostCache();
+      await router?.invalidate();
       toast.success("Post deleted");
     } catch (err) {
       toast.error((err as Error).message || "Failed to delete");
