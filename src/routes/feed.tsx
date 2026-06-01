@@ -8,6 +8,7 @@ import {
   hasMorePosts,
   clearPostCache,
   POSTS,
+  FIGHTERS,
 } from "@/data/fighters";
 import { getFighterSession, clearFighterSession, isFighterLoggedIn } from "@/lib/discord-auth";
 import { createPost, deletePost, likePost, unlikePost } from "@/lib/admin.server";
