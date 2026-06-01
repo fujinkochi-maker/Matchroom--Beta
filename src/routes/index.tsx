@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
 import { ArrowRight, Trophy, Calendar, Newspaper, Play } from "lucide-react";
 import heroArena from "@/assets/hero-arena.jpg";
 import faceoff from "@/assets/faceoff.jpg";
@@ -29,6 +29,14 @@ export const Route = createFileRoute("/")({
       ensureArticlesLoaded(),
       ensureVideosLoaded(),
     ]);
+    return {
+      fighterCount: FIGHTERS.length,
+      eventCount: EVENTS.length,
+      champs: getChampions(),
+      event: nextEvent(),
+      articles: ARTICLES.slice(0, 3),
+      videos: VIDEOS.slice(0, 4),
+    };
   },
   head: () => ({
     meta: [
@@ -50,24 +58,21 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const champs = getChampions();
-  const event = nextEvent();
-  const latest = ARTICLES.slice(0, 3);
-  const featuredVideos = VIDEOS.slice(0, 4);
+  const { fighterCount, eventCount, champs, event, articles, videos } = Route.useLoaderData();
   return (
     <>
-      <Hero />
+      <Hero fighterCount={fighterCount} eventCount={eventCount} />
       <ChampionsStrip champs={champs} />
-      {event && <NextEvent />}
+      {event && <NextEvent event={event} />}
       <RankingsTeaser />
-      <LatestNews articles={latest} />
-      <FeaturedVideos videos={featuredVideos} />
+      <LatestNews articles={articles} />
+      <FeaturedVideos videos={videos} />
       <StoreTeaser />
     </>
   );
 }
 
-function Hero() {
+function Hero({ fighterCount, eventCount }: { fighterCount: number; eventCount: number }) {
   return (
     <section className="relative isolate overflow-hidden bg-foreground text-background">
       <img
@@ -109,8 +114,8 @@ function Hero() {
           </div>
           <div className="mt-10 grid max-w-md grid-cols-3 gap-6 border-t border-background/15 pt-6">
             <Stat n={String(DIVISIONS.length)} l="Divisions" />
-            <Stat n={String(FIGHTERS.length)} l="Pro Fighters" />
-            <Stat n={String(EVENTS.length)} l="Events" />
+            <Stat n={String(fighterCount)} l="Pro Fighters" />
+            <Stat n={String(eventCount)} l="Events" />
           </div>
         </div>
       </div>
@@ -180,8 +185,7 @@ function ChampionsStrip({ champs }: { champs: ReturnType<typeof getChampions> })
   );
 }
 
-function NextEvent() {
-  const event = nextEvent();
+function NextEvent({ event }: { event: NonNullable<ReturnType<typeof nextEvent>> }) {
   if (!event) return null;
   const a = getByUsername(event.mainEvent.a);
   const b = getByUsername(event.mainEvent.b);
