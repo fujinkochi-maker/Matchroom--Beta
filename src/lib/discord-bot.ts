@@ -5,9 +5,6 @@ import https from "https";
 
 const DISCORD_API = "https://discord.com/api/v10";
 
-// HF Spaces: HTTPS agent that doesn't verify certs
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
-
 const DIVISIONS = [
   "Flyweight",
   "Bantamweight",
@@ -443,11 +440,9 @@ function formatNickname(f: {
   return `${f.display_name} | ${f.wins}-${f.losses}-${f.draws} | ${f.kos}KO${f.kos !== 1 ? "s" : ""}`;
 }
 
-/* ── Matchroom Promoter voice ── */
+/* ── Matchroom Promoter voice (fighter-level) ── */
 
-const BRAND_COLOR = 0xd71920;
-
-const PROMOTER_LINES: Record<string, (name: string) => string> = {
+const PROMOTER_NAME_LINES: Record<string, (name: string) => string> = {
   champion: (n) =>
     `"The king of the division, **${n}** — when you're at the top, there's nowhere to go but down... and I'll make sure they're coming for you."`,
   contender: (n) =>
@@ -470,16 +465,18 @@ function promoterLine(fighter: {
   rank: number;
 }): string {
   const name = fighter.display_name;
-  if (fighter.rank === 0) return PROMOTER_LINES.champion(name);
-  if (fighter.losses === 0 && fighter.wins > 0) return PROMOTER_LINES.undefeated(name);
-  if (fighter.wins >= 15) return PROMOTER_LINES.veteran(name);
+  if (fighter.rank === 0) return PROMOTER_NAME_LINES.champion(name);
+  if (fighter.losses === 0 && fighter.wins > 0) return PROMOTER_NAME_LINES.undefeated(name);
+  if (fighter.wins >= 15) return PROMOTER_NAME_LINES.veteran(name);
   if (fighter.kos / Math.max(fighter.wins, 1) > 0.6 && fighter.wins > 0)
-    return PROMOTER_LINES.brawler(name);
-  if (fighter.wins <= 3) return PROMOTER_LINES.newcomer(name);
-  return PROMOTER_LINES.contender(name);
+    return PROMOTER_NAME_LINES.brawler(name);
+  if (fighter.wins <= 3) return PROMOTER_NAME_LINES.newcomer(name);
+  return PROMOTER_NAME_LINES.contender(name);
 }
 
-function promoterEmbed(fighter: {
+const BRAND_COLOR = 0xd71920;
+
+function baseFighterEmbed(fighter: {
   image_url?: string;
   display_name: string;
   division: string;
@@ -515,8 +512,8 @@ function discordHeaders() {
   };
 }
 
-/* Use https.request() instead of Bun's fetch() for Discord API calls
-   to avoid TLS cert issues in HF Spaces and containerized environments. */
+/* Use https.request() with rejectUnauthorized=false to bypass TLS cert issues in HF Spaces.
+   Note: Bun's fetch() + tls option and Node.js https.Agent approach both fail here. */
 function discordFetch(
   url: string,
   options: { method: string; headers?: Record<string, string>; body?: string },
@@ -529,7 +526,7 @@ function discordFetch(
         path: u.pathname + u.search,
         method: options.method,
         headers: options.headers,
-        agent: httpsAgent,
+        rejectUnauthorized: false,
       },
       (res) => {
         let data = "";
@@ -838,7 +835,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           data: {
             embeds: [
               {
-                ...promoterEmbed(fighter),
+                ...baseFighterEmbed(fighter),
                 fields: [
                   { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
                   { name: "Division", value: fighter.division || "TBD", inline: true },
@@ -974,7 +971,7 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
           data: {
             embeds: [
               {
-                ...promoterEmbed(fighter),
+                ...baseFighterEmbed(fighter),
                 fields: [
                   { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
                   { name: "Division", value: fighter.division, inline: true },

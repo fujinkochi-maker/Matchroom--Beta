@@ -1,11 +1,5 @@
-// HF Spaces Bun has SSL cert issues with discord.com — relax TLS for all bot fetch calls
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
 import https from "https";
 import { Client, ActivityType } from "discord.js";
-
-// HF Spaces: HTTPS agent that doesn't verify certs
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const token = process.env.DISCORD_BOT_TOKEN;
 if (!token) {
@@ -92,24 +86,25 @@ async function registerCommands() {
 
   try {
     const body = JSON.stringify(commands);
-    const options = {
-      hostname: "discord.com",
-      path: `/api/v10/applications/${appId}/commands`,
-      method: "PUT",
-      headers: {
-        Authorization: `Bot ${botToken}`,
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(body),
-      } as Record<string, string>,
-      agent: httpsAgent,
-    } satisfies https.RequestOptions;
-
     const resObj = await new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
-      const req = https.request(options, (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => resolve({ statusCode: res.statusCode, body: data }));
-      });
+      const req = https.request(
+        {
+          hostname: "discord.com",
+          path: `/api/v10/applications/${appId}/commands`,
+          method: "PUT",
+          headers: {
+            Authorization: `Bot ${botToken}`,
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(body),
+          },
+          rejectUnauthorized: false,
+        },
+        (res) => {
+          let data = "";
+          res.on("data", (chunk) => (data += chunk));
+          res.on("end", () => resolve({ statusCode: res.statusCode, body: data }));
+        },
+      );
       req.on("error", reject);
       req.write(body);
       req.end();
