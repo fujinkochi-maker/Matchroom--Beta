@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+NITRO_PRESET=vercel bun run build
+mkdir -p .vercel/output/static .vercel/output/functions/__server.func
+cp -r dist/client/. .vercel/output/static/
+cp -r dist/server/. .vercel/output/functions/__server.func/
+cp dist/config.json .vercel/output/config.json
