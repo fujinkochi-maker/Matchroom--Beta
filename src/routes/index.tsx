@@ -36,6 +36,7 @@ export const Route = createFileRoute("/")({
       event: nextEvent(),
       articles: ARTICLES.slice(0, 3),
       videos: VIDEOS.slice(0, 4),
+      _t: Date.now(),
     };
   },
   head: () => ({
