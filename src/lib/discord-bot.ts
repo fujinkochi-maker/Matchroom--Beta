@@ -266,27 +266,7 @@ function jsonResponse(data: unknown, status = 200) {
 function ephemeral(content: string) {
   return jsonResponse({
     type: InteractionResponseType.ChannelMessageWithSource,
-    data: {
-      embeds: [
-        promoterEmbed(fighter.display_name, {
-          thumbnail: fighter.image_url,
-          fields: [
-            { name: "Division", value: fighter.division, inline: true },
-            { name: "Rank", value: rank, inline: true },
-            { name: "Record", value: record, inline: true },
-            { name: "Stance", value: fighter.stance, inline: true },
-            { name: "Streak", value: fighter.streak || "N/A", inline: true },
-            {
-              name: "Promoter's Note",
-              value: `"${getPromoterLine(fighter)}" — Eddie Matchroom`,
-              inline: false,
-            },
-          ],
-          footer: `@${fighter.username}`,
-        }),
-      ],
-      flags: 64,
-    },
+    data: { content, flags: 64 },
   });
 }
 
@@ -730,6 +710,186 @@ async function sendPromoterDM(
   }
 }
 
+/* ── Deferred command handlers (fire-and-forget, respond via webhook PATCH) ── */
+
+async function handleStatsCommand(interaction: any) {
+  const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+  if (!discordId) { await sendFollowUp(interaction, { content: "Could not identify you.", flags: 64 }); return; }
+
+  const supabase = getSupabaseAdmin();
+  const { data: fighter } = await supabase
+    .from("fighters")
+    .select("*")
+    .eq("discord_id", discordId)
+    .single();
+
+  if (!fighter) {
+    await sendFollowUp(interaction, { content: "You're not registered yet! Use `/register` to create your fighter.", flags: 64 });
+    return;
+  }
+
+  if (fighter.wins >= 3) {
+    const promoGuildId = fighter.guild_id || interaction.guild_id;
+    if (promoGuildId) {
+      await addRole(promoGuildId, discordId, PRO_BOXER_ROLE);
+      await removeRole(promoGuildId, discordId, AMATEUR_ROLE);
+    }
+  }
+
+  await sendFollowUp(interaction, {
+    embeds: [{
+      ...baseFighterEmbed(fighter),
+      fields: [
+        { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
+        { name: "Division", value: fighter.division || "TBD", inline: true },
+        { name: "Rank", value: fighter.rank === 0 ? "Champion" : `#${fighter.rank}`, inline: true },
+        { name: "Record", value: formatRecord(fighter), inline: true },
+        { name: "Stance", value: fighter.stance, inline: true },
+        { name: "Streak", value: fighter.streak || "N/A", inline: true },
+        ...(fighter.belts_held ? [{ name: "Belts Held", value: fighter.belts_held, inline: false }] : []),
+      ],
+    }],
+    flags: 64,
+  });
+}
+
+async function handleRankingsCommand(interaction: any) {
+  const division = getOptionValue(interaction.data.options, "division");
+  if (!division) { await sendFollowUp(interaction, { content: "Please choose a division.", flags: 64 }); return; }
+
+  const supabase = getSupabaseAdmin();
+  const { data: fighters, error } = await supabase
+    .from("fighters")
+    .select("*")
+    .eq("division", division)
+    .order("rank", { ascending: true })
+    .limit(10);
+
+  if (error || !fighters?.length) {
+    await sendFollowUp(interaction, { content: `No fighters found in **${division}**.`, flags: 64 });
+    return;
+  }
+
+  await sendFollowUp(interaction, {
+    embeds: [{
+      color: BRAND_COLOR,
+      author: {
+        name: "Matchroom Boxing",
+        icon_url: "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+      },
+      title: `Boxing ${division} Rankings`,
+      description: "\"Let's look at the **" + division + "** division. Some hungry fighters here...\"",
+      fields: fighters.map((f: any, i: number) => ({
+        name: `${f.rank === 0 ? "Crown" : "#" + (i + 1)} ${f.display_name} (@${f.username})`,
+        value: `Record: ${f.wins}-${f.losses}-${f.draws} | Streak: ${f.streak || "N/A"}`,
+        inline: false,
+      })),
+      footer: { text: "Matchroom Boxing Beta Fan-made", icon_url: "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless" },
+      timestamp: new Date().toISOString(),
+    }],
+    flags: 64,
+  });
+}
+
+async function handleChampionsCommand(interaction: any) {
+  const supabase = getSupabaseAdmin();
+  const { data: champs, error } = await supabase
+    .from("fighters")
+    .select("*")
+    .eq("rank", 0)
+    .order("division", { ascending: true });
+
+  if (error || !champs?.length) {
+    await sendFollowUp(interaction, { content: "No champions found.", flags: 64 });
+    return;
+  }
+
+  await sendFollowUp(interaction, {
+    embeds: [{
+      color: BRAND_COLOR,
+      author: {
+        name: "Matchroom Boxing",
+        icon_url: "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+      },
+      title: "Current Champions",
+      description: "\"These are the men and women who run this circus. Champions don't wait they take.\"",
+      fields: champs.map((c: any) => ({
+        name: `${c.division} Champion`,
+        value: `**${c.display_name}** ${formatRecord(c)}`,
+        inline: true,
+      })),
+      footer: { text: "Matchroom Boxing Beta Fan-made", icon_url: "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless" },
+      timestamp: new Date().toISOString(),
+    }],
+    flags: 64,
+  });
+}
+
+async function handleFighterCommand(interaction: any) {
+  const username = getOptionValue(interaction.data.options, "username");
+  if (!username) { await sendFollowUp(interaction, { content: "Please provide a username.", flags: 64 }); return; }
+
+  const supabase = getSupabaseAdmin();
+  const { data: fighter, error } = await supabase
+    .from("fighters")
+    .select("*")
+    .eq("username", username)
+    .single();
+
+  if (error || !fighter) {
+    await sendFollowUp(interaction, { content: `Fighter **${username}** not found.`, flags: 64 });
+    return;
+  }
+
+  await sendFollowUp(interaction, {
+    embeds: [{
+      ...baseFighterEmbed(fighter),
+      fields: [
+        { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
+        { name: "Division", value: fighter.division, inline: true },
+        { name: "Rank", value: fighter.rank === 0 ? "Champion" : `#${fighter.rank}`, inline: true },
+        { name: "Record", value: formatRecord(fighter), inline: true },
+        { name: "Stance", value: fighter.stance, inline: true },
+        { name: "Streak", value: fighter.streak || "N/A", inline: true },
+        ...(fighter.belts_held ? [{ name: "Belts Held", value: fighter.belts_held, inline: false }] : []),
+      ],
+    }],
+    flags: 64,
+  });
+}
+
+async function handleUnregisterCommand(interaction: any) {
+  const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+  if (!discordId) { await sendFollowUp(interaction, { content: "Could not identify you.", flags: 64 }); return; }
+
+  const supabase = getSupabaseAdmin();
+  const { data: fighter } = await supabase
+    .from("fighters")
+    .select("display_name, guild_id, division")
+    .eq("discord_id", discordId)
+    .single();
+
+  if (!fighter) {
+    await sendFollowUp(interaction, { content: "You're not registered! Use `/register` to create a fighter.", flags: 64 });
+    return;
+  }
+
+  await supabase.from("fighters").delete().eq("discord_id", discordId);
+
+  const unregGuildId = fighter.guild_id || interaction.guild_id;
+  if (unregGuildId) {
+    setNickname(unregGuildId, discordId, `${fighter.display_name} [ Retired ]`);
+    if (fighter.division) removeRole(unregGuildId, discordId, DIVISION_ROLES[fighter.division]);
+    removeRole(unregGuildId, discordId, AMATEUR_ROLE);
+    removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
+  }
+
+  await sendFollowUp(interaction, {
+    content: `${fighter.display_name} has been retired. Use \`/register\` to create a new fighter anytime.`,
+    flags: 64,
+  });
+}
+
 export async function handleDiscordInteraction(request: Request): Promise<Response | null> {
   const url = new URL(request.url);
 
@@ -804,243 +964,11 @@ export async function handleDiscordInteraction(request: Request): Promise<Respon
         });
       }
 
-      if (commandName === "stats") {
-        const discordId = interaction.member?.user?.id ?? interaction.user?.id;
-        if (!discordId) return ephemeral("Could not identify you.");
-
-        const supabase = getSupabaseAdmin();
-        const { data: fighter } = await supabase
-          .from("fighters")
-          .select("*")
-          .eq("discord_id", discordId)
-          .single();
-
-        if (!fighter) {
-          return ephemeral("You're not registered yet! Use `/register` to create your fighter.");
-        }
-
-        // Check promotion
-        if (fighter.wins >= 3) {
-          console.log(`[Stats] Checking promotion for ${discordId}: ${fighter.wins} wins`);
-          const promoGuildId = fighter.guild_id || interaction.guild_id;
-          if (promoGuildId) {
-            await addRole(promoGuildId, discordId, PRO_BOXER_ROLE);
-            await removeRole(promoGuildId, discordId, AMATEUR_ROLE);
-          }
-        }
-
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            embeds: [
-              {
-                ...baseFighterEmbed(fighter),
-                fields: [
-                  { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
-                  { name: "Division", value: fighter.division || "TBD", inline: true },
-                  {
-                    name: "Rank",
-                    value: fighter.rank === 0 ? "🏆 Champion" : `#${fighter.rank}`,
-                    inline: true,
-                  },
-                  { name: "Record", value: formatRecord(fighter), inline: true },
-                  { name: "Stance", value: fighter.stance, inline: true },
-                  { name: "Streak", value: fighter.streak || "N/A", inline: true },
-                  ...(fighter.belts_held
-                    ? [{ name: "Belts Held", value: fighter.belts_held, inline: false }]
-                    : []),
-                ],
-              },
-            ],
-            flags: 64,
-          },
-        });
-      }
-
-      if (commandName === "rankings") {
-        const division = getOptionValue(interaction.data.options, "division");
-        if (!division) return ephemeral("Please choose a division.");
-
-        const supabase = getSupabaseAdmin();
-        const { data: fighters, error } = await supabase
-          .from("fighters")
-          .select("*")
-          .eq("division", division)
-          .order("rank", { ascending: true })
-          .limit(10);
-
-        if (error || !fighters?.length) {
-          return ephemeral(`No fighters found in **${division}**.`);
-        }
-
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            embeds: [
-              {
-                color: BRAND_COLOR,
-                author: {
-                  name: "Matchroom Boxing",
-                  icon_url:
-                    "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
-                },
-                title: `🥊 ${division} Rankings`,
-                description: `\`\`\`"Let's look at the **${division}** division. Some hungry fighters here..."\`\`\``,
-                fields: fighters.map((f: any, i: number) => {
-                  const icon = f.rank === 0 ? "👑" : `#${i + 1}`;
-                  return {
-                    name: `${icon} ${f.display_name} (@${f.username})`,
-                    value: `Record: ${f.wins}-${f.losses}-${f.draws} | Streak: ${f.streak || "N/A"}`,
-                    inline: false,
-                  };
-                }),
-                footer: {
-                  text: "Matchroom Boxing Beta • Fan-made",
-                  icon_url:
-                    "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
-                },
-                timestamp: new Date().toISOString(),
-              },
-            ],
-            flags: 64,
-          },
-        });
-      }
-
-      if (commandName === "champions") {
-        const supabase = getSupabaseAdmin();
-        const { data: champs, error } = await supabase
-          .from("fighters")
-          .select("*")
-          .eq("rank", 0)
-          .order("division", { ascending: true });
-
-        if (error || !champs?.length) {
-          return ephemeral("No champions found.");
-        }
-
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            embeds: [
-              {
-                color: BRAND_COLOR,
-                author: {
-                  name: "Matchroom Boxing",
-                  icon_url:
-                    "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
-                },
-                title: "👑 Current Champions",
-                description: `\`\`\`"These are the men and women who run this circus. Champions don't wait — they take."\`\`\``,
-                fields: champs.map((c: any) => ({
-                  name: `${c.division} Champion`,
-                  value: `**${c.display_name}** — ${formatRecord(c)}`,
-                  inline: true,
-                })),
-                footer: {
-                  text: "Matchroom Boxing Beta • Fan-made",
-                  icon_url:
-                    "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
-                },
-                timestamp: new Date().toISOString(),
-              },
-            ],
-            flags: 64,
-          },
-        });
-      }
-
-      if (commandName === "fighter") {
-        const username = getOptionValue(interaction.data.options, "username");
-        if (!username) return ephemeral("Please provide a username.");
-
-        const supabase = getSupabaseAdmin();
-        const { data: fighter, error } = await supabase
-          .from("fighters")
-          .select("*")
-          .eq("username", username)
-          .single();
-
-        if (error || !fighter) {
-          return ephemeral(`Fighter **${username}** not found.`);
-        }
-
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            embeds: [
-              {
-                ...baseFighterEmbed(fighter),
-                fields: [
-                  { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
-                  { name: "Division", value: fighter.division, inline: true },
-                  {
-                    name: "Rank",
-                    value: fighter.rank === 0 ? "🏆 Champion" : `#${fighter.rank}`,
-                    inline: true,
-                  },
-                  { name: "Record", value: formatRecord(fighter), inline: true },
-                  { name: "Stance", value: fighter.stance, inline: true },
-                  { name: "Streak", value: fighter.streak || "N/A", inline: true },
-                  ...(fighter.belts_held
-                    ? [{ name: "Belts Held", value: fighter.belts_held, inline: false }]
-                    : []),
-                ],
-              },
-            ],
-            flags: 64,
-          },
-        });
-      }
-
-      if (commandName === "unregister") {
-        const discordId = interaction.member?.user?.id ?? interaction.user?.id;
-        if (!discordId) return ephemeral("Could not identify you.");
-
-        const supabase = getSupabaseAdmin();
-
-        const { data: fighter } = await supabase
-          .from("fighters")
-          .select("display_name, guild_id")
-          .eq("discord_id", discordId)
-          .single();
-
-        if (!fighter) {
-          return ephemeral("You're not registered! Use `/register` to create a fighter.");
-        }
-
-        const { error } = await supabase.from("fighters").delete().eq("discord_id", discordId);
-
-        if (error) {
-          return jsonResponse({
-            type: InteractionResponseType.ChannelMessageWithSource,
-            data: { content: `Failed to unregister: ${error.message}`, flags: 64 },
-          });
-        }
-
-        // Set nickname to [ Retired ] + remove roles
-        const unregGuildId = fighter.guild_id || interaction.guild_id;
-        if (unregGuildId) {
-          setNickname(unregGuildId, discordId, `${fighter.display_name} [ Retired ]`);
-          // Remove division role if set
-          if (fighter.division) {
-            const roleId = DIVISION_ROLES[fighter.division];
-            if (roleId) removeRole(unregGuildId, discordId, roleId);
-          }
-          // Remove Amateur role
-          removeRole(unregGuildId, discordId, AMATEUR_ROLE);
-          // Remove Pro Boxer role if present
-          removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
-        }
-
-        return jsonResponse({
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            content: `✅ **${fighter.display_name}** has been retired. Use \`/register\` to create a new fighter anytime.`,
-            flags: 64,
-          },
-        });
-      }
+      if (commandName === "stats") { handleStatsCommand(interaction); return deferred(); }
+      if (commandName === "rankings") { handleRankingsCommand(interaction); return deferred(); }
+      if (commandName === "champions") { handleChampionsCommand(interaction); return deferred(); }
+      if (commandName === "fighter") { handleFighterCommand(interaction); return deferred(); }
+      if (commandName === "unregister") { handleUnregisterCommand(interaction); return deferred(); }
     }
 
     // Modal submit
