@@ -92,6 +92,32 @@ export interface Video {
   views: string;
 }
 
+export interface Post {
+  id: string;
+  content: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  authorType: "admin" | "fighter";
+  authorUsername?: string;
+  authorDisplayName: string;
+  authorImage?: string;
+  tags: string[];
+  likes: number;
+  likedByCurrentUser: boolean;
+  createdAt: string;
+}
+
+export interface Notification {
+  id: string;
+  fighterUsername: string;
+  type: "tag" | "like";
+  postId: string;
+  actorDiscordId: string;
+  actorDisplayName: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface Product {
   id: string;
   name: string;

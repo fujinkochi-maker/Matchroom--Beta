@@ -1,21 +1,54 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
+import { Link, useRouterState, useRouter } from "@tanstack/react-router";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { isFighterLoggedIn, clearFighterSession, getFighterSession } from "@/lib/discord-auth";
+import { NotificationBell } from "./NotificationBell";
 
-const NAV = [
+type NavLink = { to: string; label: string };
+type NavDropdown = { label: string; children: NavLink[] };
+type NavItem = NavLink | NavDropdown;
+
+const NAV: NavItem[] = [
   { to: "/", label: "Home" },
-  { to: "/champions", label: "Champions" },
-  { to: "/boxers", label: "Boxers" },
-  { to: "/rankings", label: "Rankings" },
+  { to: "/feed", label: "Feed" },
   { to: "/events", label: "Events" },
-  { to: "/news", label: "News" },
-  { to: "/videos", label: "Videos" },
+  {
+    label: "Fighters",
+    children: [
+      { to: "/champions", label: "Champions" },
+      { to: "/boxers", label: "Boxers" },
+      { to: "/rankings", label: "Rankings" },
+    ],
+  },
+  {
+    label: "Media",
+    children: [
+      { to: "/news", label: "News" },
+      { to: "/videos", label: "Videos" },
+    ],
+  },
   { to: "/store", label: "Store" },
-] as const;
+];
+
+function flatNav() {
+  const items: NavLink[] = [];
+  for (const n of NAV) {
+    if ("to" in n) items.push(n);
+    else items.push(...n.children);
+  }
+  return items;
+}
+
+function isActive(path: string, to: string) {
+  return to === "/" ? path === "/" : path.startsWith(to);
+}
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const router = useRouter();
+  const loggedIn = isFighterLoggedIn();
+  const session = getFighterSession();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -31,21 +64,89 @@ export function SiteHeader() {
 
         <nav className="hidden items-center gap-1 lg:flex">
           {NAV.map((n) => {
-            const active = n.to === "/" ? path === "/" : path.startsWith(n.to);
+            if ("to" in n) {
+              const active = isActive(path, n.to);
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={`relative px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                    active ? "text-primary" : "text-foreground hover:text-primary"
+                  }`}
+                >
+                  {n.label}
+                  {active && <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-primary" />}
+                </Link>
+              );
+            }
+            const childActive = n.children.some((c) => isActive(path, c.to));
             return (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`relative px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
-                  active ? "text-primary" : "text-foreground hover:text-primary"
-                }`}
-              >
-                {n.label}
-                {active && <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-primary" />}
-              </Link>
+              <div key={n.label} className="group relative">
+                <button
+                  className={`relative flex items-center gap-1 px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                    childActive ? "text-primary" : "text-foreground hover:text-primary"
+                  }`}
+                >
+                  {n.label}
+                  <ChevronDown className="h-3 w-3" />
+                  {childActive && (
+                    <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-primary" />
+                  )}
+                </button>
+                <div className="absolute left-0 top-full min-w-[180px] origin-top scale-y-0 border border-border bg-background shadow-lg opacity-0 transition-all group-hover:scale-y-100 group-hover:opacity-100">
+                  <div className="py-1">
+                    {n.children.map((c) => {
+                      const active = isActive(path, c.to);
+                      return (
+                        <Link
+                          key={c.to}
+                          to={c.to}
+                          className={`block px-4 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                            active
+                              ? "bg-primary/10 text-primary"
+                              : "text-foreground hover:bg-accent hover:text-primary"
+                          }`}
+                        >
+                          {c.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             );
           })}
         </nav>
+
+        <div className="flex items-center gap-2">
+          {loggedIn && <NotificationBell />}
+          {loggedIn ? (
+            <Link
+              to={`/boxers/${session?.username}`}
+              className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground lg:inline"
+            >
+              {session?.displayName}
+            </Link>
+          ) : (
+            <Link
+              to="/auth/login"
+              className="hidden rounded-md bg-primary px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground hover:opacity-90 lg:inline"
+            >
+              Login
+            </Link>
+          )}
+          {loggedIn && (
+            <button
+              onClick={() => {
+                clearFighterSession();
+                router.invalidate();
+              }}
+              className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground lg:inline"
+            >
+              Logout
+            </button>
+          )}
+        </div>
 
         <button
           aria-label="Menu"
@@ -58,7 +159,7 @@ export function SiteHeader() {
       {open && (
         <div className="border-t border-border bg-background lg:hidden">
           <div className="container-x grid grid-cols-2 gap-1 py-3">
-            {NAV.map((n) => (
+            {flatNav().map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
@@ -68,6 +169,35 @@ export function SiteHeader() {
                 {n.label}
               </Link>
             ))}
+            {loggedIn ? (
+              <>
+                <Link
+                  to={`/boxers/${session?.username}`}
+                  onClick={() => setOpen(false)}
+                  className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    clearFighterSession();
+                    router.invalidate();
+                  }}
+                  className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/auth/login"
+                onClick={() => setOpen(false)}
+                className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
+              >
+                Login
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -99,6 +229,7 @@ export function SiteFooter() {
         <FooterCol
           title="Media"
           items={[
+            ["Feed", "/feed"],
             ["News", "/news"],
             ["Videos", "/videos"],
             ["Press", "/news"],

@@ -1,6 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import type { Fighter, Division, BoxingEvent, Article, Video, Product } from "./types";
+import type {
+  Fighter,
+  Division,
+  BoxingEvent,
+  Article,
+  Video,
+  Product,
+  Post,
+  Notification,
+} from "./types";
 import { DIVISIONS } from "./types";
 import { getSupabase } from "@/lib/supabase";
 
@@ -11,6 +20,8 @@ const _events: BoxingEvent[] = [];
 const _articles: Article[] = [];
 const _videos: Video[] = [];
 const _products: Product[] = [];
+const _posts: Post[] = [];
+const _notifications: Notification[] = [];
 
 /* ============ Public exports ============ */
 
@@ -62,14 +73,83 @@ export const featuredArticle = () => ARTICLES.find((a) => a.featured) ?? null;
 
 export const VIDEOS = _videos;
 export const getVideosForFighter = (u: string) => VIDEOS.filter((v) => v.fighters.includes(u));
+export const getPostsForFighter = (u: string) =>
+  POSTS.filter((p) => p.tags.includes(u) || p.authorUsername === u);
 
 export const PRODUCTS = _products;
+export const POSTS = _posts;
+export const NOTIFICATIONS = _notifications;
 
 /* ============ Cache helpers ============ */
 
 const _loadPromises: Record<string, Promise<void> | null> = {};
 const _lastLoaded: Record<string, number> = {};
 const CACHE_TTL = 30_000;
+
+const PAGE_SIZE = 20;
+let _postsHasMore = true;
+let _postsLoadingMore = false;
+
+export function clearPostCache() {
+  delete _lastLoaded["posts"];
+  _postsHasMore = true;
+  _postsLoadingMore = false;
+}
+
+export function hasMorePosts() {
+  return _postsHasMore;
+}
+
+export function isLoadingMorePosts() {
+  return _postsLoadingMore;
+}
+
+async function _loadPostsPage(page: number, replace: boolean) {
+  const supabase = getSupabase();
+  const from = page * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (error) throw error;
+
+  const mapped = (data || []).map(rowToPostFromRow);
+
+  if (replace) {
+    _posts.length = 0;
+    _posts.push(...mapped);
+  } else {
+    _posts.push(...mapped);
+  }
+
+  _postsHasMore = mapped.length === PAGE_SIZE;
+
+  const { data: tags } = await supabase.from("post_tags").select("*");
+  if (tags) {
+    for (let i = 0; i < _posts.length; i++) {
+      const p = _posts[i];
+      const ft = tags.filter((t: any) => t.post_id === p.id).map((t: any) => t.fighter_username);
+      _posts[i] = { ...p, tags: ft };
+    }
+  }
+
+  _lastLoaded["posts"] = Date.now();
+}
+
+export async function loadMorePosts() {
+  if (!_postsHasMore || _postsLoadingMore) return;
+  _postsLoadingMore = true;
+  const page = Math.floor(_posts.length / PAGE_SIZE);
+  try {
+    await _loadPostsPage(page, false);
+  } finally {
+    _postsLoadingMore = false;
+  }
+}
 
 async function _loadTable<T>(
   table: string,
@@ -211,6 +291,30 @@ export async function ensureProductsLoaded() {
   _loadPromises[k] = null;
 }
 
+export async function ensurePostsLoaded() {
+  const k = "_posts";
+  const now = Date.now();
+  if (now - (_lastLoaded["posts"] || 0) < CACHE_TTL && _posts.length > 0) return;
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadPostsPage(0, true);
+  await _loadPromises[k];
+  _loadPromises[k] = null;
+}
+
+export async function ensureNotificationsLoaded() {
+  const k = "_notifications";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable(
+    "notifications",
+    _notifications,
+    rowToNotificationFromRow,
+    undefined,
+    "notifications",
+  );
+  await _loadPromises[k];
+  _loadPromises[k] = null;
+}
+
 function rowToEventFromRow(row: any): BoxingEvent {
   return {
     slug: row.slug,
@@ -260,6 +364,41 @@ function rowToProductFromRow(row: any): Product {
     limited: row.limited ?? false,
     stock: row.stock ?? 50,
     image: row.image_url ?? undefined,
+  };
+}
+
+function rowToPostFromRow(row: any): Post {
+  const fighter = FIGHTERS.find((f) => f.username === row.author_username);
+  return {
+    id: row.id,
+    content: row.content,
+    imageUrl: row.image_url ?? undefined,
+    videoUrl: row.video_url ?? undefined,
+    authorType: row.author_type,
+    authorUsername: row.author_username ?? undefined,
+    authorDisplayName:
+      row.author_type === "fighter" && fighter
+        ? fighter.displayName
+        : (row.author_username ?? "Admin"),
+    authorImage: fighter?.image,
+    tags: [],
+    likes: 0,
+    likedByCurrentUser: false,
+    createdAt: row.created_at,
+  };
+}
+
+function rowToNotificationFromRow(row: any): Notification {
+  const actor = FIGHTERS.find((f) => f.discordId === row.actor_discord_id);
+  return {
+    id: row.id,
+    fighterUsername: row.fighter_username,
+    type: row.type,
+    postId: row.post_id,
+    actorDiscordId: row.actor_discord_id,
+    actorDisplayName: actor?.displayName ?? "Someone",
+    read: row.read,
+    createdAt: row.created_at,
   };
 }
 
@@ -412,6 +551,31 @@ export async function loadDataFromSupabase() {
         "videos",
       ),
       _loadTable("products", _products, rowToProductFromRow, undefined, "products"),
+      _loadTable(
+        "posts",
+        _posts,
+        rowToPostFromRow,
+        {
+          table: "post_tags",
+          on(tags: any[]) {
+            for (let i = 0; i < _posts.length; i++) {
+              const p = _posts[i];
+              const ft = tags
+                .filter((t: any) => t.post_id === p.id)
+                .map((t: any) => t.fighter_username);
+              _posts[i] = { ...p, tags: ft };
+            }
+          },
+        },
+        "posts",
+      ),
+      _loadTable(
+        "notifications",
+        _notifications,
+        rowToNotificationFromRow,
+        undefined,
+        "notifications",
+      ),
     ]);
   } catch {
     // Data will load on next access if Supabase is unavailable

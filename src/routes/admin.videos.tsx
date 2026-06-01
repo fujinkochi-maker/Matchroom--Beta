@@ -29,7 +29,7 @@ function AdminVideos() {
     const token = getAdminToken();
     if (!token) return;
     await deleteVideo({ data: { token, id } });
-    router.invalidate();
+    await router.invalidate();
     toast.success("Video deleted");
   };
   return (

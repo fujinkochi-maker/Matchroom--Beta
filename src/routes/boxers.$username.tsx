@@ -1,21 +1,33 @@
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { Trophy, ArrowLeft, Play, RefreshCw } from "lucide-react";
+import { Trophy, ArrowLeft, Play, RefreshCw, Heart } from "lucide-react";
 import { FighterAvatar } from "@/components/FighterAvatar";
 import {
   getByUsername,
   getNewsForFighter,
   getVideosForFighter,
+  getPostsForFighter,
   FIGHTERS,
+  POSTS,
   ensureFightersLoaded,
   ensureArticlesLoaded,
   ensureVideosLoaded,
+  ensurePostsLoaded,
 } from "@/data/fighters";
 import { hashHue } from "@/lib/utils";
+import { getFighterSession } from "@/lib/discord-auth";
+import { likePost, unlikePost, deletePost } from "@/lib/admin.server";
+import { toast } from "sonner";
+import type { Post } from "@/data/types";
 
 export const Route = createFileRoute("/boxers/$username")({
   loader: async ({ params }) => {
-    await Promise.all([ensureFightersLoaded(), ensureArticlesLoaded(), ensureVideosLoaded()]);
+    await Promise.all([
+      ensureFightersLoaded(),
+      ensureArticlesLoaded(),
+      ensureVideosLoaded(),
+      ensurePostsLoaded(),
+    ]);
     const fighter = getByUsername(params.username);
     if (!fighter) throw notFound();
     return { fighter };
@@ -168,6 +180,15 @@ function FighterProfilePage() {
               <Meta l="Titles" v={`${f.belts}`} />
             </dl>
 
+            {/* Feed Section */}
+            <h3 className="mt-10 font-display text-2xl uppercase">
+              <span className="red-bar" />
+              Recent Activity
+            </h3>
+            <div className="mt-4 space-y-3">
+              <FighterFeed username={f.username} />
+            </div>
+
             <h3 className="mt-10 font-display text-2xl uppercase">
               <span className="red-bar" />
               Fight History
@@ -307,6 +328,129 @@ function FighterProfilePage() {
       </section>
     </>
   );
+}
+
+function FighterFeed({ username }: { username: string }) {
+  const session = getFighterSession();
+  const posts = getPostsForFighter(username);
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const router = useRouter();
+
+  const handleLike = async (postId: string) => {
+    if (!session?.token) return;
+    try {
+      if (likedPosts.has(postId)) {
+        await unlikePost({ data: { token: session.token, postId } });
+        setLikedPosts((prev) => {
+          const next = new Set(prev);
+          next.delete(postId);
+          return next;
+        });
+      } else {
+        await likePost({ data: { token: session.token, postId } });
+        setLikedPosts((prev) => {
+          const next = new Set(prev);
+          next.add(postId);
+          return next;
+        });
+      }
+    } catch {
+      /* best-effort */
+    }
+  };
+
+  const handleDelete = async (postId: string) => {
+    if (!session?.token) return;
+    try {
+      await deletePost({ data: { token: session.token, postId } });
+      await router.invalidate();
+      toast.success("Post deleted");
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to delete");
+    }
+  };
+
+  if (posts.length === 0) {
+    return <p className="text-sm text-muted-foreground">No activity yet.</p>;
+  }
+
+  return (
+    <>
+      {[...posts]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map((p) => (
+          <div key={p.id} className="rounded-lg border border-border bg-card p-3">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="whitespace-pre-wrap text-sm">{p.content}</p>
+                {p.imageUrl && (
+                  <div className="mt-2 overflow-hidden rounded-lg border border-border">
+                    <img src={p.imageUrl} alt="" className="w-full object-cover" loading="lazy" />
+                  </div>
+                )}
+                {p.videoUrl && (
+                  <div className="mt-2 overflow-hidden rounded-lg border border-border">
+                    <iframe
+                      src={p.videoUrl.replace("watch?v=", "embed/").split("&")[0]}
+                      className="aspect-video w-full"
+                      allowFullScreen
+                      title="Video"
+                    />
+                  </div>
+                )}
+                {p.tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {p.tags.map((t) => {
+                      const fighter = FIGHTERS.find((f) => f.username === t);
+                      return (
+                        <Link
+                          key={t}
+                          to="/boxers/$username"
+                          params={{ username: t }}
+                          className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground hover:text-primary"
+                        >
+                          @{fighter?.displayName ?? t}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                  <button
+                    onClick={() => handleLike(p.id)}
+                    disabled={!session?.token}
+                    className={`inline-flex items-center gap-1 ${likedPosts.has(p.id) ? "text-primary" : ""} hover:text-primary disabled:opacity-50`}
+                  >
+                    <Heart className={`h-3 w-3 ${likedPosts.has(p.id) ? "fill-current" : ""}`} />
+                  </button>
+                  <span>{formatTime(p.createdAt)}</span>
+                  {session?.username === p.authorUsername && (
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className="ml-auto text-muted-foreground hover:text-destructive"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+    </>
+  );
+}
+
+function formatTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return new Date(iso).toLocaleDateString();
 }
 
 function Meta({ l, v }: { l: string; v: string | number }) {

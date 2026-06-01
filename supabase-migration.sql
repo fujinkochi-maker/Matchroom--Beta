@@ -100,6 +100,41 @@ CREATE TABLE IF NOT EXISTS products (
   image_url TEXT
 );
 
+-- Social Feed: posts
+CREATE TABLE IF NOT EXISTS posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content TEXT NOT NULL,
+  image_url TEXT,
+  video_url TEXT,
+  author_type TEXT NOT NULL DEFAULT 'admin' CHECK (author_type IN ('admin', 'fighter')),
+  author_username TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS post_tags (
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  fighter_username TEXT NOT NULL REFERENCES fighters(username) ON DELETE CASCADE,
+  PRIMARY KEY (post_id, fighter_username)
+);
+
+CREATE TABLE IF NOT EXISTS post_likes (
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_discord_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (post_id, user_discord_id)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fighter_username TEXT NOT NULL REFERENCES fighters(username) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('tag', 'like')),
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  actor_discord_id TEXT NOT NULL,
+  read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Indexes (IF NOT EXISTS for indexes requires PG 9.5+)
 CREATE INDEX IF NOT EXISTS idx_fighters_division ON fighters(division);
 CREATE INDEX IF NOT EXISTS idx_fighters_rank ON fighters(rank);
@@ -148,6 +183,43 @@ USING (bucket_id = 'article-images');
 DROP POLICY IF EXISTS "anon select product-images" ON storage.objects;
 CREATE POLICY "anon select product-images" ON storage.objects FOR SELECT TO anon
 USING (bucket_id = 'product-images');
+
+-- Indexes for posts
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_post_tags_fighter ON post_tags(fighter_username);
+CREATE INDEX IF NOT EXISTS idx_notifications_fighter ON notifications(fighter_username, read);
+CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+
+-- Allow anon reads on social feed tables
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anon select posts" ON posts;
+CREATE POLICY "anon select posts" ON posts FOR SELECT TO anon USING (true);
+
+DROP POLICY IF EXISTS "anon select post_tags" ON post_tags;
+CREATE POLICY "anon select post_tags" ON post_tags FOR SELECT TO anon USING (true);
+
+DROP POLICY IF EXISTS "anon select post_likes" ON post_likes;
+CREATE POLICY "anon select post_likes" ON post_likes FOR SELECT TO anon USING (true);
+
+DROP POLICY IF EXISTS "anon select notifications" ON notifications;
+CREATE POLICY "anon select notifications" ON notifications FOR SELECT TO anon USING (true);
+
+-- Storage bucket for post images
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('post-images', 'post-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "anon insert post-images" ON storage.objects;
+CREATE POLICY "anon insert post-images" ON storage.objects FOR INSERT TO anon
+WITH CHECK (bucket_id = 'post-images');
+
+DROP POLICY IF EXISTS "anon select post-images" ON storage.objects;
+CREATE POLICY "anon select post-images" ON storage.objects FOR SELECT TO anon
+USING (bucket_id = 'post-images');
 
 -- Migrate existing tables: add columns that may be missing from older schema
 ALTER TABLE fighters ADD COLUMN IF NOT EXISTS image_url TEXT;

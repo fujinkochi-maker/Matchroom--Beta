@@ -29,7 +29,7 @@ function AdminProducts() {
     const token = getAdminToken();
     if (!token) return;
     await deleteProduct({ data: { token, id } });
-    router.invalidate();
+    await router.invalidate();
     toast.success("Product deleted");
   };
   return (

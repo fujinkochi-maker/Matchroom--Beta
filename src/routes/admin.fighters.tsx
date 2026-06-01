@@ -29,7 +29,7 @@ function AdminFighters() {
     const token = getAdminToken();
     if (!token) return;
     await deleteFighter({ data: { token, username } });
-    router.invalidate();
+    await router.invalidate();
     toast.success("Fighter deleted");
   };
   return (

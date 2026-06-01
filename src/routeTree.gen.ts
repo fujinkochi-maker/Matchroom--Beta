@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VideosRouteImport } from './routes/videos'
 import { Route as StoreRouteImport } from './routes/store'
 import { Route as RankingsRouteImport } from './routes/rankings'
+import { Route as FeedRouteImport } from './routes/feed'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as ChampionsRouteImport } from './routes/champions'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -21,14 +22,18 @@ import { Route as BoxersIndexRouteImport } from './routes/boxers.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as NewsSlugRouteImport } from './routes/news.$slug'
 import { Route as BoxersUsernameRouteImport } from './routes/boxers.$username'
+import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
+import { Route as AdminPostsRouteImport } from './routes/admin.posts'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminFightersRouteImport } from './routes/admin.fighters'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminArticlesRouteImport } from './routes/admin.articles'
+import { Route as AuthDiscordCallbackRouteImport } from './routes/auth.discord.callback'
 import { Route as AdminVideosNewRouteImport } from './routes/admin.videos.new'
 import { Route as AdminProductsNewRouteImport } from './routes/admin.products.new'
+import { Route as AdminPostsNewRouteImport } from './routes/admin.posts.new'
 import { Route as AdminFightersNewRouteImport } from './routes/admin.fighters.new'
 import { Route as AdminEventsNewRouteImport } from './routes/admin.events.new'
 import { Route as AdminArticlesNewRouteImport } from './routes/admin.articles.new'
@@ -51,6 +56,11 @@ const StoreRoute = StoreRouteImport.update({
 const RankingsRoute = RankingsRouteImport.update({
   id: '/rankings',
   path: '/rankings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedRoute = FeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsRoute = EventsRouteImport.update({
@@ -98,6 +108,11 @@ const BoxersUsernameRoute = BoxersUsernameRouteImport.update({
   path: '/boxers/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminVideosRoute = AdminVideosRouteImport.update({
   id: '/videos',
   path: '/videos',
@@ -106,6 +121,11 @@ const AdminVideosRoute = AdminVideosRouteImport.update({
 const AdminProductsRoute = AdminProductsRouteImport.update({
   id: '/products',
   path: '/products',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPostsRoute = AdminPostsRouteImport.update({
+  id: '/posts',
+  path: '/posts',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
@@ -128,6 +148,11 @@ const AdminArticlesRoute = AdminArticlesRouteImport.update({
   path: '/articles',
   getParentRoute: () => AdminRoute,
 } as any)
+const AuthDiscordCallbackRoute = AuthDiscordCallbackRouteImport.update({
+  id: '/auth/discord/callback',
+  path: '/auth/discord/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminVideosNewRoute = AdminVideosNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -137,6 +162,11 @@ const AdminProductsNewRoute = AdminProductsNewRouteImport.update({
   id: '/new',
   path: '/new',
   getParentRoute: () => AdminProductsRoute,
+} as any)
+const AdminPostsNewRoute = AdminPostsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminPostsRoute,
 } as any)
 const AdminFightersNewRoute = AdminFightersNewRouteImport.update({
   id: '/new',
@@ -185,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/champions': typeof ChampionsRoute
   '/events': typeof EventsRoute
+  '/feed': typeof FeedRoute
   '/rankings': typeof RankingsRoute
   '/store': typeof StoreRoute
   '/videos': typeof VideosRoute
@@ -192,8 +223,10 @@ export interface FileRoutesByFullPath {
   '/admin/events': typeof AdminEventsRouteWithChildren
   '/admin/fighters': typeof AdminFightersRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/admin/posts': typeof AdminPostsRouteWithChildren
   '/admin/products': typeof AdminProductsRouteWithChildren
   '/admin/videos': typeof AdminVideosRouteWithChildren
+  '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
   '/news/$slug': typeof NewsSlugRoute
   '/admin/': typeof AdminIndexRoute
@@ -202,8 +235,10 @@ export interface FileRoutesByFullPath {
   '/admin/articles/new': typeof AdminArticlesNewRoute
   '/admin/events/new': typeof AdminEventsNewRoute
   '/admin/fighters/new': typeof AdminFightersNewRoute
+  '/admin/posts/new': typeof AdminPostsNewRoute
   '/admin/products/new': typeof AdminProductsNewRoute
   '/admin/videos/new': typeof AdminVideosNewRoute
+  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/admin/articles/$slug/edit': typeof AdminArticlesSlugEditRoute
   '/admin/events/$slug/edit': typeof AdminEventsSlugEditRoute
   '/admin/fighters/$username/edit': typeof AdminFightersUsernameEditRoute
@@ -214,6 +249,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/champions': typeof ChampionsRoute
   '/events': typeof EventsRoute
+  '/feed': typeof FeedRoute
   '/rankings': typeof RankingsRoute
   '/store': typeof StoreRoute
   '/videos': typeof VideosRoute
@@ -221,8 +257,10 @@ export interface FileRoutesByTo {
   '/admin/events': typeof AdminEventsRouteWithChildren
   '/admin/fighters': typeof AdminFightersRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/admin/posts': typeof AdminPostsRouteWithChildren
   '/admin/products': typeof AdminProductsRouteWithChildren
   '/admin/videos': typeof AdminVideosRouteWithChildren
+  '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
   '/news/$slug': typeof NewsSlugRoute
   '/admin': typeof AdminIndexRoute
@@ -231,8 +269,10 @@ export interface FileRoutesByTo {
   '/admin/articles/new': typeof AdminArticlesNewRoute
   '/admin/events/new': typeof AdminEventsNewRoute
   '/admin/fighters/new': typeof AdminFightersNewRoute
+  '/admin/posts/new': typeof AdminPostsNewRoute
   '/admin/products/new': typeof AdminProductsNewRoute
   '/admin/videos/new': typeof AdminVideosNewRoute
+  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/admin/articles/$slug/edit': typeof AdminArticlesSlugEditRoute
   '/admin/events/$slug/edit': typeof AdminEventsSlugEditRoute
   '/admin/fighters/$username/edit': typeof AdminFightersUsernameEditRoute
@@ -245,6 +285,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/champions': typeof ChampionsRoute
   '/events': typeof EventsRoute
+  '/feed': typeof FeedRoute
   '/rankings': typeof RankingsRoute
   '/store': typeof StoreRoute
   '/videos': typeof VideosRoute
@@ -252,8 +293,10 @@ export interface FileRoutesById {
   '/admin/events': typeof AdminEventsRouteWithChildren
   '/admin/fighters': typeof AdminFightersRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/admin/posts': typeof AdminPostsRouteWithChildren
   '/admin/products': typeof AdminProductsRouteWithChildren
   '/admin/videos': typeof AdminVideosRouteWithChildren
+  '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
   '/news/$slug': typeof NewsSlugRoute
   '/admin/': typeof AdminIndexRoute
@@ -262,8 +305,10 @@ export interface FileRoutesById {
   '/admin/articles/new': typeof AdminArticlesNewRoute
   '/admin/events/new': typeof AdminEventsNewRoute
   '/admin/fighters/new': typeof AdminFightersNewRoute
+  '/admin/posts/new': typeof AdminPostsNewRoute
   '/admin/products/new': typeof AdminProductsNewRoute
   '/admin/videos/new': typeof AdminVideosNewRoute
+  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/admin/articles/$slug/edit': typeof AdminArticlesSlugEditRoute
   '/admin/events/$slug/edit': typeof AdminEventsSlugEditRoute
   '/admin/fighters/$username/edit': typeof AdminFightersUsernameEditRoute
@@ -277,6 +322,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/champions'
     | '/events'
+    | '/feed'
     | '/rankings'
     | '/store'
     | '/videos'
@@ -284,8 +330,10 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/fighters'
     | '/admin/login'
+    | '/admin/posts'
     | '/admin/products'
     | '/admin/videos'
+    | '/auth/login'
     | '/boxers/$username'
     | '/news/$slug'
     | '/admin/'
@@ -294,8 +342,10 @@ export interface FileRouteTypes {
     | '/admin/articles/new'
     | '/admin/events/new'
     | '/admin/fighters/new'
+    | '/admin/posts/new'
     | '/admin/products/new'
     | '/admin/videos/new'
+    | '/auth/discord/callback'
     | '/admin/articles/$slug/edit'
     | '/admin/events/$slug/edit'
     | '/admin/fighters/$username/edit'
@@ -306,6 +356,7 @@ export interface FileRouteTypes {
     | '/'
     | '/champions'
     | '/events'
+    | '/feed'
     | '/rankings'
     | '/store'
     | '/videos'
@@ -313,8 +364,10 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/fighters'
     | '/admin/login'
+    | '/admin/posts'
     | '/admin/products'
     | '/admin/videos'
+    | '/auth/login'
     | '/boxers/$username'
     | '/news/$slug'
     | '/admin'
@@ -323,8 +376,10 @@ export interface FileRouteTypes {
     | '/admin/articles/new'
     | '/admin/events/new'
     | '/admin/fighters/new'
+    | '/admin/posts/new'
     | '/admin/products/new'
     | '/admin/videos/new'
+    | '/auth/discord/callback'
     | '/admin/articles/$slug/edit'
     | '/admin/events/$slug/edit'
     | '/admin/fighters/$username/edit'
@@ -336,6 +391,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/champions'
     | '/events'
+    | '/feed'
     | '/rankings'
     | '/store'
     | '/videos'
@@ -343,8 +399,10 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/fighters'
     | '/admin/login'
+    | '/admin/posts'
     | '/admin/products'
     | '/admin/videos'
+    | '/auth/login'
     | '/boxers/$username'
     | '/news/$slug'
     | '/admin/'
@@ -353,8 +411,10 @@ export interface FileRouteTypes {
     | '/admin/articles/new'
     | '/admin/events/new'
     | '/admin/fighters/new'
+    | '/admin/posts/new'
     | '/admin/products/new'
     | '/admin/videos/new'
+    | '/auth/discord/callback'
     | '/admin/articles/$slug/edit'
     | '/admin/events/$slug/edit'
     | '/admin/fighters/$username/edit'
@@ -367,13 +427,16 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   ChampionsRoute: typeof ChampionsRoute
   EventsRoute: typeof EventsRoute
+  FeedRoute: typeof FeedRoute
   RankingsRoute: typeof RankingsRoute
   StoreRoute: typeof StoreRoute
   VideosRoute: typeof VideosRoute
+  AuthLoginRoute: typeof AuthLoginRoute
   BoxersUsernameRoute: typeof BoxersUsernameRoute
   NewsSlugRoute: typeof NewsSlugRoute
   BoxersIndexRoute: typeof BoxersIndexRoute
   NewsIndexRoute: typeof NewsIndexRoute
+  AuthDiscordCallbackRoute: typeof AuthDiscordCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -397,6 +460,13 @@ declare module '@tanstack/react-router' {
       path: '/rankings'
       fullPath: '/rankings'
       preLoaderRoute: typeof RankingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed': {
+      id: '/feed'
+      path: '/feed'
+      fullPath: '/feed'
+      preLoaderRoute: typeof FeedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/events': {
@@ -462,6 +532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BoxersUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/videos': {
       id: '/admin/videos'
       path: '/videos'
@@ -474,6 +551,13 @@ declare module '@tanstack/react-router' {
       path: '/products'
       fullPath: '/admin/products'
       preLoaderRoute: typeof AdminProductsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/posts': {
+      id: '/admin/posts'
+      path: '/posts'
+      fullPath: '/admin/posts'
+      preLoaderRoute: typeof AdminPostsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/login': {
@@ -504,6 +588,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminArticlesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/auth/discord/callback': {
+      id: '/auth/discord/callback'
+      path: '/auth/discord/callback'
+      fullPath: '/auth/discord/callback'
+      preLoaderRoute: typeof AuthDiscordCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/videos/new': {
       id: '/admin/videos/new'
       path: '/new'
@@ -517,6 +608,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/products/new'
       preLoaderRoute: typeof AdminProductsNewRouteImport
       parentRoute: typeof AdminProductsRoute
+    }
+    '/admin/posts/new': {
+      id: '/admin/posts/new'
+      path: '/new'
+      fullPath: '/admin/posts/new'
+      preLoaderRoute: typeof AdminPostsNewRouteImport
+      parentRoute: typeof AdminPostsRoute
     }
     '/admin/fighters/new': {
       id: '/admin/fighters/new'
@@ -619,6 +717,18 @@ const AdminFightersRouteWithChildren = AdminFightersRoute._addFileChildren(
   AdminFightersRouteChildren,
 )
 
+interface AdminPostsRouteChildren {
+  AdminPostsNewRoute: typeof AdminPostsNewRoute
+}
+
+const AdminPostsRouteChildren: AdminPostsRouteChildren = {
+  AdminPostsNewRoute: AdminPostsNewRoute,
+}
+
+const AdminPostsRouteWithChildren = AdminPostsRoute._addFileChildren(
+  AdminPostsRouteChildren,
+)
+
 interface AdminProductsRouteChildren {
   AdminProductsNewRoute: typeof AdminProductsNewRoute
   AdminProductsIdEditRoute: typeof AdminProductsIdEditRoute
@@ -652,6 +762,7 @@ interface AdminRouteChildren {
   AdminEventsRoute: typeof AdminEventsRouteWithChildren
   AdminFightersRoute: typeof AdminFightersRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
+  AdminPostsRoute: typeof AdminPostsRouteWithChildren
   AdminProductsRoute: typeof AdminProductsRouteWithChildren
   AdminVideosRoute: typeof AdminVideosRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
@@ -662,6 +773,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEventsRoute: AdminEventsRouteWithChildren,
   AdminFightersRoute: AdminFightersRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
+  AdminPostsRoute: AdminPostsRouteWithChildren,
   AdminProductsRoute: AdminProductsRouteWithChildren,
   AdminVideosRoute: AdminVideosRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
@@ -674,13 +786,16 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   ChampionsRoute: ChampionsRoute,
   EventsRoute: EventsRoute,
+  FeedRoute: FeedRoute,
   RankingsRoute: RankingsRoute,
   StoreRoute: StoreRoute,
   VideosRoute: VideosRoute,
+  AuthLoginRoute: AuthLoginRoute,
   BoxersUsernameRoute: BoxersUsernameRoute,
   NewsSlugRoute: NewsSlugRoute,
   BoxersIndexRoute: BoxersIndexRoute,
   NewsIndexRoute: NewsIndexRoute,
+  AuthDiscordCallbackRoute: AuthDiscordCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

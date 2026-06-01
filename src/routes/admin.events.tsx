@@ -29,7 +29,7 @@ function AdminEvents() {
     const token = getAdminToken();
     if (!token) return;
     await deleteEvent({ data: { token, slug } });
-    router.invalidate();
+    await router.invalidate();
     toast.success("Event deleted");
   };
   return (

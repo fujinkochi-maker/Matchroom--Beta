@@ -29,7 +29,7 @@ function AdminArticles() {
     const token = getAdminToken();
     if (!token) return;
     await deleteArticle({ data: { token, slug } });
-    router.invalidate();
+    await router.invalidate();
     toast.success("Article deleted");
   };
   return (

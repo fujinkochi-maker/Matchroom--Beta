@@ -8,6 +8,7 @@ import {
   Newspaper,
   Video,
   Package,
+  MessageSquare,
   LogOut,
 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
@@ -19,6 +20,7 @@ const SIDEBAR = [
   { to: "/admin/events", label: "Events", icon: Calendar },
   { to: "/admin/articles", label: "Articles", icon: Newspaper },
   { to: "/admin/videos", label: "Videos", icon: Video },
+  { to: "/admin/posts", label: "Feed Posts", icon: MessageSquare },
   { to: "/admin/products", label: "Products", icon: Package },
 ];
 

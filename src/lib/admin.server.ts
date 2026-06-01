@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import crypto from "node:crypto";
 import { getAdminSupabase } from "./supabase-admin";
+import { exchangeDiscordCode, validateFighterToken } from "./discord-oauth.server";
 
 const DISCORD_API = "https://discord.com/api/v10";
 
@@ -90,6 +91,14 @@ export const adminLogin = createServerFn({ method: "POST" })
       throw new Error("Invalid password");
     }
     return { token: signToken() };
+  });
+
+/* ── Fighter Discord OAuth Login ── */
+
+export const discordLogin = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ code: z.string(), redirectUri: z.string() }))
+  .handler(async ({ data }) => {
+    return exchangeDiscordCode(data.code, data.redirectUri);
   });
 
 const DIVISIONS = [
@@ -565,5 +574,223 @@ export const deleteProduct = createServerFn({ method: "POST" })
     const supabase = getAdminSupabase();
     const { error } = await supabase.from("products").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/* ============ Posts / Feed ============ */
+
+const postSchema = z.object({
+  token: z.string(),
+  content: z.string().min(1).max(2000),
+  imageUrl: z.string().optional(),
+  videoUrl: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+});
+
+export const createPost = createServerFn({ method: "POST" })
+  .inputValidator(postSchema)
+  .handler(async ({ data }) => {
+    const supabase = getAdminSupabase();
+    let authorType: string;
+    let authorUsername: string | null;
+
+    // Try fighter token first, then admin token
+    const discordId = validateFighterToken(data.token);
+    if (discordId) {
+      authorType = "fighter";
+      const { data: fighter } = await supabase
+        .from("fighters")
+        .select("username")
+        .eq("discord_id", discordId)
+        .single();
+      if (!fighter) throw new Error("Fighter not found");
+      authorUsername = fighter.username;
+    } else if (validateToken(data.token)) {
+      authorType = "admin";
+      authorUsername = "admin";
+    } else {
+      throw new Error("Unauthorized");
+    }
+
+    const { data: inserted, error: pErr } = await supabase
+      .from("posts")
+      .insert({
+        content: data.content,
+        image_url: data.imageUrl ?? null,
+        video_url: data.videoUrl ?? null,
+        author_type: authorType,
+        author_username: authorUsername,
+      })
+      .select("id")
+      .single();
+
+    if (pErr) throw new Error(pErr.message);
+
+    const postId = inserted.id;
+
+    if (data.tags.length > 0) {
+      const { error: tErr } = await supabase
+        .from("post_tags")
+        .insert(data.tags.map((u) => ({ post_id: postId, fighter_username: u })));
+      if (tErr) throw new Error(tErr.message);
+
+      // Create notifications for tagged fighters
+      const { data: taggedFighters } = await supabase
+        .from("fighters")
+        .select("username, discord_id, guild_id")
+        .in("username", data.tags);
+
+      if (taggedFighters) {
+        const notifs = taggedFighters.map((f) => ({
+          fighter_username: f.username,
+          type: "tag" as const,
+          post_id: postId,
+          actor_discord_id: discordId ?? "admin",
+        }));
+        await supabase.from("notifications").insert(notifs);
+
+        // Send Discord DM to each tagged fighter
+        for (const f of taggedFighters) {
+          if (f.discord_id && process.env.DISCORD_BOT_TOKEN) {
+            try {
+              const dmRes = await fetch(`${DISCORD_API}/users/${f.discord_id}/channels`, {
+                method: "POST",
+                headers: discordHeaders(),
+                body: JSON.stringify({ recipient_id: f.discord_id }),
+              });
+              if (dmRes.ok) {
+                const dm = (await dmRes.json()) as { id: string };
+                const preview =
+                  data.content.length > 100 ? data.content.slice(0, 100) + "..." : data.content;
+                await fetch(`${DISCORD_API}/channels/${dm.id}/messages`, {
+                  method: "POST",
+                  headers: discordHeaders(),
+                  body: JSON.stringify({
+                    content: `🔔 You were tagged in a post: "${preview}"\nCheck it out: ${process.env.VITE_SITE_URL ?? "http://localhost:5173"}/feed`,
+                  }),
+                });
+              }
+            } catch {
+              // DM is best-effort
+            }
+          }
+        }
+      }
+    }
+
+    return { ok: true };
+  });
+
+export const deletePost = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), postId: z.string() }))
+  .handler(async ({ data }) => {
+    const supabase = getAdminSupabase();
+    const discordId = validateFighterToken(data.token);
+    const isAdmin = validateToken(data.token);
+
+    if (!discordId && !isAdmin) throw new Error("Unauthorized");
+
+    if (discordId) {
+      // Fighter can only delete their own posts
+      const { data: post } = await supabase
+        .from("posts")
+        .select("author_type, author_username")
+        .eq("id", data.postId)
+        .single();
+      if (!post || post.author_type !== "fighter") throw new Error("Unauthorized");
+      const { data: fighter } = await supabase
+        .from("fighters")
+        .select("username")
+        .eq("discord_id", discordId)
+        .single();
+      if (!fighter || fighter.username !== post.author_username) throw new Error("Unauthorized");
+    }
+
+    const { error } = await supabase.from("posts").delete().eq("id", data.postId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const likePost = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), postId: z.string() }))
+  .handler(async ({ data }) => {
+    const discordId = validateFighterToken(data.token);
+    if (!discordId && !validateToken(data.token)) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    const { error } = await supabase
+      .from("post_likes")
+      .insert({ post_id: data.postId, user_discord_id: discordId ?? "admin" });
+    if (error && !error.message.includes("violates unique constraint")) {
+      throw new Error(error.message);
+    }
+
+    // Notify post author
+    const { data: post } = await supabase
+      .from("posts")
+      .select("author_type, author_username")
+      .eq("id", data.postId)
+      .single();
+    if (post?.author_type === "fighter" && post.author_username) {
+      const { data: author } = await supabase
+        .from("fighters")
+        .select("username")
+        .eq("username", post.author_username)
+        .single();
+      if (author) {
+        await supabase.from("notifications").insert({
+          fighter_username: author.username,
+          type: "like",
+          post_id: data.postId,
+          actor_discord_id: discordId ?? "admin",
+        });
+      }
+    }
+
+    return { ok: true };
+  });
+
+export const unlikePost = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), postId: z.string() }))
+  .handler(async ({ data }) => {
+    const discordId = validateFighterToken(data.token);
+    if (!discordId && !validateToken(data.token)) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    await supabase
+      .from("post_likes")
+      .delete()
+      .eq("post_id", data.postId)
+      .eq("user_discord_id", discordId ?? "admin");
+    return { ok: true };
+  });
+
+export const getNotifications = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => {
+    const discordId = validateFighterToken(data.token);
+    if (!discordId) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    const { data: notifs } = await supabase
+      .from("notifications")
+      .select("*, fighters!inner(discord_id)")
+      .eq("fighters.discord_id", discordId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return { notifications: notifs ?? [] };
+  });
+
+export const markNotificationsRead = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => {
+    const discordId = validateFighterToken(data.token);
+    if (!discordId) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq(
+        "fighter_username",
+        (await supabase.from("fighters").select("username").eq("discord_id", discordId).single())
+          .data?.username ?? "",
+      );
     return { ok: true };
   });
