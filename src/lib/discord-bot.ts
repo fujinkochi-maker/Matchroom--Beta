@@ -269,13 +269,33 @@ function jsonResponse(data: unknown, status = 200) {
 function ephemeral(content: string) {
   return jsonResponse({
     type: InteractionResponseType.ChannelMessageWithSource,
-    data: { content, flags: 64 },
+    data: {
+      embeds: [
+        promoterEmbed(fighter.display_name, {
+          thumbnail: fighter.image_url,
+          fields: [
+            { name: "Division", value: fighter.division, inline: true },
+            { name: "Rank", value: rank, inline: true },
+            { name: "Record", value: record, inline: true },
+            { name: "Stance", value: fighter.stance, inline: true },
+            { name: "Streak", value: fighter.streak || "N/A", inline: true },
+            {
+              name: "Promoter's Note",
+              value: `"${getPromoterLine(fighter)}" — Eddie Matchroom`,
+              inline: false,
+            },
+          ],
+          footer: `@${fighter.username}`,
+        }),
+      ],
+      flags: 64,
+    },
   });
 }
 
 async function sendFollowUp(interaction: any, payload: any) {
   try {
-    await fetch(
+    await discordFetch(
       `${DISCORD_API}/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`,
       {
         method: "PATCH",
@@ -305,6 +325,112 @@ function getOptionValue(
 
 function formatRecord(f: { wins: number; losses: number; draws: number; kos: number }): string {
   return `${f.wins}-${f.losses}-${f.draws} (${Math.round((f.kos / Math.max(f.wins, 1)) * 100)}% KO)`;
+}
+
+/* ============ Promoter Voice & Embed Helpers ============ */
+
+const PROMOTER_LINES = {
+  champion: [
+    "This man is a PROBLEM in the {division} division. Pure violence.",
+    "Talk about a specimen. Built different from the rest of us.",
+    "He doesn't just win fights, he ends careers.",
+    "The aura this guy carries? Championship material.",
+    "If you're looking for the baddest man on the planet, stop here.",
+  ],
+  contender: [
+    "Now THIS is a fighter with serious upside. Watch this space.",
+    "He's been putting in work and it's starting to show.",
+    "The hunger in his eyes? That's championship material right there.",
+    "Every time he steps in that ring, he takes a piece of it with him.",
+    "He's not just climbing the ranks, he's reshaping them.",
+  ],
+  undefeated: [
+    "Zero losses and counting. That's not luck, that's dominance.",
+    "Perfect record for a reason. He makes it look easy.",
+    "When you're undefeated, you're not just fighting records, you're fighting history.",
+    "That record isn't just impressive, it's intimidating.",
+    "He hasn't just avoided losses, he's made opponents wish they never stepped in the ring.",
+  ],
+  veteran: [
+    "He's been in the trenches and came out with stripes to show for it.",
+    "Experience like that doesn't just teach you how to fight, it teaches you how to win.",
+    "The ring isn't just a place for him, it's where he belongs.",
+    "He's seen every style, faced every challenge, and adapted to overcome.",
+    "Time in the ring doesn't lie, and neither does his record.",
+  ],
+  newcomer: [
+    "Fresh meat with serious potential. I can see the fire in his eyes.",
+    "New face, old school mentality. Respect.",
+    "He's just getting started but you can already tell he's built for this.",
+    "First impressions matter, and this one? It's gonna leave a mark.",
+    "Every champion starts somewhere. This is his somewhere.",
+  ],
+  brawler: [
+    "He doesn't just throw punches, he throws commitment.",
+    "When he walks to that ring, you know it's going to be a war.",
+    "He's not here to point fight, he's here to make a statement.",
+    "The way he fights? That's how legends are made.",
+    "He brings pressure like it's going out of style.",
+  ],
+};
+
+function getPromoterLine(fighter: any): string {
+  const division = fighter.division.toLowerCase().replace(/\s+/g, " ");
+
+  // Determine fighter category
+  let category: keyof typeof PROMOTER_LINES;
+  if (fighter.rank === 0) {
+    category = "champion";
+  } else if (fighter.wins === 0 && fighter.losses === 0 && fighter.draws === 0) {
+    category = "newcomer";
+  } else if (fighter.wins >= 10) {
+    category = "veteran";
+  } else if (fighter.wins >= fighter.losses * 2 && fighter.wins >= 5) {
+    category = "contender";
+  } else if (fighter.losses === 0 && fighter.wins > 0) {
+    category = "undefeated";
+  } else if (fighter.kos / Math.max(fighter.wins, 1) > 0.6) {
+    category = "brawler";
+  } else {
+    category = "contender"; // default
+  }
+
+  const lines = PROMOTER_LINES[category];
+  const line = lines[Math.floor(Math.random() * lines.length)];
+  return line.replace("{division}", fighter.division);
+}
+
+function promoterEmbed(
+  title: string,
+  opts?: {
+    description?: string;
+    fields?: Array<{ name: string; value: string; inline?: boolean }>;
+    thumbnail?: string;
+    image?: string;
+    footer?: string;
+  },
+): any {
+  const embed: any = {
+    title,
+    color: 0xd71920, // Matchroom Red
+    timestamp: new Date().toISOString(),
+  };
+
+  if (opts?.description) embed.description = opts.description;
+  if (opts?.fields) embed.fields = opts.fields;
+  if (opts?.thumbnail) embed.thumbnail = { url: opts.thumbnail };
+  if (opts?.image) embed.image = { url: opts.image };
+  if (opts?.footer) embed.footer = { text: opts.footer };
+  else embed.footer = { text: "Matchroom Boxing Beta • Fan-made" };
+
+  // Add author with Matchroom logo (using Supabase storage or Discord CDN)
+  // For now, we'll use a placeholder - in production this would be your actual logo
+  embed.author = {
+    name: "Matchroom Boxing",
+    icon_url: "https://i.imgur.com/8k0zZQl.png", // Placeholder - replace with actual logo
+  };
+
+  return embed;
 }
 
 function formatNickname(f: {
@@ -389,12 +515,46 @@ function discordHeaders() {
   };
 }
 
+/* Use https.request() instead of Bun's fetch() for Discord API calls
+   to avoid TLS cert issues in HF Spaces and containerized environments. */
+function discordFetch(
+  url: string,
+  options: { method: string; headers?: Record<string, string>; body?: string },
+): Promise<Response> {
+  const u = new URL(url);
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        method: options.method,
+        headers: options.headers,
+        agent: httpsAgent,
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () =>
+          resolve(
+            new Response(data, {
+              status: res.statusCode,
+              statusText: res.statusMessage,
+            }),
+          ),
+        );
+      },
+    );
+    req.on("error", reject);
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
 async function createDM(userId: string): Promise<string> {
-  const res = await fetch(`${DISCORD_API}/users/@me/channels`, {
+  const res = await discordFetch(`${DISCORD_API}/users/@me/channels`, {
     method: "POST",
     headers: discordHeaders(),
     body: JSON.stringify({ recipient_id: userId }),
-    agent: httpsAgent,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
@@ -407,11 +567,10 @@ async function createDM(userId: string): Promise<string> {
 async function sendMessage(channelId: string, content: string, components?: any[]) {
   const body: any = { content };
   if (components) body.components = components;
-  await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+  await discordFetch(`${DISCORD_API}/channels/${channelId}/messages`, {
     method: "POST",
     headers: discordHeaders(),
     body: JSON.stringify(body),
-    agent: httpsAgent,
   });
 }
 
@@ -424,22 +583,20 @@ async function editMessage(
   const body: any = {};
   if (content !== undefined) body.content = content;
   if (components) body.components = components;
-  await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
+  await discordFetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
     method: "PATCH",
     headers: discordHeaders(),
     body: JSON.stringify(body),
-    agent: httpsAgent,
   });
 }
 
 async function setNickname(guildId: string, userId: string, nick: string) {
   try {
     console.log(`[Nick] Setting ${userId} in ${guildId} to "${nick}"`);
-    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
+    const res = await discordFetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
       method: "PATCH",
       headers: discordHeaders(),
       body: JSON.stringify({ nick }),
-      agent: httpsAgent,
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
@@ -493,11 +650,13 @@ const PRO_BOXER_ROLE = "1510665774052806780";
 async function addRole(guildId: string, userId: string, roleId: string) {
   try {
     console.log(`[Role] Adding ${roleId} to ${userId} in ${guildId}`);
-    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
-      method: "PUT",
-      headers: discordHeaders(),
-      agent: httpsAgent,
-    });
+    const res = await discordFetch(
+      `${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      {
+        method: "PUT",
+        headers: discordHeaders(),
+      },
+    );
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
       console.error(`[Role] Failed to add (${res.status}):`, err);
@@ -514,11 +673,13 @@ async function addRole(guildId: string, userId: string, roleId: string) {
 async function removeRole(guildId: string, userId: string, roleId: string) {
   try {
     console.log(`[Role] Removing ${roleId} from ${userId} in ${guildId}`);
-    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
-      method: "DELETE",
-      headers: discordHeaders(),
-      agent: httpsAgent,
-    });
+    const res = await discordFetch(
+      `${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      {
+        method: "DELETE",
+        headers: discordHeaders(),
+      },
+    );
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
       console.error(`[Role] Failed to remove (${res.status}):`, err);
@@ -555,7 +716,7 @@ async function sendPromoterDM(
     console.error("Promoter DM failed:", err);
     if (interaction) {
       try {
-        await fetch(
+        await discordFetch(
           `${DISCORD_API}/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`,
           {
             method: "PATCH",

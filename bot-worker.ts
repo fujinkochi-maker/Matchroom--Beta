@@ -92,7 +92,7 @@ async function registerCommands() {
 
   try {
     const body = JSON.stringify(commands);
-    const options: any = {
+    const options = {
       hostname: "discord.com",
       path: `/api/v10/applications/${appId}/commands`,
       method: "PUT",
@@ -100,11 +100,11 @@ async function registerCommands() {
         Authorization: `Bot ${botToken}`,
         "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(body),
-      },
+      } as Record<string, string>,
       agent: httpsAgent,
-    };
+    } satisfies https.RequestOptions;
 
-    const resObj: any = await new Promise((resolve, reject) => {
+    const resObj = await new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
       const req = https.request(options, (res) => {
         let data = "";
         res.on("data", (chunk) => (data += chunk));

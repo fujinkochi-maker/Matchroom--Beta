@@ -147,23 +147,28 @@ See `src/routes/README.md`. Key: `routeTree.gen.ts` is auto-generated.
 ### Auto-Role System
 
 On `/register`, the bot stores the guild ID (`guild_id`) in the fighter's DB row. When the fighter picks a division via DM buttons:
+
 - Their division role is assigned (e.g. `Heavyweight` → role `1510665777106387025`)
 - The `Amateur` role (`1510667124006457496`) is added
 
 When a fighter reaches **3+ wins** (`checkPromotion`):
+
 - `Amateur` role is removed
 - `Pro Boxer` role (`1510665774052806780`) is added
 
 Promotion is checked:
+
 - On `/stats` command (fire-and-forget)
 - After admin `updateFighter` saves stat changes
 
 Role helpers at `src/lib/discord-bot.ts`:
+
 - `addRole(guildId, userId, roleId)` — PUT role
 - `removeRole(guildId, userId, roleId)` — DELETE role
 - `checkPromotion(guildId, discordId, wins)` — promotes if wins >= 3
 
 Admin-side helpers at `src/lib/admin.server.ts`:
+
 - `discordAddRole(guildId, userId, roleId)`
 - `discordRemoveRole(guildId, userId, roleId)`
 
