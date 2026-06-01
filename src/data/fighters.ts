@@ -67,7 +67,7 @@ export const PRODUCTS = _products;
 
 /* ============ Cache helpers ============ */
 
-let _loadPromise: Promise<void> | null = null;
+const _loadPromises: Record<string, Promise<void> | null> = {};
 const _lastLoaded: Record<string, number> = {};
 const CACHE_TTL = 30_000;
 
@@ -99,8 +99,9 @@ async function _loadTable<T>(
 }
 
 export async function ensureFightersLoaded() {
-  if (_loadPromise) return _loadPromise;
-  _loadPromise = _loadTable(
+  const k = "_fighters";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable(
     "fighters",
     _fighters,
     rowToFighter,
@@ -122,13 +123,14 @@ export async function ensureFightersLoaded() {
     },
     "fighters",
   );
-  await _loadPromise;
-  _loadPromise = null;
+  await _loadPromises[k];
+  _loadPromises[k] = null;
 }
 
 export async function ensureEventsLoaded() {
-  if (_loadPromise) return _loadPromise;
-  _loadPromise = _loadTable(
+  const k = "_events";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable(
     "events",
     _events,
     rowToEventFromRow,
@@ -147,13 +149,14 @@ export async function ensureEventsLoaded() {
     },
     "events",
   );
-  await _loadPromise;
-  _loadPromise = null;
+  await _loadPromises[k];
+  _loadPromises[k] = null;
 }
 
 export async function ensureArticlesLoaded() {
-  if (_loadPromise) return _loadPromise;
-  _loadPromise = _loadTable(
+  const k = "_articles";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable(
     "articles",
     _articles,
     rowToArticleFromRow,
@@ -171,13 +174,14 @@ export async function ensureArticlesLoaded() {
     },
     "articles",
   );
-  await _loadPromise;
-  _loadPromise = null;
+  await _loadPromises[k];
+  _loadPromises[k] = null;
 }
 
 export async function ensureVideosLoaded() {
-  if (_loadPromise) return _loadPromise;
-  _loadPromise = _loadTable(
+  const k = "_videos";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable(
     "videos",
     _videos,
     rowToVideoFromRow,
@@ -195,15 +199,16 @@ export async function ensureVideosLoaded() {
     },
     "videos",
   );
-  await _loadPromise;
-  _loadPromise = null;
+  await _loadPromises[k];
+  _loadPromises[k] = null;
 }
 
 export async function ensureProductsLoaded() {
-  if (_loadPromise) return _loadPromise;
-  _loadPromise = _loadTable("products", _products, rowToProductFromRow, undefined, "products");
-  await _loadPromise;
-  _loadPromise = null;
+  const k = "_products";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable("products", _products, rowToProductFromRow, undefined, "products");
+  await _loadPromises[k];
+  _loadPromises[k] = null;
 }
 
 function rowToEventFromRow(row: any): BoxingEvent {
