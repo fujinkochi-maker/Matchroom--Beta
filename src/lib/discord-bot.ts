@@ -693,7 +693,7 @@ async function sendPromoterDM(
 
 /* ── Cache-based read handlers (instant, no deferred needed) ── */
 
-async function handleStatsCommand(interaction: any): Promise<Response> {
+function handleStatsCommand(interaction: any): Response {
   const discordId = interaction.member?.user?.id ?? interaction.user?.id;
   if (!discordId) return ephemeral("Could not identify you.");
 
@@ -704,8 +704,8 @@ async function handleStatsCommand(interaction: any): Promise<Response> {
   if (fighter.wins >= 3) {
     const promoGuildId = fighter.guildId || interaction.guild_id;
     if (promoGuildId) {
-      await addRole(promoGuildId, discordId, PRO_BOXER_ROLE);
-      await removeRole(promoGuildId, discordId, AMATEUR_ROLE);
+      addRole(promoGuildId, discordId, PRO_BOXER_ROLE);
+      removeRole(promoGuildId, discordId, AMATEUR_ROLE);
     }
   }
 
@@ -860,11 +860,10 @@ async function handleUnregisterCommand(interaction: any): Promise<Response> {
 
   const unregGuildId = fighter.guildId || interaction.guild_id;
   if (unregGuildId) {
-    await setNickname(unregGuildId, discordId, `${fighter.displayName} [ Retired ]`);
-    if (fighter.division)
-      await removeRole(unregGuildId, discordId, DIVISION_ROLES[fighter.division]);
-    await removeRole(unregGuildId, discordId, AMATEUR_ROLE);
-    await removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
+    setNickname(unregGuildId, discordId, `${fighter.displayName} [ Retired ]`);
+    if (fighter.division) removeRole(unregGuildId, discordId, DIVISION_ROLES[fighter.division]);
+    removeRole(unregGuildId, discordId, AMATEUR_ROLE);
+    removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
   }
 
   await loadDataFromSupabase();
@@ -940,7 +939,7 @@ async function handleRegisterModal(interaction: any): Promise<Response> {
 
   const guildId = interaction.guild_id;
   if (guildId) {
-    await setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
+    setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
   }
   sendPromoterDM(discordId, displayName, {
     token: interaction.token,
@@ -996,14 +995,14 @@ async function handleDivisionButton(interaction: any): Promise<Response> {
   const roleGuildId = fighter.guildId || interaction.guild_id;
   if (roleGuildId) {
     const roleId = DIVISION_ROLES[division];
-    if (roleId) await addRole(roleGuildId, discordId, roleId);
-    await addRole(roleGuildId, discordId, AMATEUR_ROLE);
+    if (roleId) addRole(roleGuildId, discordId, roleId);
+    addRole(roleGuildId, discordId, AMATEUR_ROLE);
   }
 
   const guildId = interaction.guild_id;
   if (guildId) {
     const full = FIGHTERS.find((f: any) => f.discordId === discordId);
-    if (full) await setNickname(guildId, discordId, formatNickname(full));
+    if (full) setNickname(guildId, discordId, formatNickname(full));
   }
 
   await loadDataFromSupabase();
