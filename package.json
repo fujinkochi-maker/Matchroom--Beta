@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "seed": "bun scripts/seed.ts",
     "register-commands": "bun scripts/register-commands.ts",
-    "bot": "bun run bot-worker.ts"
+    "deploy": "wrangler deploy",
+    "dev:worker": "wrangler dev src/worker.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -57,7 +58,6 @@
     "date-fns": "^4.1.0",
     "discord-api-types": "^0.38.48",
     "discord-interactions": "^4.4.0",
-    "discord.js": "^14.26.4",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.40.0",
     "input-otp": "^1.4.2",
@@ -79,6 +79,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260531.1",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "^2.1.1",
     "@types/node": "^22.16.5",
@@ -96,6 +97,7 @@
     "tsx": "^4.22.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "wrangler": "^4.95.0"
   }
 }
