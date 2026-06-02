@@ -130,13 +130,17 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
           </select>
         </Field>
         <Field label="Rank">
-          <input
-            type="number"
-            min={0}
-            value={form.rank}
-            onChange={(e) => set("rank", Number(e.target.value))}
-            className={inp()}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              value={form.rank}
+              onChange={(e) => set("rank", Number(e.target.value))}
+              className={inp("bg-muted/50")}
+              disabled
+            />
+            <span className="text-xs text-muted-foreground">Auto-calculated</span>
+          </div>
         </Field>
         <Field label="Stance" required>
           <select
@@ -186,6 +190,9 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
             className={inp()}
           />
         </Field>
+        <div className="col-span-full text-xs text-muted-foreground">
+          Stats auto-calculate from fight history on save. Manual fields are fallback.
+        </div>
         <Field label="Belts Held">
           <div className="flex flex-wrap gap-4">
             {["WBC", "WBA", "WBO", "IBF"].map((b) => (

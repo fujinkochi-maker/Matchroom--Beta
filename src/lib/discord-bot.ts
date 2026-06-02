@@ -1,6 +1,7 @@
 import { verifyKey } from "discord-interactions";
 import { InteractionType, InteractionResponseType } from "discord-api-types/v10";
 import { createClient } from "@supabase/supabase-js";
+import { setSupabaseEnv } from "@/lib/supabase";
 import {
   FIGHTERS,
   getRanked,
@@ -23,7 +24,12 @@ const DIVISIONS = [
   "Heavyweight",
 ] as const;
 
-export function createHandler(env: Record<string, string>) {
+export function createHandler(
+  env: Record<string, string>,
+  waitUntil?: (promise: Promise<unknown>) => void,
+) {
+  // Ensure Supabase env is set for cache loading (Workers don't have process.env)
+  setSupabaseEnv(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const BOT_TOKEN = env.DISCORD_BOT_TOKEN;
 
@@ -324,18 +330,6 @@ export function createHandler(env: Record<string, string>) {
     }
   }
 
-  async function sendPromoterDM(discordId: string, displayName: string) {
-    try {
-      const dmId = await createDM(discordId);
-      await sendMessage(
-        dmId,
-        `🥊 **Matchroom Promoter**\n\n"Welcome to the big leagues, **${displayName}**. I've seen potential in you.\n\nBest of luck in your career — make us proud."`,
-      );
-    } catch (err) {
-      console.error("Promoter DM failed:", err);
-    }
-  }
-
   /* ── Command handlers ── */
 
   function handleStatsCommand(interaction: any): Response {
@@ -495,29 +489,54 @@ export function createHandler(env: Record<string, string>) {
     const discordId = interaction.member?.user?.id ?? interaction.user?.id;
     if (!discordId) return ephemeral("Could not identify you.");
 
-    const supabase = getSupabaseAdmin();
-    const fighter = FIGHTERS.find((f: any) => f.discordId === discordId);
-    if (!fighter) return ephemeral("You're not registered! Use `/register` to create a fighter.");
+    const appId = interaction.application_id;
+    const intToken = interaction.token;
 
-    await supabase.from("fighters").delete().eq("discord_id", discordId);
+    const bgTask = (async () => {
+      try {
+        const supabase = getSupabaseAdmin();
 
-    const unregGuildId = fighter.guildId || interaction.guild_id;
-    if (unregGuildId) {
-      setNickname(unregGuildId, discordId, `${fighter.displayName} [ Retired ]`);
-      if (fighter.division) removeRole(unregGuildId, discordId, DIVISION_ROLES[fighter.division]);
-      removeRole(unregGuildId, discordId, AMATEUR_ROLE);
-      removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
-    }
+        const { data: fighter } = await supabase
+          .from("fighters")
+          .select("display_name, guild_id, division")
+          .eq("discord_id", discordId)
+          .single();
 
-    await loadDataFromSupabase();
+        if (!fighter) {
+          await editDeferredResponse(
+            appId,
+            intToken,
+            "You're not registered! Use `/register` to create a fighter.",
+          );
+          return;
+        }
 
-    return jsonResponse({
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: {
-        content: `${fighter.displayName} has been retired. Use \`/register\` to create a new fighter anytime.`,
-        flags: 64,
-      },
-    });
+        await supabase.from("fighters").delete().eq("discord_id", discordId);
+
+        const unregGuildId = fighter.guild_id || interaction.guild_id;
+        if (unregGuildId) {
+          setNickname(unregGuildId, discordId, `${fighter.display_name} [ Retired ]`);
+          if (fighter.division)
+            removeRole(unregGuildId, discordId, DIVISION_ROLES[fighter.division]);
+          removeRole(unregGuildId, discordId, AMATEUR_ROLE);
+          removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
+        }
+
+        await loadDataFromSupabase();
+        await editDeferredResponse(
+          appId,
+          intToken,
+          `${fighter.display_name} has been retired. Use \`/register\` to create a new fighter anytime.`,
+        );
+      } catch (err) {
+        console.error("[Unregister] Background error:", err);
+        await editDeferredResponse(appId, intToken, "Unregister failed. Try again.");
+      }
+    })();
+
+    if (waitUntil) waitUntil(bgTask);
+
+    return jsonResponse({ type: 5 });
   }
 
   async function handleRegisterModal(interaction: any): Promise<Response> {
@@ -538,73 +557,71 @@ export function createHandler(env: Record<string, string>) {
 
     if (!displayName || !username) return ephemeral("All fields are required.");
 
-    const existingFighter = FIGHTERS.find((f: any) => f.discordId === discordId);
-    if (existingFighter)
-      return ephemeral("You're already registered! Use `/stats` to view your profile.");
-
-    const usernameTaken = FIGHTERS.find((f: any) => f.username === username);
-    if (usernameTaken) return ephemeral(`Username "${username}" is already taken. Choose another.`);
-
-    const supabase = getSupabaseAdmin();
-    const registerGuildId = interaction.guild_id ?? "";
-    const { error } = await supabase.from("fighters").insert({
-      username,
-      display_name: displayName,
-      nickname: "",
-      division: "",
-      rank: 999,
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      kos: 0,
-      stance: "Orthodox",
-      belts: 0,
-      belts_held: "",
-      debut: new Date().toISOString().split("T")[0],
-      streak: "",
-      bio: "",
-      discord_id: discordId,
-      guild_id: registerGuildId,
-    });
-
-    if (error) {
-      const msg = error.message ?? "";
-      if (msg.includes("duplicate key") || msg.includes("unique constraint"))
-        return ephemeral("You're already registered! Use `/stats` to view your profile.");
-      return jsonResponse({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: { content: `Registration failed: ${msg}`, flags: 64 },
-      });
-    }
-
     const appId = interaction.application_id;
     const intToken = interaction.token;
 
-    (async () => {
+    const bgTask = (async () => {
       try {
+        const supabase = getSupabaseAdmin();
+        const guildId = interaction.guild_id ?? "";
+
+        const { error } = await supabase.from("fighters").insert({
+          username,
+          display_name: displayName,
+          nickname: "",
+          division: "",
+          rank: 999,
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          kos: 0,
+          stance: "Orthodox",
+          belts: 0,
+          belts_held: "",
+          debut: new Date().toISOString().split("T")[0],
+          streak: "",
+          bio: "",
+          discord_id: discordId,
+          guild_id: guildId,
+        });
+
+        if (error) {
+          const msg = error.message ?? "";
+          if (msg.includes("duplicate key") || msg.includes("unique constraint"))
+            await editDeferredResponse(
+              appId,
+              intToken,
+              "You're already registered! Use `/stats` to view your profile.",
+            );
+          else await editDeferredResponse(appId, intToken, `Registration failed: ${msg}`);
+          return;
+        }
+
         await loadDataFromSupabase();
-        const guildId = interaction.guild_id;
+
         if (guildId) {
           setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
         }
-        sendPromoterDM(discordId, displayName);
+
         await editDeferredResponse(
           appId,
           intToken,
-          `Welcome to the big leagues, ${displayName}! "Now tell me — what division are you fighting in?"`,
+          `"Now tell me — what division are you fighting in, **${displayName}**?"`,
           DIVISION_BUTTONS,
         );
       } catch (err) {
         console.error("[RegisterModal] Background error:", err);
-        await editDeferredResponse(
-          appId,
-          intToken,
-          "Registration saved, but something went wrong afterward. Try again.",
-        );
+        await editDeferredResponse(appId, intToken, "Registration failed. Please try again.");
       }
     })();
 
-    return jsonResponse({ type: 5 });
+    if (waitUntil) waitUntil(bgTask);
+
+    // Ephemeral — only the user who registered sees this
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: { content: "Registering you as a fighter...", flags: 64 },
+    });
   }
 
   async function handleDivisionButton(interaction: any): Promise<Response> {
@@ -618,15 +635,28 @@ export function createHandler(env: Record<string, string>) {
 
     if (!(DIVISIONS as readonly string[]).includes(division)) return ephemeral("Invalid division.");
 
-    const fighter = FIGHTERS.find((f: any) => f.discordId === discordId);
-    if (!fighter) return ephemeral("Register with `/register` first!");
-
     const appId = interaction.application_id;
     const intToken = interaction.token;
-    const supabase = getSupabaseAdmin();
 
-    (async () => {
+    const bgTask = (async () => {
       try {
+        const supabase = getSupabaseAdmin();
+
+        const { data: fighter, error: lookupErr } = await supabase
+          .from("fighters")
+          .select("display_name, guild_id")
+          .eq("discord_id", discordId)
+          .single();
+
+        if (lookupErr || !fighter) {
+          await editDeferredResponse(
+            appId,
+            intToken,
+            "You're not registered! Use `/register` first.",
+          );
+          return;
+        }
+
         const { error } = await supabase
           .from("fighters")
           .update({ division })
@@ -651,17 +681,12 @@ export function createHandler(env: Record<string, string>) {
           .update({ rank: (count ?? 0) + 1 })
           .eq("discord_id", discordId);
 
-        const roleGuildId = fighter.guildId || interaction.guild_id;
+        const roleGuildId = fighter.guild_id || interaction.guild_id;
         if (roleGuildId) {
           const roleId = DIVISION_ROLES[division];
           if (roleId) addRole(roleGuildId, discordId, roleId);
           addRole(roleGuildId, discordId, AMATEUR_ROLE);
-        }
-
-        const guildId = interaction.guild_id;
-        if (guildId) {
-          const full = FIGHTERS.find((f: any) => f.discordId === discordId);
-          if (full) setNickname(guildId, discordId, formatNickname(full));
+          setNickname(roleGuildId, discordId, `${fighter.display_name} | 0-0-0 | 0KOs`);
         }
 
         await loadDataFromSupabase();
@@ -669,7 +694,7 @@ export function createHandler(env: Record<string, string>) {
         await editDeferredResponse(
           appId,
           intToken,
-          `Division locked in. **${fighter.displayName}** is now fighting at **${division}**. The Promoter is watching.`,
+          `Division locked in. **${fighter.display_name}** is now fighting at **${division}**. The Promoter is watching.`,
         );
       } catch (err) {
         console.error("[DivisionButton] Background error:", err);
@@ -681,7 +706,9 @@ export function createHandler(env: Record<string, string>) {
       }
     })();
 
-    return jsonResponse({ type: 5 });
+    if (waitUntil) waitUntil(bgTask);
+
+    return jsonResponse({ type: 6 });
   }
 
   async function handleDiscordInteraction(request: Request): Promise<Response | null> {

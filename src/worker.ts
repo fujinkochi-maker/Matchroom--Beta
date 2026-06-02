@@ -1,9 +1,30 @@
-import { loadDataFromSupabase } from "./data/fighters";
+import { setSupabaseEnv } from "./lib/supabase";
+import { DiscordGatewayDO } from "./durable-object";
+
+export { DiscordGatewayDO };
+
+async function wakeupGateway(env: Record<string, any>) {
+  try {
+    const doId = env.DISCORD_GATEWAY.idFromName("discord-gateway");
+    const stub = env.DISCORD_GATEWAY.get(doId);
+    await stub.fetch("https://do/wakeup");
+  } catch (err) {
+    console.error("[Wakeup] DO not available yet:", err);
+  }
+}
 
 export default {
+  async scheduled(
+    _event: any,
+    env: Record<string, any>,
+    ctx: { waitUntil: (promise: Promise<unknown>) => void },
+  ) {
+    ctx.waitUntil(wakeupGateway(env));
+  },
+
   async fetch(
     request: Request,
-    env: Record<string, string>,
+    env: Record<string, any>,
     ctx: { waitUntil: (promise: Promise<unknown>) => void },
   ): Promise<Response> {
     const url = new URL(request.url);
@@ -15,8 +36,11 @@ export default {
       return new Response("OK", { status: 200 });
     }
 
+    setSupabaseEnv(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
+
+    const { loadDataFromSupabase } = await import("./data/fighters");
     const { createHandler } = await import("./lib/discord-bot");
-    const handler = createHandler(env);
+    const handler = createHandler(env, (p) => ctx.waitUntil(p));
 
     ctx.waitUntil(
       loadDataFromSupabase()
@@ -26,6 +50,9 @@ export default {
     ctx.waitUntil(
       handler.registerCommands().catch((err) => console.error("Command registration failed:", err)),
     );
+
+    // Wake up Gateway DO on each interaction to keep it alive
+    ctx.waitUntil(wakeupGateway(env));
 
     const response = await handler.handleDiscordInteraction(request);
     return response ?? new Response("OK", { status: 200 });

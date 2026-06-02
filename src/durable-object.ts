@@ -1,0 +1,197 @@
+const DISCORD_API = "https://discord.com/api/v10";
+const GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json";
+const RECONNECT_DELAY = 5000;
+const CONTEXT_TTL = 60_000;
+
+export class DiscordGatewayDO {
+  state: any;
+  env: Record<string, any>;
+  ws: WebSocket | null = null;
+  heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  contextTimer: ReturnType<typeof setInterval> | null = null;
+  botUserId: string | null = null;
+  destroyed = false;
+
+  constructor(state: any, env: Record<string, any>) {
+    this.state = state;
+    this.env = env;
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/wakeup") {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        this.connect();
+      }
+      this.refreshContext(); // fire-and-forget on first wakeup
+      return new Response("OK", { status: 200 });
+    }
+
+    if (url.pathname === "/refresh") {
+      await this.refreshContext();
+      return new Response("Context refreshed", { status: 200 });
+    }
+
+    return new Response("Not found", { status: 404 });
+  }
+
+  async refreshContext() {
+    try {
+      const { buildContext } = await import("./lib/discord-ai");
+      const ctx = await buildContext(this.env);
+      await this.state.storage.put("ai_context", ctx);
+      await this.state.storage.put("ai_context_updated", Date.now());
+      console.log("[DO] Context refreshed");
+    } catch (err) {
+      console.error("[DO] Context refresh failed:", err);
+    }
+  }
+
+  startContextTimer() {
+    this.stopContextTimer();
+    this.contextTimer = setInterval(() => this.refreshContext(), CONTEXT_TTL);
+  }
+
+  stopContextTimer() {
+    if (this.contextTimer) {
+      clearInterval(this.contextTimer);
+      this.contextTimer = null;
+    }
+  }
+
+  async connect() {
+    if (this.destroyed) return;
+    try {
+      this.ws = new WebSocket(GATEWAY_URL);
+
+      this.ws.onopen = () => {
+        console.log("[DO] Gateway connected");
+        this.startContextTimer();
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          this.handleMessage(JSON.parse(event.data as string));
+        } catch (err) {
+          console.error("[DO] Parse error:", err);
+        }
+      };
+
+      this.ws.onclose = (event) => {
+        console.log(`[DO] Gateway closed: ${event.code}`);
+        this.cleanup();
+        if (!this.destroyed) setTimeout(() => this.connect(), RECONNECT_DELAY);
+      };
+
+      this.ws.onerror = () => console.error("[DO] Gateway error");
+    } catch (err) {
+      console.error("[DO] Connect error:", err);
+      if (!this.destroyed) setTimeout(() => this.connect(), RECONNECT_DELAY);
+    }
+  }
+
+  handleMessage(data: any) {
+    switch (data.op) {
+      case 10:
+        this.startHeartbeat(data.d.heartbeat_interval);
+        this.identify();
+        break;
+      case 0:
+        this.handleDispatch(data);
+        break;
+      case 7:
+        this.ws?.close();
+        break;
+      case 9:
+        this.identify();
+        break;
+    }
+  }
+
+  identify() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(
+      JSON.stringify({
+        op: 2,
+        d: {
+          token: this.env.DISCORD_BOT_TOKEN,
+          intents: (1 << 9) | (1 << 15),
+          properties: { os: "linux", browser: "matchroom-bot", device: "matchroom-bot" },
+        },
+      }),
+    );
+  }
+
+  startHeartbeat(ms: number) {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ op: 1, d: null }));
+      }
+    }, ms);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  cleanup() {
+    this.stopHeartbeat();
+    this.stopContextTimer();
+    this.ws = null;
+  }
+
+  async handleDispatch(data: any) {
+    const { t: type, d: event } = data;
+    if (type === "READY") {
+      this.botUserId = event.user.id;
+      console.log(`[DO] Ready as ${event.user.username}`);
+    } else if (type === "MESSAGE_CREATE") {
+      await this.handleMessageCreate(event);
+    }
+  }
+
+  async handleMessageCreate(msg: any) {
+    if (msg.author?.id === this.botUserId || msg.author?.bot) return;
+
+    const mentioned = (msg.mentions || []).some((m: any) => m.id === this.botUserId);
+    if (!mentioned) return;
+
+    const question = msg.content.replace(/<@!?\d+>/g, "").trim();
+    if (!question) return;
+
+    console.log(`[DO] @mention from ${msg.author.username}: "${question.slice(0, 60)}"`);
+
+    try {
+      // Get cached context (refresh if missing)
+      let context = await this.state.storage.get("ai_context");
+      if (!context) {
+        await this.refreshContext();
+        context = await this.state.storage.get("ai_context");
+      }
+
+      const { askAI } = await import("./lib/discord-ai");
+      const reply = await askAI(this.env.AI, question, context || "");
+
+      await fetch(`${DISCORD_API}/channels/${msg.channel_id}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${this.env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: reply,
+          message_reference: { message_id: msg.id },
+        }),
+      });
+
+      console.log("[DO] Reply sent");
+    } catch (err) {
+      console.error("[DO] Reply failed:", err);
+    }
+  }
+}

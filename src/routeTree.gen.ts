@@ -24,6 +24,7 @@ import { Route as NewsSlugRouteImport } from './routes/news.$slug'
 import { Route as BoxersUsernameRouteImport } from './routes/boxers.$username'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
+import { Route as AdminRankingsRouteImport } from './routes/admin.rankings'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminPostsRouteImport } from './routes/admin.posts'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
@@ -116,6 +117,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AdminVideosRoute = AdminVideosRouteImport.update({
   id: '/videos',
   path: '/videos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRankingsRoute = AdminRankingsRouteImport.update({
+  id: '/rankings',
+  path: '/rankings',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProductsRoute = AdminProductsRouteImport.update({
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/admin/posts': typeof AdminPostsRouteWithChildren
   '/admin/products': typeof AdminProductsRouteWithChildren
+  '/admin/rankings': typeof AdminRankingsRoute
   '/admin/videos': typeof AdminVideosRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
@@ -259,6 +266,7 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/admin/posts': typeof AdminPostsRouteWithChildren
   '/admin/products': typeof AdminProductsRouteWithChildren
+  '/admin/rankings': typeof AdminRankingsRoute
   '/admin/videos': typeof AdminVideosRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/admin/login': typeof AdminLoginRoute
   '/admin/posts': typeof AdminPostsRouteWithChildren
   '/admin/products': typeof AdminProductsRouteWithChildren
+  '/admin/rankings': typeof AdminRankingsRoute
   '/admin/videos': typeof AdminVideosRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/posts'
     | '/admin/products'
+    | '/admin/rankings'
     | '/admin/videos'
     | '/auth/login'
     | '/boxers/$username'
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/posts'
     | '/admin/products'
+    | '/admin/rankings'
     | '/admin/videos'
     | '/auth/login'
     | '/boxers/$username'
@@ -401,6 +412,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/posts'
     | '/admin/products'
+    | '/admin/rankings'
     | '/admin/videos'
     | '/auth/login'
     | '/boxers/$username'
@@ -544,6 +556,13 @@ declare module '@tanstack/react-router' {
       path: '/videos'
       fullPath: '/admin/videos'
       preLoaderRoute: typeof AdminVideosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/rankings': {
+      id: '/admin/rankings'
+      path: '/rankings'
+      fullPath: '/admin/rankings'
+      preLoaderRoute: typeof AdminRankingsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/products': {
@@ -764,6 +783,7 @@ interface AdminRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   AdminPostsRoute: typeof AdminPostsRouteWithChildren
   AdminProductsRoute: typeof AdminProductsRouteWithChildren
+  AdminRankingsRoute: typeof AdminRankingsRoute
   AdminVideosRoute: typeof AdminVideosRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -775,6 +795,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   AdminPostsRoute: AdminPostsRouteWithChildren,
   AdminProductsRoute: AdminProductsRouteWithChildren,
+  AdminRankingsRoute: AdminRankingsRoute,
   AdminVideosRoute: AdminVideosRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }

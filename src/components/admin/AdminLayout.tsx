@@ -10,13 +10,13 @@ import {
   Package,
   MessageSquare,
   LogOut,
+  Trophy,
 } from "lucide-react";
-import { Toaster } from "@/components/ui/sonner";
-import { getAdminToken, clearAdminToken } from "@/lib/admin-auth";
 
 const SIDEBAR = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/fighters", label: "Fighters", icon: Users },
+  { to: "/admin/rankings", label: "Rankings", icon: Trophy },
   { to: "/admin/events", label: "Events", icon: Calendar },
   { to: "/admin/articles", label: "Articles", icon: Newspaper },
   { to: "/admin/videos", label: "Videos", icon: Video },

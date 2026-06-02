@@ -10,10 +10,11 @@ function NewFighter() {
   const handleSubmit = async (data: FighterFormData) => {
     const token = getAdminToken();
     if (!token) throw new Error("Not authenticated");
-    const { history, ...payload } = data;
-    await createFighter({ data: { token, ...payload } });
-    if (history && history.length > 0) {
-      await upsertFightHistory({ data: { token, fighterUsername: payload.username, history } });
+    await createFighter({ data: { token, ...data } });
+    if (data.history && data.history.length > 0) {
+      await upsertFightHistory({
+        data: { token, fighterUsername: data.username, history: data.history },
+      });
     }
     toast.success("Fighter created");
     router.navigate({ to: "/admin/fighters" });

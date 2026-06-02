@@ -122,7 +122,8 @@ export function SiteHeader() {
           {loggedIn && <NotificationBell />}
           {loggedIn ? (
             <Link
-              to={`/boxers/${session?.username}`}
+              to="/boxers/$username"
+              params={{ username: session?.username ?? "" }}
               className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground lg:inline"
             >
               {session?.displayName}
@@ -172,7 +173,8 @@ export function SiteHeader() {
             {loggedIn ? (
               <>
                 <Link
-                  to={`/boxers/${session?.username}`}
+                  to="/boxers/$username"
+                  params={{ username: session?.username ?? "" }}
                   onClick={() => setOpen(false)}
                   className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
                 >

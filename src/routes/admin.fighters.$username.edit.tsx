@@ -18,11 +18,7 @@ function EditFighter() {
   const handleSubmit = async (data: FighterFormData) => {
     const token = getAdminToken();
     if (!token) throw new Error("Not authenticated");
-    const { history, ...payload } = data;
-    await updateFighter({ data: { token, originalUsername: username, ...payload } });
-    await upsertFightHistory({
-      data: { token, fighterUsername: payload.username, history: history ?? [] },
-    });
+    await updateFighter({ data: { token, originalUsername: username, ...data } });
     router.navigate({ to: "/admin/fighters" });
   };
   return (

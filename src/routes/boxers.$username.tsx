@@ -16,7 +16,7 @@ import {
 } from "@/data/fighters";
 import { hashHue } from "@/lib/utils";
 import { getFighterSession } from "@/lib/discord-auth";
-import { likePost, unlikePost, deletePost } from "@/lib/admin.server";
+import { getPublicRankings, likePost, unlikePost, deletePost } from "@/lib/admin.server";
 import { toast } from "sonner";
 import type { Post } from "@/data/types";
 
@@ -30,7 +30,9 @@ export const Route = createFileRoute("/boxers/$username")({
     ]);
     const fighter = getByUsername(params.username);
     if (!fighter) throw notFound();
-    return { fighter };
+    const { rankings } = await getPublicRankings();
+    const fighterRanks = rankings.filter((r: any) => r.fighter_username === params.username);
+    return { fighter, fighterRanks };
   },
   head: ({ loaderData }) => ({
     meta: loaderData
@@ -66,7 +68,7 @@ export const Route = createFileRoute("/boxers/$username")({
 
 function FighterProfilePage() {
   const router = useRouter();
-  const { fighter: f } = Route.useLoaderData();
+  const { fighter: f, fighterRanks } = Route.useLoaderData();
   const news = getNewsForFighter(f.username);
   const videos = getVideosForFighter(f.username);
   const kos = Math.round((f.kos / Math.max(f.wins, 1)) * 100);
@@ -162,6 +164,52 @@ function FighterProfilePage() {
             <p className="mt-1 font-display text-2xl">{v}</p>
           </div>
         ))}
+      </section>
+
+      {/* Road to Belt */}
+      <section className="container-x py-8">
+        <h2 className="font-display text-3xl uppercase">
+          <span className="red-bar" />
+          Road to Belt
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          Current ranking per sanctioning body.
+          {fighterRanks.some((r: any) => r.rank === 0) && (
+            <span className="ml-2 inline-flex items-center gap-1 bg-primary px-2 py-0.5 text-xs font-bold uppercase text-primary-foreground">
+              <Trophy className="h-3 w-3" /> Unified Champion
+            </span>
+          )}
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {fighterRanks.length === 0 && (
+            <p className="col-span-full text-sm text-muted-foreground">Not yet ranked.</p>
+          )}
+          {fighterRanks.map((r: any) => {
+            const isChamp = r.rank === 0;
+            const isMandatory = r.rank === 1;
+            return (
+              <div
+                key={r.body}
+                className={`border p-4 ${isChamp ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  {r.body}
+                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className={`font-display text-2xl ${isChamp ? "text-primary" : ""}`}>
+                    {isChamp ? "CHAMP" : `#${r.rank}`}
+                  </p>
+                  <span className="font-mono text-xs text-muted-foreground">{r.points} pts</span>
+                </div>
+                {isMandatory && (
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+                    Mandatory Challenger
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       {/* Career */}

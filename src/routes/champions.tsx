@@ -1,11 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ChampionCard } from "@/components/ChampionCard";
 import { getChampions, ensureFightersLoaded } from "@/data/fighters";
+import { getPublicRankings } from "@/lib/admin.server";
 import beltImg from "@/assets/belt.jpg";
 
 export const Route = createFileRoute("/champions")({
   loader: async () => {
     await ensureFightersLoaded();
+    const { rankings } = await getPublicRankings();
+    const champs = getChampions();
+    const beltMap: Record<string, string[]> = {};
+    for (const r of rankings) {
+      if (r.rank === 0) {
+        if (!beltMap[r.fighter_username]) beltMap[r.fighter_username] = [];
+        beltMap[r.fighter_username].push(r.body);
+      }
+    }
+    const withBelts = champs.map((c) => ({
+      ...c,
+      beltsHeld: beltMap[c.username] ?? [],
+    }));
+    return { champions: withBelts };
   },
   head: () => ({
     meta: [
@@ -27,7 +42,7 @@ export const Route = createFileRoute("/champions")({
 });
 
 function ChampionsPage() {
-  const champs = getChampions();
+  const { champions } = Route.useLoaderData();
   return (
     <>
       <section className="relative isolate overflow-hidden bg-foreground text-background">
@@ -51,11 +66,11 @@ function ChampionsPage() {
           </p>
         </div>
       </section>
-      {champs.length > 0 ? (
+      {champions.length > 0 ? (
         <section className="container-x py-12 md:py-16">
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {champs.map((c) => (
-              <ChampionCard key={c.username} fighter={c} />
+            {champions.map((c: any) => (
+              <ChampionCard key={c.username} fighter={c} beltsHeld={c.beltsHeld} />
             ))}
           </div>
         </section>

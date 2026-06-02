@@ -2,6 +2,23 @@ name = "matchroom-bot"
 main = "src/worker.ts"
 compatibility_date = "2025-01-01"
 
+# Cron: keep Gateway DO alive 24/7
+[triggers]
+crons = ["* * * * *"]
+
+# Durable Object for persistent Gateway WebSocket
+[[durable_objects.bindings]]
+name = "DISCORD_GATEWAY"
+class_name = "DiscordGatewayDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DiscordGatewayDO"]
+
+# Workers AI (free, 10k req/day)
+[ai]
+binding = "AI"
+
 # All secrets set via `wrangler secret put`
 # DISCORD_BOT_TOKEN
 # DISCORD_PUBLIC_KEY

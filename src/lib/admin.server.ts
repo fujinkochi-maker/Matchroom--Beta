@@ -115,6 +115,40 @@ const DIVISIONS = [
 
 /* ============ Fighters ============ */
 
+function autoCalcStats(history?: { result: string; method: string }[]) {
+  if (!history?.length) return null;
+  let wins = 0,
+    losses = 0,
+    draws = 0,
+    kos = 0;
+  for (const h of history) {
+    if (h.result === "W") wins++;
+    else if (h.result === "L") losses++;
+    else draws++;
+    if (h.result === "W" && ["KO", "TKO"].includes(h.method)) kos++;
+  }
+  let streak = "";
+  const sorted = [...history];
+  if (sorted.length) {
+    const r = sorted[sorted.length - 1].result;
+    let c = 1;
+    for (let i = sorted.length - 2; i >= 0; i--) {
+      if (sorted[i].result === r) c++;
+      else break;
+    }
+    streak = `${c}${r}`;
+  }
+  return { wins, losses, draws, kos, streak };
+}
+
+const historyEntrySchema = z.object({
+  opponent: z.string(),
+  result: z.enum(["W", "L", "D"]),
+  method: z.string(),
+  date: z.string(),
+  event: z.string(),
+});
+
 const fighterSchema = z.object({
   token: z.string(),
   username: z.string().min(1).max(50),
@@ -133,6 +167,7 @@ const fighterSchema = z.object({
   streak: z.string().default(""),
   bio: z.string().default(""),
   imageUrl: z.string().optional(),
+  history: z.array(historyEntrySchema).optional(),
 });
 
 export const createFighter = createServerFn({ method: "POST" })
@@ -167,20 +202,29 @@ export const updateFighter = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!validateToken(data.token)) throw new Error("Unauthorized");
     const supabase = getAdminSupabase();
+
+    // Auto-calc stats from fight history if provided
+    const auto = autoCalcStats(data.history);
+    const wins = auto ? auto.wins : data.wins;
+    const losses = auto ? auto.losses : data.losses;
+    const draws = auto ? auto.draws : data.draws;
+    const kos = auto ? auto.kos : data.kos;
+    const streak = auto ? auto.streak : data.streak;
+
     const { error } = await supabase.from("fighters").upsert({
       username: data.username,
       display_name: data.displayName,
       nickname: data.nickname,
       division: data.division,
       rank: data.rank,
-      wins: data.wins,
-      losses: data.losses,
-      draws: data.draws,
-      kos: data.kos,
+      wins,
+      losses,
+      draws,
+      kos,
       stance: data.stance,
       belts: data.belts,
       debut: data.debut,
-      streak: data.streak,
+      streak,
       bio: data.bio,
       image_url: data.imageUrl ?? null,
       belts_held: data.beltsHeld,
@@ -191,6 +235,28 @@ export const updateFighter = createServerFn({ method: "POST" })
       await supabase.from("fighters").delete().eq("username", data.originalUsername);
     }
 
+    // Save fight history if provided
+    if (data.history?.length) {
+      await supabase.from("fight_history").delete().eq("fighter_username", data.username);
+      const { error: hErr } = await supabase.from("fight_history").insert(
+        data.history.map((h) => ({
+          fighter_username: data.username,
+          opponent: h.opponent,
+          result: h.result,
+          method: h.method,
+          date: h.date,
+          event: h.event,
+        })),
+      );
+      if (hErr) console.error("Failed to save fight history:", hErr);
+    }
+
+    // Recalculate rankings for this division
+    const { recalculateDivision } = await import("@/data/rankings");
+    recalculateDivision(data.division).catch((err: any) =>
+      console.error("Ranking recalculation failed:", err),
+    );
+
     // Update Discord nickname with new record
     const { data: updated } = await supabase
       .from("fighters")
@@ -199,7 +265,6 @@ export const updateFighter = createServerFn({ method: "POST" })
       .single();
     if (updated?.discord_id) {
       updateDiscordNickname(updated.discord_id, formatNickname(updated));
-      // Check promotion (fire-and-forget)
       if (updated.guild_id && updated.wins >= 3) {
         discordAddRole(updated.guild_id, updated.discord_id, PRO_BOXER_ROLE);
         discordRemoveRole(updated.guild_id, updated.discord_id, AMATEUR_ROLE);
@@ -218,6 +283,44 @@ export const deleteFighter = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const recalculateAllRankings = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => {
+    if (!validateToken(data.token)) throw new Error("Unauthorized");
+    const { recalculateAll } = await import("@/data/rankings");
+    await recalculateAll();
+    return { ok: true };
+  });
+
+export const getRankingsForAdmin = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => {
+    if (!validateToken(data.token)) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    const { data: rankings } = await supabase
+      .from("rankings")
+      .select("*, fighters:fighter_username(display_name)")
+      .order("division", { ascending: true })
+      .order("body", { ascending: true })
+      .order("rank", { ascending: true });
+    return { rankings: rankings ?? [] };
+  });
+
+export const getPublicRankings = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const supabase = getAdminSupabase();
+    const { data } = await supabase
+      .from("rankings")
+      .select("*, fighters:fighter_username(display_name, image_url)")
+      .order("division", { ascending: true })
+      .order("body", { ascending: true })
+      .order("rank", { ascending: true });
+    return { rankings: data ?? [] };
+  } catch {
+    return { rankings: [] };
+  }
+});
 
 export const upsertFightHistory = createServerFn({ method: "POST" })
   .inputValidator(
@@ -252,6 +355,35 @@ export const upsertFightHistory = createServerFn({ method: "POST" })
       );
       if (error) throw new Error(error.message);
     }
+
+    // Auto-calc stats from history and update fighter
+    const auto = autoCalcStats(data.history);
+    if (auto) {
+      await supabase
+        .from("fighters")
+        .update({
+          wins: auto.wins,
+          losses: auto.losses,
+          draws: auto.draws,
+          kos: auto.kos,
+          streak: auto.streak,
+        })
+        .eq("username", data.fighterUsername);
+    }
+
+    // Recalculate rankings
+    const { data: fighter } = await supabase
+      .from("fighters")
+      .select("division")
+      .eq("username", data.fighterUsername)
+      .single();
+    if (fighter?.division) {
+      const { recalculateDivision } = await import("@/data/rankings");
+      recalculateDivision(fighter.division).catch((err: any) =>
+        console.error("Ranking recalculation failed:", err),
+      );
+    }
+
     return { ok: true };
   });
 
