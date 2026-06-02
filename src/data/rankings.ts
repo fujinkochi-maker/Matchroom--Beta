@@ -1,5 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-import { getAdminSupabase } from "./supabase-admin";
+import { getAdminSupabase } from "@/lib/supabase-admin";
 
 const BODIES = ["WBC", "WBA", "IBF", "WBO", "OVERALL"] as const;
 export type RankingBody = (typeof BODIES)[number];
