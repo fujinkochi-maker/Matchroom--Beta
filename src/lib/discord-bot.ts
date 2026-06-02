@@ -499,6 +499,25 @@ async function retryFetch(
   throw new Error("unreachable");
 }
 
+async function editDeferredResponse(
+  applicationId: string,
+  token: string,
+  content: string,
+  components?: any[],
+) {
+  try {
+    const body: any = { content };
+    if (components) body.components = components;
+    await discordFetch(`${DISCORD_API}/webhooks/${applicationId}/${token}/messages/@original`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error("[Deferred] Failed to edit:", err);
+  }
+}
+
 /* Discord API calls with retry for HF Spaces intermittent timeouts. */
 function discordFetch(
   url: string,
@@ -895,8 +914,6 @@ async function handleRegisterModal(interaction: any): Promise<Response> {
 
   if (!displayName || !username) return ephemeral("All fields are required.");
 
-  const supabase = getSupabaseAdmin();
-
   const existingFighter = FIGHTERS.find((f: any) => f.discordId === discordId);
   if (existingFighter)
     return ephemeral("You're already registered! Use `/stats` to view your profile.");
@@ -904,6 +921,7 @@ async function handleRegisterModal(interaction: any): Promise<Response> {
   const usernameTaken = FIGHTERS.find((f: any) => f.username === username);
   if (usernameTaken) return ephemeral(`Username "${username}" is already taken. Choose another.`);
 
+  const supabase = getSupabaseAdmin();
   const registerGuildId = interaction.guild_id ?? "";
   const { error } = await supabase.from("fighters").insert({
     username,
@@ -935,25 +953,35 @@ async function handleRegisterModal(interaction: any): Promise<Response> {
     });
   }
 
-  await loadDataFromSupabase();
+  const appId = interaction.application_id;
+  const intToken = interaction.token;
 
-  const guildId = interaction.guild_id;
-  if (guildId) {
-    setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
-  }
-  sendPromoterDM(discordId, displayName, {
-    token: interaction.token,
-    application_id: interaction.application_id,
-  });
+  // Background: cache reload, nickname, DM, then edit with buttons
+  (async () => {
+    try {
+      await loadDataFromSupabase();
+      const guildId = interaction.guild_id;
+      if (guildId) {
+        setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
+      }
+      sendPromoterDM(discordId, displayName);
+      await editDeferredResponse(
+        appId,
+        intToken,
+        `Welcome to the big leagues, ${displayName}! "Now tell me — what division are you fighting in?"`,
+        DIVISION_BUTTONS,
+      );
+    } catch (err) {
+      console.error("[RegisterModal] Background error:", err);
+      await editDeferredResponse(
+        appId,
+        intToken,
+        "Registration saved, but something went wrong afterward. Try again.",
+      );
+    }
+  })();
 
-  return jsonResponse({
-    type: InteractionResponseType.ChannelMessageWithSource,
-    data: {
-      content: `Welcome to the big leagues, ${displayName}! "Now tell me — what division are you fighting in?"`,
-      components: DIVISION_BUTTONS,
-      flags: 64,
-    },
-  });
+  return jsonResponse({ type: 5 });
 }
 
 async function handleDivisionButton(interaction: any): Promise<Response> {
@@ -967,53 +995,67 @@ async function handleDivisionButton(interaction: any): Promise<Response> {
 
   if (!(DIVISIONS as readonly string[]).includes(division)) return ephemeral("Invalid division.");
 
-  const supabase = getSupabaseAdmin();
   const fighter = FIGHTERS.find((f: any) => f.discordId === discordId);
   if (!fighter) return ephemeral("Register with `/register` first!");
 
-  const { error } = await supabase
-    .from("fighters")
-    .update({ division })
-    .eq("discord_id", discordId);
-  if (error)
-    return jsonResponse({
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: { content: `Failed to set division. Try again later.`, flags: 64 },
-    });
+  const appId = interaction.application_id;
+  const intToken = interaction.token;
+  const supabase = getSupabaseAdmin();
 
-  const { count } = await supabase
-    .from("fighters")
-    .select("*", { count: "exact", head: true })
-    .eq("division", division)
-    .gt("rank", 0);
+  // Background: DB updates, roles, nickname, cache reload, then edit
+  (async () => {
+    try {
+      const { error } = await supabase
+        .from("fighters")
+        .update({ division })
+        .eq("discord_id", discordId);
+      if (error) {
+        await editDeferredResponse(appId, intToken, "❌ Failed to set division. Try again later.");
+        return;
+      }
 
-  await supabase
-    .from("fighters")
-    .update({ rank: (count ?? 0) + 1 })
-    .eq("discord_id", discordId);
+      const { count } = await supabase
+        .from("fighters")
+        .select("*", { count: "exact", head: true })
+        .eq("division", division)
+        .gt("rank", 0);
 
-  const roleGuildId = fighter.guildId || interaction.guild_id;
-  if (roleGuildId) {
-    const roleId = DIVISION_ROLES[division];
-    if (roleId) addRole(roleGuildId, discordId, roleId);
-    addRole(roleGuildId, discordId, AMATEUR_ROLE);
-  }
+      await supabase
+        .from("fighters")
+        .update({ rank: (count ?? 0) + 1 })
+        .eq("discord_id", discordId);
 
-  const guildId = interaction.guild_id;
-  if (guildId) {
-    const full = FIGHTERS.find((f: any) => f.discordId === discordId);
-    if (full) setNickname(guildId, discordId, formatNickname(full));
-  }
+      const roleGuildId = fighter.guildId || interaction.guild_id;
+      if (roleGuildId) {
+        const roleId = DIVISION_ROLES[division];
+        if (roleId) addRole(roleGuildId, discordId, roleId);
+        addRole(roleGuildId, discordId, AMATEUR_ROLE);
+      }
 
-  await loadDataFromSupabase();
+      const guildId = interaction.guild_id;
+      if (guildId) {
+        const full = FIGHTERS.find((f: any) => f.discordId === discordId);
+        if (full) setNickname(guildId, discordId, formatNickname(full));
+      }
 
-  return jsonResponse({
-    type: InteractionResponseType.ChannelMessageWithSource,
-    data: {
-      content: `Division locked in. **${fighter.displayName}** is now fighting at **${division}**. The Promoter is watching.`,
-      flags: 64,
-    },
-  });
+      await loadDataFromSupabase();
+
+      await editDeferredResponse(
+        appId,
+        intToken,
+        `Division locked in. **${fighter.displayName}** is now fighting at **${division}**. The Promoter is watching.`,
+      );
+    } catch (err) {
+      console.error("[DivisionButton] Background error:", err);
+      await editDeferredResponse(
+        appId,
+        intToken,
+        "❌ Something went wrong picking your division. Try `/register` again.",
+      );
+    }
+  })();
+
+  return jsonResponse({ type: 5 });
 }
 
 export async function handleDiscordInteraction(request: Request): Promise<Response | null> {
