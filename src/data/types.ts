@@ -50,6 +50,7 @@ export interface Fighter {
   history: FightRecord[];
   image?: string; // URL to fighter photo
   discordId?: string;
+  guildId?: string;
 }
 
 export interface BoxingEvent {

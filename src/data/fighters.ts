@@ -424,6 +424,7 @@ function rowToFighter(row: any): Fighter {
     history: [],
     image: row.image_url ?? undefined,
     discordId: row.discord_id ?? undefined,
+    guildId: row.guild_id ?? undefined,
   };
 }
 
