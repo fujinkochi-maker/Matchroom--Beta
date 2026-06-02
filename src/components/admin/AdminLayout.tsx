@@ -1,5 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouter, useLocation } from "@tanstack/react-router";
+import { getAdminToken, clearAdminToken } from "@/lib/admin-auth";
+import { Toaster } from "@/components/ui/sonner";
 import {
   Shield,
   LayoutDashboard,
