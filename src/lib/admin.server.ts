@@ -251,7 +251,21 @@ export const updateFighter = createServerFn({ method: "POST" })
       if (hErr) console.error("Failed to save fight history:", hErr);
     }
 
-    // Recalculate rankings for this division
+    // Recalculate division ranks for fighters table
+    const { data: divFighters } = await supabase
+      .from("fighters")
+      .select("username, rank")
+      .eq("division", data.division)
+      .order("rank", { ascending: true });
+    if (divFighters) {
+      let nextRank = 1;
+      for (const f of divFighters) {
+        if (f.rank === 0) continue;
+        await supabase.from("fighters").update({ rank: nextRank++ }).eq("username", f.username);
+      }
+    }
+
+    // Recalculate rankings for this division (rankings table)
     const { recalculateDivision } = await import("@/data/rankings");
     recalculateDivision(data.division).catch((err: any) =>
       console.error("Ranking recalculation failed:", err),

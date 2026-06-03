@@ -31,8 +31,16 @@ export const getChampion = (division: Division) =>
 export const getChampions = () => DIVISIONS.map((d) => getChampion(d)).filter(Boolean) as Fighter[];
 export const getByUsername = (u: string) =>
   FIGHTERS.find((f) => f.username.toLowerCase() === u.toLowerCase());
-export const getRanked = (division: Division) =>
-  FIGHTERS.filter((f) => f.division === division).sort((a, b) => a.rank - b.rank);
+export const getRanked = (division: Division) => {
+  const fighters = FIGHTERS.filter((f) => f.division === division).sort(
+    (a, b) => a.rank - b.rank,
+  );
+  let displayRank = 1;
+  return fighters.map((f) => ({
+    ...f,
+    displayRank: f.rank === 0 ? 0 : displayRank++,
+  }));
+};
 
 export const CATEGORIES = [
   "All",

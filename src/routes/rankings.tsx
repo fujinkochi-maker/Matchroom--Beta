@@ -200,7 +200,7 @@ function OverallTable({ division }: { division: Division }) {
         </thead>
         <tbody className="divide-y divide-border">
           {ranked.map((f) => {
-            const isChamp = f.rank === 0;
+            const isChamp = f.displayRank === 0;
             const kos = Math.round((f.kos / Math.max(f.wins, 1)) * 100);
             return (
               <tr key={f.username} className={isChamp ? "bg-primary/5" : "bg-card"}>
@@ -210,7 +210,7 @@ function OverallTable({ division }: { division: Division }) {
                       <Trophy className="h-3 w-3" /> C
                     </span>
                   ) : (
-                    <span className="font-mono text-base font-bold">{f.rank}</span>
+                    <span className="font-mono text-base font-bold">{f.displayRank}</span>
                   )}
                 </td>
                 <td className="px-4 py-3">

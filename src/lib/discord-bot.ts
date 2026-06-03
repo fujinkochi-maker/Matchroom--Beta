@@ -343,6 +343,27 @@ export function createHandler(
     }
   }
 
+  async function recalculateDivisionRanks(division: string) {
+    try {
+      const supabase = getSupabaseAdmin();
+      const { data: fighters } = await supabase
+        .from("fighters")
+        .select("username, rank")
+        .eq("division", division)
+        .order("rank", { ascending: true });
+
+      if (!fighters) return;
+
+      let nextRank = 1;
+      for (const f of fighters) {
+        if (f.rank === 0) continue;
+        await supabase.from("fighters").update({ rank: nextRank++ }).eq("username", f.username);
+      }
+    } catch (err) {
+      console.error("[Ranks] Recalculation failed:", err);
+    }
+  }
+
   /* ── Command handlers ── */
 
   function handleStatsCommand(interaction: any): Response {
@@ -699,12 +720,15 @@ export function createHandler(
           .from("fighters")
           .select("*", { count: "exact", head: true })
           .eq("division", division)
-          .gt("rank", 0);
+          .gt("rank", 0)
+          .neq("discord_id", discordId);
 
         await supabase
           .from("fighters")
           .update({ rank: (count ?? 0) + 1 })
           .eq("discord_id", discordId);
+
+        await recalculateDivisionRanks(division);
 
         const roleGuildId = fighter.guild_id || interaction.guild_id;
         if (roleGuildId) {

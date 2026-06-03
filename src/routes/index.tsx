@@ -275,9 +275,9 @@ function RankingsTeaser() {
                       className="flex items-center gap-3 px-4 py-3 hover:bg-surface"
                     >
                       <span
-                        className={`w-6 font-mono text-sm font-bold ${f.rank === 0 ? "text-primary" : "text-muted-foreground"}`}
+                        className={`w-6 font-mono text-sm font-bold ${f.displayRank === 0 ? "text-primary" : "text-muted-foreground"}`}
                       >
-                        {f.rank === 0 ? "C" : f.rank}
+                        {f.displayRank === 0 ? "C" : f.displayRank}
                       </span>
                       <div className="h-9 w-9 shrink-0">
                         <FighterAvatar name={f.displayName} square src={f.image} />
