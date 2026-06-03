@@ -12,6 +12,7 @@ export class DiscordGatewayDO_v2 {
   botUserId: string | null = null;
   botToken: string | null = null;
   destroyed = false;
+  processedMessages: Set<string> = new Set();
 
   constructor(state: any, env: Record<string, any>) {
     this.state = state;
@@ -177,6 +178,12 @@ export class DiscordGatewayDO_v2 {
 
   async handleMessageCreate(msg: any) {
     if (msg.author?.id === this.botUserId || msg.author?.bot) return;
+    if (this.processedMessages.has(msg.id)) return;
+    this.processedMessages.add(msg.id);
+    // Evict old entries every 100 messages
+    if (this.processedMessages.size > 100) {
+      this.processedMessages.clear();
+    }
 
     const mentioned = (msg.mentions || []).some((m: any) => m.id === this.botUserId);
     if (!mentioned) return;
