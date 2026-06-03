@@ -22,7 +22,8 @@ export class DiscordGatewayDO_v2 {
     const url = new URL(request.url);
 
     if (url.pathname === "/wakeup") {
-      this.botToken = this.env.DISCORD_BOT_TOKEN;
+      this.botToken = url.searchParams.get("token") || this.env.DISCORD_BOT_TOKEN || "";
+      console.log(`[DO] Wakeup — botToken set: ${this.botToken ? "yes (" + this.botToken.slice(0, 20) + "...)" : "NO"}`);
       this.cleanup();
       this.connect();
       this.refreshContext();
@@ -32,6 +33,22 @@ export class DiscordGatewayDO_v2 {
     if (url.pathname === "/refresh") {
       await this.refreshContext();
       return new Response("Context refreshed", { status: 200 });
+    }
+
+    if (url.pathname === "/status") {
+      const info = {
+        connected: this.ws?.readyState === WebSocket.OPEN,
+        readyState: this.ws?.readyState,
+        botUserId: this.botUserId,
+        hasToken: !!this.botToken,
+        hasEnvToken: !!this.env.DISCORD_BOT_TOKEN,
+        envTokenPrefix: this.env.DISCORD_BOT_TOKEN ? this.env.DISCORD_BOT_TOKEN.slice(0, 15) + "..." : null,
+        destroyed: this.destroyed,
+      };
+      return new Response(JSON.stringify(info, null, 2), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     return new Response("Not found", { status: 404 });

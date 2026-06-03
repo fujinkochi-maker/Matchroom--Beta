@@ -10,7 +10,7 @@ async function wakeupGateway(env: Record<string, any>) {
   try {
     const doId = env.DISCORD_GATEWAY.idFromName("discord-gateway");
     const stub = env.DISCORD_GATEWAY.get(doId);
-    await stub.fetch("https://do/wakeup");
+    await stub.fetch(`https://do/wakeup?token=${encodeURIComponent(env.DISCORD_BOT_TOKEN || "")}`);
   } catch (err) {
     console.error("[Wakeup] DO not available yet:", err);
   }
@@ -31,6 +31,43 @@ export default {
     ctx: { waitUntil: (promise: Promise<unknown>) => void },
   ): Promise<Response> {
     const url = new URL(request.url);
+
+    // Debug endpoint — check DO status
+    if (request.method === "GET" && url.pathname === "/debug") {
+      try {
+        const doId = env.DISCORD_GATEWAY.idFromName("discord-gateway");
+        const stub = env.DISCORD_GATEWAY.get(doId);
+        const status = await stub.fetch("https://do/status");
+        const info = await status.json();
+        return new Response(JSON.stringify(info, null, 2), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: String(err) }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    // Manual wakeup — force DO reconnect with fresh token
+    if (request.method === "GET" && url.pathname === "/wakeup") {
+      console.log("[Worker] Token present:", !!env.DISCORD_BOT_TOKEN);
+      ctx.waitUntil(wakeupGateway(env));
+      return new Response("Wakeup triggered", { status: 200 });
+    }
+
+    // Check worker env
+    if (request.method === "GET" && url.pathname === "/envcheck") {
+      return new Response(JSON.stringify({
+        hasBotToken: !!env.DISCORD_BOT_TOKEN,
+        tokenPrefix: env.DISCORD_BOT_TOKEN ? env.DISCORD_BOT_TOKEN.slice(0, 15) + "..." : null,
+        hasAppId: !!env.DISCORD_APPLICATION_ID,
+        hasPublicKey: !!env.DISCORD_PUBLIC_KEY,
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+
     if (request.method === "GET" && url.pathname === "/discord") {
       return Response.redirect("https://discord.gg/PB8vesEaTs", 302);
     }
