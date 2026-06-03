@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { FighterForm, type FighterFormData } from "@/components/admin/FighterForm";
 import { createFighter, upsertFightHistory } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
+import { clearFightersCache } from "@/data/fighters";
 import { ADMIN_HEADING, adminCard } from "@/lib/admin-styles";
 export const Route = createFileRoute("/admin/fighters/new")({ component: NewFighter });
 function NewFighter() {
@@ -16,6 +17,7 @@ function NewFighter() {
         data: { token, fighterUsername: data.username, history: data.history },
       });
     }
+    clearFightersCache();
     toast.success("Fighter created");
     router.navigate({ to: "/admin/fighters" });
   };

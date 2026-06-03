@@ -13,6 +13,7 @@ import {
   ensureArticlesLoaded,
   ensureVideosLoaded,
   ensurePostsLoaded,
+  refreshFighter,
 } from "@/data/fighters";
 import { hashHue } from "@/lib/utils";
 import { getFighterSession } from "@/lib/discord-auth";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/boxers/$username")({
       ensureVideosLoaded(),
       ensurePostsLoaded(),
     ]);
+    await refreshFighter(params.username);
     const fighter = getByUsername(params.username);
     if (!fighter) throw notFound();
     const { rankings } = await getPublicRankings();

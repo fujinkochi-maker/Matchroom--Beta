@@ -186,6 +186,45 @@ async function _loadTable<T>(
   }
 }
 
+export function clearFightersCache() {
+  delete _lastLoaded["_fighters"];
+}
+
+export async function refreshFighter(username: string): Promise<Fighter | undefined> {
+  const supabase = getSupabase();
+
+  const { data: row } = await supabase
+    .from("fighters")
+    .select("*")
+    .eq("username", username)
+    .single();
+
+  if (!row) return undefined;
+
+  const { data: history } = await supabase
+    .from("fight_history")
+    .select("*")
+    .eq("fighter_username", username);
+
+  const fighter = rowToFighter(row);
+  fighter.history = (history || []).map((h: any) => ({
+    opponent: h.opponent,
+    result: h.result as "W" | "L" | "D",
+    method: h.method,
+    date: h.date,
+    event: h.event,
+  }));
+
+  const idx = _fighters.findIndex((f) => f.username === username);
+  if (idx !== -1) {
+    _fighters[idx] = fighter;
+  } else {
+    _fighters.push(fighter);
+  }
+
+  return fighter;
+}
+
 export async function ensureFightersLoaded() {
   const k = "_fighters";
   if (_loadPromises[k]) return _loadPromises[k];

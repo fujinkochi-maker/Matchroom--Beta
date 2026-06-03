@@ -2,7 +2,7 @@ import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
 import { FighterForm, type FighterFormData } from "@/components/admin/FighterForm";
 import { updateFighter, upsertFightHistory } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
-import { ensureFightersLoaded, getByUsername } from "@/data/fighters";
+import { ensureFightersLoaded, getByUsername, clearFightersCache } from "@/data/fighters";
 import { ADMIN_HEADING, ADMIN_SUBTITLE, adminCard } from "@/lib/admin-styles";
 export const Route = createFileRoute("/admin/fighters/$username/edit")({
   loader: async () => {
@@ -19,6 +19,7 @@ function EditFighter() {
     const token = getAdminToken();
     if (!token) throw new Error("Not authenticated");
     await updateFighter({ data: { token, originalUsername: username, ...data } });
+    clearFightersCache();
     router.navigate({ to: "/admin/fighters" });
   };
   return (
