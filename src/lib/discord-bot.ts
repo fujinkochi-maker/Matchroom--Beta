@@ -330,6 +330,19 @@ export function createHandler(
     }
   }
 
+  async function refreshDOContext() {
+    try {
+      const ns = (env as any).DISCORD_GATEWAY;
+      if (!ns) return;
+      const doId = ns.idFromName("discord-gateway");
+      const stub = ns.get(doId);
+      await stub.fetch("https://do/refresh");
+      console.log("[DO] Context refreshed from command");
+    } catch (err) {
+      console.error("[DO] Context refresh failed:", err);
+    }
+  }
+
   /* ── Command handlers ── */
 
   function handleStatsCommand(interaction: any): Response {
@@ -523,6 +536,7 @@ export function createHandler(
         }
 
         await loadDataFromSupabase();
+        await refreshDOContext();
         await editDeferredResponse(
           appId,
           intToken,
@@ -598,6 +612,7 @@ export function createHandler(
         }
 
         await loadDataFromSupabase();
+        await refreshDOContext();
 
         if (guildId) {
           setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
@@ -644,7 +659,7 @@ export function createHandler(
 
         const { data: fighter, error: lookupErr } = await supabase
           .from("fighters")
-          .select("display_name, guild_id")
+          .select("display_name, guild_id, division")
           .eq("discord_id", discordId)
           .single();
 
@@ -653,6 +668,16 @@ export function createHandler(
             appId,
             intToken,
             "You're not registered! Use `/register` first.",
+          );
+          return;
+        }
+
+        if (fighter.division) {
+          await editDeferredResponse(
+            appId,
+            intToken,
+            "You already picked a division! One shot per fighter.",
+            [],
           );
           return;
         }
@@ -690,11 +715,13 @@ export function createHandler(
         }
 
         await loadDataFromSupabase();
+        await refreshDOContext();
 
         await editDeferredResponse(
           appId,
           intToken,
           `Division locked in. **${fighter.display_name}** is now fighting at **${division}**. The Promoter is watching.`,
+          [],
         );
       } catch (err) {
         console.error("[DivisionButton] Background error:", err);
