@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { FighterAvatar } from "@/components/FighterAvatar";
 import { DIVISIONS, type Division } from "@/data/types";
-import { getRanked, ensureFightersLoaded } from "@/data/fighters";
+import { getRanked, ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
 import { getPublicRankings } from "@/lib/admin.server";
 
 const BODIES = ["OVERALL", "WBC", "WBA", "IBF", "WBO"] as const;
@@ -135,7 +135,7 @@ function RankingTable({
         <tbody className="divide-y divide-border">
           {bodyRankings.map((r: any) => {
             const isChamp = r.rank === 0;
-            const fighter = r.fighters;
+            const fighter = FIGHTERS.find((f) => f.username === r.fighter_username);
             return (
               <tr
                 key={`${r.fighter_username}-${r.body}`}
@@ -157,11 +157,11 @@ function RankingTable({
                     className="group flex items-center gap-3"
                   >
                     <div className="h-10 w-10 shrink-0">
-                      <FighterAvatar name={fighter?.display_name ?? r.fighter_username} square />
+                      <FighterAvatar name={fighter?.displayName ?? r.fighter_username} square src={fighter?.image} />
                     </div>
                     <div>
                       <p className="font-semibold group-hover:text-primary">
-                        {fighter?.display_name ?? r.fighter_username}
+                        {fighter?.displayName ?? r.fighter_username}
                       </p>
                       <p className="text-xs text-muted-foreground">@{r.fighter_username}</p>
                     </div>
