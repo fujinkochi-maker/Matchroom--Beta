@@ -3,13 +3,14 @@ const GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json";
 const RECONNECT_DELAY = 5000;
 const CONTEXT_TTL = 60_000;
 
-export class DiscordGatewayDO {
+export class DiscordGatewayDO_v2 {
   state: any;
   env: Record<string, any>;
   ws: WebSocket | null = null;
   heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   contextTimer: ReturnType<typeof setInterval> | null = null;
   botUserId: string | null = null;
+  botToken: string | null = null;
   destroyed = false;
 
   constructor(state: any, env: Record<string, any>) {
@@ -21,6 +22,7 @@ export class DiscordGatewayDO {
     const url = new URL(request.url);
 
     if (url.pathname === "/wakeup") {
+      this.botToken = this.env.DISCORD_BOT_TOKEN;
       this.cleanup();
       this.connect();
       this.refreshContext();
@@ -110,11 +112,13 @@ export class DiscordGatewayDO {
 
   identify() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    const token = this.botToken || this.env.DISCORD_BOT_TOKEN;
+    if (!token) return;
     this.ws.send(
       JSON.stringify({
         op: 2,
         d: {
-          token: this.env.DISCORD_BOT_TOKEN,
+          token,
           intents: (1 << 9) | (1 << 15),
           properties: { os: "linux", browser: "matchroom-bot", device: "matchroom-bot" },
         },
@@ -176,10 +180,13 @@ export class DiscordGatewayDO {
       const { askAI } = await import("./lib/discord-ai");
       const reply = await askAI(this.env.AI, question, context || "");
 
+      const token = this.botToken || this.env.DISCORD_BOT_TOKEN;
+      if (!token) return;
+
       await fetch(`${DISCORD_API}/channels/${msg.channel_id}/messages`, {
         method: "POST",
         headers: {
-          Authorization: `Bot ${this.env.DISCORD_BOT_TOKEN}`,
+          Authorization: `Bot ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

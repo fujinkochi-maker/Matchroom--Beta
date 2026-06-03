@@ -1,7 +1,10 @@
 import { setSupabaseEnv } from "./lib/supabase";
-import { DiscordGatewayDO } from "./durable-object";
+import { DiscordGatewayDO_v2 } from "./durable-object";
 
-export { DiscordGatewayDO };
+// Re-export old name for migration compatibility
+class DiscordGatewayDO extends DiscordGatewayDO_v2 {}
+
+export { DiscordGatewayDO, DiscordGatewayDO_v2 };
 
 async function wakeupGateway(env: Record<string, any>) {
   try {

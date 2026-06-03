@@ -9,11 +9,15 @@ crons = ["* * * * *"]
 # Durable Object for persistent Gateway WebSocket
 [[durable_objects.bindings]]
 name = "DISCORD_GATEWAY"
-class_name = "DiscordGatewayDO"
+class_name = "DiscordGatewayDO_v2"
 
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["DiscordGatewayDO"]
+
+[[migrations]]
+tag = "v2"
+renamed_classes = [{ from = "DiscordGatewayDO", to = "DiscordGatewayDO_v2" }]
 
 # Workers AI (free, 10k req/day)
 [ai]
