@@ -21,10 +21,9 @@ export class DiscordGatewayDO {
     const url = new URL(request.url);
 
     if (url.pathname === "/wakeup") {
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        this.connect();
-      }
-      this.refreshContext(); // fire-and-forget on first wakeup
+      this.cleanup();
+      this.connect();
+      this.refreshContext();
       return new Response("OK", { status: 200 });
     }
 
@@ -104,7 +103,7 @@ export class DiscordGatewayDO {
         this.ws?.close();
         break;
       case 9:
-        this.identify();
+        this.ws?.close();
         break;
     }
   }
