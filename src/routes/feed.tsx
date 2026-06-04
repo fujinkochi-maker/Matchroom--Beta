@@ -20,7 +20,7 @@ import type { Post } from "@/data/types";
 export const Route = createFileRoute("/feed")({
   loader: async () => {
     await Promise.all([ensureFightersLoaded(), ensurePostsLoaded()]);
-    return POSTS;
+    return { posts: POSTS, fighters: FIGHTERS };
   },
   component: FeedPage,
 });
@@ -29,7 +29,7 @@ function FeedPage() {
   const router = useRouter();
   const session = getFighterSession();
   const loggedIn = isFighterLoggedIn();
-  const posts = Route.useLoaderData();
+  const { posts, fighters } = Route.useLoaderData();
   const [loadingMore, setLoadingMore] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -85,7 +85,7 @@ function FeedPage() {
             </Link>
             <div className="mt-12 space-y-4 text-left">
               {posts.map((p) => (
-                <PostCard key={p.id} post={p} />
+                <PostCard key={p.id} post={p} fighters={fighters} />
               ))}
               {posts.length === 0 && (
                 <p className="text-center text-sm text-muted-foreground">No posts yet.</p>
@@ -112,13 +112,19 @@ function FeedPage() {
               </button>
             </div>
 
-            <PostComposer session={session!} router={router} />
+            <PostComposer session={session!} router={router} fighters={fighters} />
 
             <div className="mt-8 space-y-4">
               {[...posts]
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .map((p) => (
-                  <PostCard key={p.id} post={p} session={session} router={router} />
+                  <PostCard
+                    key={p.id}
+                    post={p}
+                    session={session}
+                    router={router}
+                    fighters={fighters}
+                  />
                 ))}
               {posts.length === 0 && (
                 <p className="text-center text-sm text-muted-foreground">
@@ -143,9 +149,11 @@ function FeedPage() {
 function PostComposer({
   session,
   router,
+  fighters,
 }: {
   session: { token: string; username: string; displayName: string; image?: string };
   router: ReturnType<typeof useRouter>;
+  fighters: typeof FIGHTERS;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [content, setContent] = useState("");
@@ -159,11 +167,13 @@ function PostComposer({
 
   const filteredTagSuggestions =
     tagInput.length > 0
-      ? FIGHTERS.filter(
-          (f) =>
-            f.displayName.toLowerCase().includes(tagInput.toLowerCase()) &&
-            !tags.includes(f.username),
-        ).slice(0, 5)
+      ? fighters
+          .filter(
+            (f) =>
+              f.displayName.toLowerCase().includes(tagInput.toLowerCase()) &&
+              !tags.includes(f.username),
+          )
+          .slice(0, 5)
       : [];
 
   const handlePost = async () => {
@@ -283,7 +293,7 @@ function PostComposer({
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {tags.map((t) => {
-                const fighter = FIGHTERS.find((f) => f.username === t);
+                const fighter = fighters.find((f) => f.username === t);
                 return (
                   <span
                     key={t}
@@ -355,10 +365,12 @@ function PostCard({
   post,
   session,
   router,
+  fighters,
 }: {
   post: Post;
   session?: { token: string; username: string; displayName: string; image?: string } | null;
   router?: ReturnType<typeof useRouter>;
+  fighters: typeof FIGHTERS;
 }) {
   const [liked, setLiked] = useState(post.likedByCurrentUser);
   const [likeCount, setLikeCount] = useState(post.likes);
@@ -466,7 +478,7 @@ function PostCard({
           {post.tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {post.tags.map((t) => {
-                const fighter = FIGHTERS.find((f) => f.username === t);
+                const fighter = fighters.find((f) => f.username === t);
                 return (
                   <Link
                     key={t}

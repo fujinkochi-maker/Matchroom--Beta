@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import type { Fighter } from "@/data/types";
 import {
   ARTICLES,
   getArticleBySlug,
@@ -13,7 +14,9 @@ export const Route = createFileRoute("/news/$slug")({
     await Promise.all([ensureArticlesLoaded(), ensureFightersLoaded()]);
     const article = getArticleBySlug(params.slug);
     if (!article) throw notFound();
-    return { article };
+    const related = ARTICLES.filter((x) => x.slug !== article.slug).slice(0, 4);
+    const articleFighters = article.fighters.map((u: string) => getByUsername(u)).filter(Boolean);
+    return { article, related, articleFighters, fighters: FIGHTERS };
   },
   head: ({ loaderData }) => ({
     meta: loaderData
@@ -37,8 +40,7 @@ export const Route = createFileRoute("/news/$slug")({
 });
 
 function ArticlePage() {
-  const { article: a } = Route.useLoaderData();
-  const related = ARTICLES.filter((x) => x.slug !== a.slug).slice(0, 4);
+  const { article: a, related, articleFighters } = Route.useLoaderData();
   return (
     <article>
       <header
@@ -87,14 +89,13 @@ function ArticlePage() {
                 Fighters in this story
               </p>
               <div className="mt-3 flex flex-wrap gap-3">
-                {a.fighters.map((u: string) => {
-                  const f = getByUsername(u);
+                {articleFighters.map((f: Fighter) => {
                   if (!f) return null;
                   return (
                     <Link
-                      key={u}
+                      key={f.username}
                       to="/boxers/$username"
-                      params={{ username: u }}
+                      params={{ username: f.username }}
                       className="group flex items-center gap-3 border border-border bg-card p-2 pr-4 hover:border-primary"
                     >
                       <div className="h-12 w-12 shrink-0">

@@ -41,7 +41,22 @@ export const Route = createFileRoute("/boxers/$username")({
       (f) => f.username === fighter.username,
     )?.displayRank;
     const overallRank = overallEntry?.rank ?? computedRank;
-    return { fighter, fighterRanks, overallRank };
+    const news = getNewsForFighter(fighter.username);
+    const videos = getVideosForFighter(fighter.username);
+    const opponents = FIGHTERS.filter(
+      (x) => x.division === fighter.division && x.username !== fighter.username,
+    ).slice(0, 4);
+    const fighterPosts = getPostsForFighter(fighter.username);
+    return {
+      fighter,
+      fighterRanks,
+      overallRank,
+      news,
+      videos,
+      opponents,
+      fighterPosts,
+      fighters: FIGHTERS,
+    };
   },
   head: ({ loaderData }) => ({
     meta: loaderData
@@ -77,13 +92,17 @@ export const Route = createFileRoute("/boxers/$username")({
 
 function FighterProfilePage() {
   const router = useRouter();
-  const { fighter: f, fighterRanks, overallRank } = Route.useLoaderData();
-  const news = getNewsForFighter(f.username);
-  const videos = getVideosForFighter(f.username);
+  const {
+    fighter: f,
+    fighterRanks,
+    overallRank,
+    news,
+    videos,
+    opponents,
+    fighterPosts,
+    fighters,
+  } = Route.useLoaderData();
   const kos = Math.round((f.kos / Math.max(f.wins, 1)) * 100);
-  const opponents = FIGHTERS.filter(
-    (x) => x.division === f.division && x.username !== f.username,
-  ).slice(0, 4);
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = async () => {
@@ -243,7 +262,7 @@ function FighterProfilePage() {
               Recent Activity
             </h3>
             <div className="mt-4 space-y-3">
-              <FighterFeed username={f.username} />
+              <FighterFeed username={f.username} posts={fighterPosts} fighters={fighters} />
             </div>
 
             <h3 className="mt-10 font-display text-2xl uppercase">
@@ -387,9 +406,16 @@ function FighterProfilePage() {
   );
 }
 
-function FighterFeed({ username }: { username: string }) {
+function FighterFeed({
+  username,
+  posts,
+  fighters,
+}: {
+  username: string;
+  posts: Post[];
+  fighters: typeof FIGHTERS;
+}) {
   const session = getFighterSession();
-  const posts = getPostsForFighter(username);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const router = useRouter();
 
@@ -463,7 +489,7 @@ function FighterFeed({ username }: { username: string }) {
                 {p.tags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {p.tags.map((t) => {
-                      const fighter = FIGHTERS.find((f) => f.username === t);
+                      const fighter = fighters.find((f) => f.username === t);
                       return (
                         <Link
                           key={t}
