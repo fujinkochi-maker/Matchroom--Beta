@@ -549,11 +549,11 @@ export function createHandler(
 
         const unregGuildId = fighter.guild_id || interaction.guild_id;
         if (unregGuildId) {
-          setNickname(unregGuildId, discordId, `${fighter.display_name} [ Retired ]`);
+          await setNickname(unregGuildId, discordId, `${fighter.display_name} [ Retired ]`);
           if (fighter.division)
-            removeRole(unregGuildId, discordId, DIVISION_ROLES[fighter.division]);
-          removeRole(unregGuildId, discordId, AMATEUR_ROLE);
-          removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
+            await removeRole(unregGuildId, discordId, DIVISION_ROLES[fighter.division]);
+          await removeRole(unregGuildId, discordId, AMATEUR_ROLE);
+          await removeRole(unregGuildId, discordId, PRO_BOXER_ROLE);
         }
 
         await loadDataFromSupabase();
