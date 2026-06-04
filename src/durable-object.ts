@@ -29,12 +29,14 @@ export class DiscordGatewayDO_v2 {
       console.log(
         `[DO] Wakeup — botToken set: ${this.botToken ? "yes (" + this.botToken.slice(0, 20) + "...)" : "NO"}`,
       );
-      if (this.ws?.readyState !== WebSocket.OPEN) {
-        console.log("[DO] WS not open, reconnecting");
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        console.log("[DO] Already connected, refreshing context only");
+      } else if (this.connecting) {
+        console.log("[DO] Connection already in progress, skipping reconnect");
+      } else {
+        console.log("[DO] WS not connected, reconnecting");
         this.cleanup();
         this.connect();
-      } else {
-        console.log("[DO] Already connected, refreshing context only");
       }
       this.refreshContext();
       return new Response("OK", { status: 200 });

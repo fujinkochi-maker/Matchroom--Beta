@@ -60,12 +60,15 @@ export default {
 
     // Check worker env
     if (request.method === "GET" && url.pathname === "/envcheck") {
-      return new Response(JSON.stringify({
-        hasBotToken: !!env.DISCORD_BOT_TOKEN,
-        tokenPrefix: env.DISCORD_BOT_TOKEN ? env.DISCORD_BOT_TOKEN.slice(0, 15) + "..." : null,
-        hasAppId: !!env.DISCORD_APPLICATION_ID,
-        hasPublicKey: !!env.DISCORD_PUBLIC_KEY,
-      }), { status: 200, headers: { "content-type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          hasBotToken: !!env.DISCORD_BOT_TOKEN,
+          tokenPrefix: env.DISCORD_BOT_TOKEN ? env.DISCORD_BOT_TOKEN.slice(0, 15) + "..." : null,
+          hasAppId: !!env.DISCORD_APPLICATION_ID,
+          hasPublicKey: !!env.DISCORD_PUBLIC_KEY,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
     }
 
     if (request.method === "GET" && url.pathname === "/discord") {
@@ -90,9 +93,6 @@ export default {
     ctx.waitUntil(
       handler.registerCommands().catch((err) => console.error("Command registration failed:", err)),
     );
-
-    // Wake up Gateway DO on each interaction to keep it alive
-    ctx.waitUntil(wakeupGateway(env));
 
     const response = await handler.handleDiscordInteraction(request);
     return response ?? new Response("OK", { status: 200 });
