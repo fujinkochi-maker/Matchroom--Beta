@@ -5,6 +5,7 @@ import { VIDEOS, VIDEO_CATS, ensureVideosLoaded } from "@/data/fighters";
 export const Route = createFileRoute("/videos")({
   loader: async () => {
     await ensureVideosLoaded();
+    return { videos: VIDEOS };
   },
   head: () => ({
     meta: [
@@ -22,7 +23,8 @@ export const Route = createFileRoute("/videos")({
 });
 
 function VideosPage() {
-  const featured = VIDEOS[0];
+  const { videos } = Route.useLoaderData();
+  const featured = videos[0];
   if (!featured) {
     return (
       <>
@@ -67,15 +69,21 @@ function VideosPage() {
 
       <section className="container-x py-12">
         {VIDEO_CATS.map((c) => (
-          <VideoRow key={c} category={c} />
+          <VideoRow key={c} category={c} videos={videos} />
         ))}
       </section>
     </>
   );
 }
 
-function VideoRow({ category }: { category: (typeof VIDEO_CATS)[number] }) {
-  const vids = VIDEOS.filter((v) => v.category === category);
+function VideoRow({
+  category,
+  videos,
+}: {
+  category: (typeof VIDEO_CATS)[number];
+  videos: typeof VIDEOS;
+}) {
+  const vids = videos.filter((v) => v.category === category);
   if (vids.length === 0) return null;
   return (
     <div className="mb-10">

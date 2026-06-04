@@ -36,17 +36,12 @@ export const Route = createFileRoute("/boxers/$username")({
     if (!fighter) throw notFound();
     const { rankings } = await getPublicRankings();
     const fighterRanks = rankings.filter((r: any) => r.fighter_username === params.username);
-    const computedRank = getRanked(fighter.division).find((f) => f.username === fighter.username);
-    const syncedRanks = fighterRanks.filter((r: any) => r.body !== "OVERALL");
-    const overallRank = computedRank?.displayRank;
-    if (overallRank != null) {
-      syncedRanks.push({
-        body: "OVERALL",
-        rank: overallRank,
-        points: overallRank === 0 ? 0 : Math.max(11 - overallRank, 1),
-      });
-    }
-    return { fighter, fighterRanks: syncedRanks, overallRank };
+    const overallEntry = fighterRanks.find((r: any) => r.body === "OVERALL");
+    const computedRank = getRanked(fighter.division).find(
+      (f) => f.username === fighter.username,
+    )?.displayRank;
+    const overallRank = overallEntry?.rank ?? computedRank;
+    return { fighter, fighterRanks, overallRank };
   },
   head: ({ loaderData }) => ({
     meta: loaderData

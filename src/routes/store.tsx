@@ -8,6 +8,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/store")({
   loader: async () => {
     await ensureProductsLoaded();
+    return { products: PRODUCTS };
   },
   head: () => ({
     meta: [
@@ -28,12 +29,13 @@ export const Route = createFileRoute("/store")({
 });
 
 function StorePage() {
+  const { products } = Route.useLoaderData();
   const [cat, setCat] = useState<(typeof CATS)[number]>("All");
-  const list = PRODUCTS.filter((p) => cat === "All" || p.category === cat);
+  const list = products.filter((p) => cat === "All" || p.category === cat);
   const featured =
-    PRODUCTS.find((p) => p.category === "Limited Drop" && (p.stock ?? 0) < 10) ?? PRODUCTS[0];
+    products.find((p) => p.category === "Limited Drop" && (p.stock ?? 0) < 10) ?? products[0];
 
-  if (PRODUCTS.length === 0) {
+  if (products.length === 0) {
     return (
       <>
         <Toaster position="bottom-right" />

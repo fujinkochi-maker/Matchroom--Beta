@@ -12,6 +12,7 @@ import {
 export const Route = createFileRoute("/news/")({
   loader: async () => {
     await Promise.all([ensureArticlesLoaded(), ensureFightersLoaded()]);
+    return { articles: ARTICLES, featured: featuredArticle() };
   },
   head: () => ({
     meta: [
@@ -32,12 +33,12 @@ export const Route = createFileRoute("/news/")({
 });
 
 function NewsPage() {
+  const { articles, featured: feat } = Route.useLoaderData();
   const [cat, setCat] = useState<(typeof CATEGORIES)[number]>("All");
-  const feat = featuredArticle();
   const rest = feat
-    ? ARTICLES.filter((a) => a.slug !== feat.slug).filter(
-        (a) => cat === "All" || a.category === cat,
-      )
+    ? articles
+        .filter((a) => a.slug !== feat.slug)
+        .filter((a) => cat === "All" || a.category === cat)
     : [];
 
   return (

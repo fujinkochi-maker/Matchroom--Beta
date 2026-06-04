@@ -16,11 +16,7 @@ export const Route = createFileRoute("/champions")({
         beltMap[r.fighter_username].push(r.body);
       }
     }
-    const withBelts = champs.map((c) => ({
-      ...c,
-      beltsHeld: beltMap[c.username] ?? [],
-    }));
-    return { champions: withBelts };
+    return { champions: champs, beltMap };
   },
   head: () => ({
     meta: [
@@ -42,7 +38,7 @@ export const Route = createFileRoute("/champions")({
 });
 
 function ChampionsPage() {
-  const { champions } = Route.useLoaderData();
+  const { champions, beltMap } = Route.useLoaderData();
   return (
     <>
       <section className="relative isolate overflow-hidden bg-foreground text-background">
@@ -70,7 +66,7 @@ function ChampionsPage() {
         <section className="container-x py-12 md:py-16">
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {champions.map((c: any) => (
-              <ChampionCard key={c.username} fighter={c} beltsHeld={c.beltsHeld} />
+              <ChampionCard key={c.username} fighter={c} beltsHeld={beltMap[c.username] ?? []} />
             ))}
           </div>
         </section>

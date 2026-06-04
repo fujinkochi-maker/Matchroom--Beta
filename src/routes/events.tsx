@@ -2,12 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MapPin, Play } from "lucide-react";
 import { Countdown } from "@/components/Countdown";
 import { FighterAvatar } from "@/components/FighterAvatar";
-import { EVENTS, getByUsername, ensureEventsLoaded, ensureFightersLoaded } from "@/data/fighters";
+import { EVENTS, FIGHTERS, ensureEventsLoaded, ensureFightersLoaded } from "@/data/fighters";
+import type { Fighter } from "@/data/types";
 import { hashHue } from "@/lib/utils";
 
 export const Route = createFileRoute("/events")({
   loader: async () => {
     await Promise.all([ensureEventsLoaded(), ensureFightersLoaded()]);
+    return { events: EVENTS, fighters: FIGHTERS };
   },
   head: () => ({
     meta: [
@@ -28,8 +30,9 @@ export const Route = createFileRoute("/events")({
 });
 
 function EventsPage() {
-  const upcoming = EVENTS.filter((e) => e.status === "upcoming");
-  const past = EVENTS.filter((e) => e.status === "past");
+  const { events, fighters } = Route.useLoaderData();
+  const upcoming = events.filter((e) => e.status === "upcoming");
+  const past = events.filter((e) => e.status === "past");
   return (
     <>
       <section className="bg-foreground text-background">
@@ -54,7 +57,7 @@ function EventsPage() {
         {upcoming.length > 0 ? (
           <div className="grid gap-6 lg:grid-cols-2">
             {upcoming.map((e) => (
-              <EventCard key={e.slug} event={e} />
+              <EventCard key={e.slug} event={e} fighters={fighters} />
             ))}
           </div>
         ) : (
@@ -91,9 +94,15 @@ function EventsPage() {
   );
 }
 
-function EventCard({ event }: { event: (typeof EVENTS)[number] }) {
-  const a = getByUsername(event.mainEvent.a);
-  const b = getByUsername(event.mainEvent.b);
+function EventCard({
+  event,
+  fighters,
+}: {
+  event: (typeof EVENTS)[number];
+  fighters: typeof FIGHTERS;
+}) {
+  const a = fighters.find((f) => f.username === event.mainEvent.a);
+  const b = fighters.find((f) => f.username === event.mainEvent.b);
   if (!a || !b) return null;
   return (
     <article className="overflow-hidden border border-border bg-card shadow-card">
@@ -134,15 +143,18 @@ function EventCard({ event }: { event: (typeof EVENTS)[number] }) {
           Full Card
         </p>
         <ul className="mt-2 divide-y divide-border">
-          {event.card.map((b, i) => (
-            <li key={i} className="flex items-center justify-between py-2 text-sm">
-              <span className="font-semibold">
-                {getByUsername(b.a)?.displayName} <span className="text-muted-foreground">vs</span>{" "}
-                {getByUsername(b.b)?.displayName}
-              </span>
-              <span className="text-xs uppercase tracking-wider text-primary">{b.weight}</span>
-            </li>
-          ))}
+          {event.card.map((b, i) => {
+            const aName = fighters.find((f) => f.username === b.a)?.displayName;
+            const bName = fighters.find((f) => f.username === b.b)?.displayName;
+            return (
+              <li key={i} className="flex items-center justify-between py-2 text-sm">
+                <span className="font-semibold">
+                  {aName} <span className="text-muted-foreground">vs</span> {bName}
+                </span>
+                <span className="text-xs uppercase tracking-wider text-primary">{b.weight}</span>
+              </li>
+            );
+          })}
         </ul>
         <button className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-primary px-4 py-3 text-sm font-bold uppercase tracking-wider text-primary-foreground hover:bg-primary-dark">
           <Play className="h-4 w-4" /> Watch Now
@@ -152,7 +164,7 @@ function EventCard({ event }: { event: (typeof EVENTS)[number] }) {
   );
 }
 
-function FighterMini({ f, side }: { f: ReturnType<typeof getByUsername>; side: "left" | "right" }) {
+function FighterMini({ f, side }: { f: Fighter | undefined; side: "left" | "right" }) {
   if (!f) return null;
   return (
     <div className={side === "right" ? "text-right" : ""}>
