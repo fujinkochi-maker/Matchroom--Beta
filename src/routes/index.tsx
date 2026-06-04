@@ -92,7 +92,18 @@ function Hero({ fighterCount, eventCount }: { fighterCount: number; eventCount: 
           </p>
           <h1 className="mt-3 font-display text-[14vw] uppercase leading-[0.85] tracking-tight md:text-[7.5rem] animate-slide-up animate-delay-100">
             Matchroom
-            <span className="block text-primary">EXCLUSIVES</span>
+            <span
+              className="block text-transparent bg-clip-text"
+              style={{
+                backgroundImage:
+                  "linear-gradient(180deg, #fef3c7 0%, #f59e0b 40%, #b45309 70%, #92400e 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
+              }}
+            >
+              EXCLUSIVES
+            </span>
           </h1>
           <p className="mt-5 max-w-xl text-base text-background/80 md:text-lg animate-fade-in animate-delay-200">
             The Ultimate Roblox Boxing Championship Experience. Champions, contenders, world-class
@@ -127,7 +138,7 @@ function Hero({ fighterCount, eventCount }: { fighterCount: number; eventCount: 
 function Stat({ n, l }: { n: string; l: string }) {
   return (
     <div>
-      <p className="font-display text-3xl text-primary">{n}</p>
+      <p className="font-display text-3xl text-background">{n}</p>
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-background/70">{l}</p>
     </div>
   );
