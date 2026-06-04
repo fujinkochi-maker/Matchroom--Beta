@@ -51,7 +51,7 @@ export function SiteHeader() {
   const session = getFighterSession();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-black text-white">
       <div className="container-x flex h-16 items-center justify-between gap-6">
         <Link to="/" className="flex items-center gap-2">
           <img src="/favicon.png" alt="Matchroom" className="h-8 w-auto" />
@@ -66,11 +66,11 @@ export function SiteHeader() {
                   key={n.to}
                   to={n.to}
                   className={`relative px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
-                    active ? "text-primary" : "text-foreground hover:text-primary"
+                    active ? "text-white" : "text-white/70 hover:text-white"
                   }`}
                 >
                   {n.label}
-                  {active && <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-primary" />}
+                  {active && <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-white" />}
                 </Link>
               );
             }
@@ -79,13 +79,13 @@ export function SiteHeader() {
               <div key={n.label} className="group relative">
                 <button
                   className={`relative flex items-center gap-1 px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
-                    childActive ? "text-primary" : "text-foreground hover:text-primary"
+                    childActive ? "text-white" : "text-white/70 hover:text-white"
                   }`}
                 >
                   {n.label}
                   <ChevronDown className="h-3 w-3" />
                   {childActive && (
-                    <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-primary" />
+                    <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-white" />
                   )}
                 </button>
                 <div className="absolute left-0 top-full min-w-[180px] origin-top scale-y-0 border border-border bg-background shadow-lg opacity-0 transition-all group-hover:scale-y-100 group-hover:opacity-100">
@@ -119,14 +119,14 @@ export function SiteHeader() {
             <Link
               to="/boxers/$username"
               params={{ username: session?.username ?? "" }}
-              className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground lg:inline"
+              className="hidden text-xs font-semibold uppercase tracking-wider text-white/70 hover:text-white lg:inline"
             >
               {session?.displayName}
             </Link>
           ) : (
             <Link
               to="/auth/login"
-              className="hidden rounded-md bg-primary px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground hover:opacity-90 lg:inline"
+              className="hidden rounded-md bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90 lg:inline"
             >
               Login
             </Link>
@@ -137,7 +137,7 @@ export function SiteHeader() {
                 clearFighterSession();
                 router.invalidate();
               }}
-              className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground lg:inline"
+              className="hidden text-xs font-semibold uppercase tracking-wider text-white/70 hover:text-white lg:inline"
             >
               Logout
             </button>
