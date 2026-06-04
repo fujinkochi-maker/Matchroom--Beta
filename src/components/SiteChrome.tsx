@@ -54,12 +54,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container-x flex h-16 items-center justify-between gap-6">
         <Link to="/" className="flex items-center gap-2">
-          <span className="bg-primary px-2 py-1 font-display text-lg leading-none tracking-wider text-primary-foreground">
-            MATCHROOM
-          </span>
-          <span className="hidden font-display text-sm uppercase tracking-[0.2em] text-foreground sm:inline">
-            Boxing Beta
-          </span>
+          <img src="/favicon.png" alt="Matchroom" className="h-8 w-auto" />
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
