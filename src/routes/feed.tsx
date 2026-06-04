@@ -211,7 +211,7 @@ function PostComposer({
         className="mt-6 flex cursor-text items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/50"
       >
         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
-          <FighterAvatar name={session.displayName} src={session.image} />
+          <FighterAvatar name={session.displayName} src={session.image} square />
         </div>
         <span className="text-sm text-muted-foreground">What's on your mind?</span>
       </div>
@@ -270,7 +270,9 @@ function PostComposer({
                       setTagInput("");
                     }}
                   >
-                    <FighterAvatar name={f.displayName} src={f.image} />
+                    <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full">
+                      <FighterAvatar name={f.displayName} src={f.image} square />
+                    </div>
                     {f.displayName} (@{f.username})
                   </button>
                 ))}
@@ -401,11 +403,11 @@ function PostCard({
             params={{ username: post.authorUsername }}
             className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted"
           >
-            <FighterAvatar name={post.authorDisplayName} src={post.authorImage} />
+            <FighterAvatar name={post.authorDisplayName} src={post.authorImage} square />
           </Link>
         ) : (
           <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
-            <FighterAvatar name={post.authorDisplayName} src={post.authorImage} />
+            <FighterAvatar name={post.authorDisplayName} src={post.authorImage} square />
           </div>
         )}
         <div className="flex-1 min-w-0">
