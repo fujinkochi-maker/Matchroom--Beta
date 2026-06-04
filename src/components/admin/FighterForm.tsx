@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Fighter } from "@/data/types";
 import { ImageUpload } from "./ImageUpload";
 import { Plus, Trash2 } from "lucide-react";
 import { ADMIN_INPUT, ADMIN_LABEL, ADMIN_BTN_PRIMARY, ADMIN_ERROR } from "@/lib/admin-styles";
+import { FIGHTERS } from "@/data/fighters";
 
 const DIVISIONS = [
   "Flyweight",
@@ -250,15 +251,13 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
               key={i}
               className="flex flex-wrap items-center gap-2 rounded-md border border-border p-2"
             >
-              <input
+              <OpponentInput
                 value={h.opponent}
-                onChange={(e) => {
+                onChange={(v) => {
                   const h2 = [...(form.history ?? [])];
-                  h2[i] = { ...h2[i], opponent: e.target.value };
+                  h2[i] = { ...h2[i], opponent: v };
                   set("history", h2);
                 }}
-                placeholder="Opponent"
-                className="h-8 w-28 rounded border border-input bg-transparent px-2 text-xs"
               />
               <select
                 value={h.result}
@@ -336,6 +335,61 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
         {busy ? "Saving..." : submitLabel}
       </button>
     </form>
+  );
+}
+
+function OpponentInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const matches = FIGHTERS.filter(
+    (f) =>
+      f.username.toLowerCase().includes(query.toLowerCase()) ||
+      f.displayName.toLowerCase().includes(query.toLowerCase()),
+  ).slice(0, 8);
+
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          onChange(e.target.value);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder="Opponent"
+        className="h-8 w-28 rounded border border-input bg-transparent px-2 text-xs"
+      />
+      {open && query && matches.length > 0 && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded border border-border bg-popover shadow-lg">
+          {matches.map((f) => (
+            <button
+              key={f.username}
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent"
+              onClick={() => {
+                setQuery(f.username);
+                onChange(f.username);
+                setOpen(false);
+              }}
+            >
+              <span className="font-medium">{f.displayName}</span>
+              <span className="text-muted-foreground">@{f.username}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

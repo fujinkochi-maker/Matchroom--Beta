@@ -124,6 +124,74 @@ const DIVISIONS = [
 
 /* ============ Fighters ============ */
 
+function invertResult(r: string): string {
+  if (r === "W") return "L";
+  if (r === "L") return "W";
+  return "D";
+}
+
+async function syncOpponentRecords(
+  supabase: any,
+  username: string,
+  history: { opponent: string; result: string; method: string; date: string; event: string }[],
+) {
+  const opponentUsernames = [...new Set(history.map((h) => h.opponent).filter(Boolean))];
+  for (const opp of opponentUsernames) {
+    const { data: oppFighter } = await supabase
+      .from("fighters")
+      .select("username, division")
+      .eq("username", opp)
+      .single();
+    if (!oppFighter) continue;
+
+    await supabase
+      .from("fight_history")
+      .delete()
+      .eq("fighter_username", opp)
+      .eq("opponent", username);
+
+    const mirrored = history
+      .filter((h) => h.opponent === opp)
+      .map((h) => ({
+        fighter_username: opp,
+        opponent: username,
+        result: invertResult(h.result),
+        method: h.method,
+        date: h.date,
+        event: h.event,
+      }));
+    if (mirrored.length > 0) {
+      const { error } = await supabase.from("fight_history").insert(mirrored);
+      if (error) console.error(`Failed to mirror fights for ${opp}:`, error);
+    }
+
+    const { data: oppHistory } = await supabase
+      .from("fight_history")
+      .select("result, method")
+      .eq("fighter_username", opp);
+    const auto = autoCalcStats(oppHistory || []);
+    if (auto) {
+      await supabase
+        .from("fighters")
+        .update({
+          wins: auto.wins,
+          losses: auto.losses,
+          draws: auto.draws,
+          kos: auto.kos,
+          streak: auto.streak,
+        })
+        .eq("username", opp);
+    }
+
+    if (oppFighter.division) {
+      const { recalculateDivision } = await import("@/data/rankings");
+      recalculateDivision(oppFighter.division).catch((err: any) =>
+        console.error(`Ranking recalculation failed for ${opp}:`, err),
+      );
+    }
+  }
+}
+
 function autoCalcStats(history?: { result: string; method: string }[]) {
   if (!history?.length) return null;
   let wins = 0,
@@ -266,6 +334,13 @@ export const updateFighter = createServerFn({ method: "POST" })
         })),
       );
       if (hErr) console.error("Failed to save fight history:", hErr);
+    }
+
+    // Sync opponent records if history provided
+    if (data.history?.length) {
+      syncOpponentRecords(supabase, data.username, data.history).catch((err: any) =>
+        console.error("Opponent sync failed:", err),
+      );
     }
 
     // Recalculate division ranks for fighters table
@@ -418,6 +493,13 @@ export const upsertFightHistory = createServerFn({ method: "POST" })
         })),
       );
       if (error) throw new Error(error.message);
+    }
+
+    // Sync opponent records
+    if (data.history.length > 0) {
+      syncOpponentRecords(supabase, data.fighterUsername, data.history).catch((err: any) =>
+        console.error("Opponent sync failed:", err),
+      );
     }
 
     // Auto-calc stats from history and update fighter
