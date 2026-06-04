@@ -6,6 +6,7 @@ import { deleteFighter } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
 import { useState } from "react";
+import { DIVISIONS } from "@/data/types";
 import {
   ADMIN_HEADING,
   ADMIN_SUBTITLE,
@@ -24,6 +25,15 @@ function AdminFighters() {
   const location = useLocation();
   const fighters = FIGHTERS;
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [divisionFilter, setDivisionFilter] = useState("All");
+  const filtered = fighters.filter((f) => {
+    const matchesSearch =
+      f.username.toLowerCase().includes(search.toLowerCase()) ||
+      f.displayName.toLowerCase().includes(search.toLowerCase());
+    const matchesDivision = divisionFilter === "All" || f.division === divisionFilter;
+    return matchesSearch && matchesDivision;
+  });
   if (location.pathname !== "/admin/fighters") return <Outlet />;
   const handleDelete = async (username: string) => {
     const token = getAdminToken();
@@ -47,6 +57,30 @@ function AdminFighters() {
           <Plus className="h-4 w-4" /> New Fighter{" "}
         </Link>{" "}
       </div>{" "}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          placeholder="Search by name or username..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        />
+        <select
+          value={divisionFilter}
+          onChange={(e) => setDivisionFilter(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="All">All Divisions</option>
+          {DIVISIONS.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted-foreground">
+          {filtered.length} of {fighters.length} fighters
+        </p>
+      </div>
       <div className={ADMIN_TABLE_WRAP}>
         {" "}
         <table className="w-full text-sm">
@@ -66,7 +100,7 @@ function AdminFighters() {
           </thead>{" "}
           <tbody>
             {" "}
-            {fighters.map((f) => (
+            {filtered.map((f) => (
               <tr key={f.username} className={ADMIN_TABLE_ROW}>
                 {" "}
                 <td className="px-4 py-3 font-medium">@{f.username}</td>{" "}
@@ -101,7 +135,7 @@ function AdminFighters() {
                 </td>{" "}
               </tr>
             ))}{" "}
-            {fighters.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
                 {" "}
                 <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">

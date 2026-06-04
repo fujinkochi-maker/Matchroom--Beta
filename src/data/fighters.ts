@@ -41,7 +41,15 @@ export const getByUsername = (u: string) =>
   FIGHTERS.find((f) => f.username.toLowerCase() === u.toLowerCase());
 export const getRanked = (division: Division, source?: Fighter[]) => {
   const pool = source ?? FIGHTERS;
-  const fighters = pool.filter((f) => f.division === division).sort((a, b) => a.rank - b.rank);
+  const fighters = pool
+    .filter((f) => f.division === division)
+    .sort((a, b) => {
+      if (a.rank === 0) return -1;
+      if (b.rank === 0) return 1;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (a.losses !== b.losses) return a.losses - b.losses;
+      return a.rank - b.rank;
+    });
   let displayRank = 1;
   return fighters.map((f) => ({
     ...f,

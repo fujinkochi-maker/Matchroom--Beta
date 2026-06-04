@@ -7,6 +7,7 @@ import {
   getNewsForFighter,
   getVideosForFighter,
   getPostsForFighter,
+  getRanked,
   FIGHTERS,
   POSTS,
   ensureFightersLoaded,
@@ -35,7 +36,10 @@ export const Route = createFileRoute("/boxers/$username")({
     if (!fighter) throw notFound();
     const { rankings } = await getPublicRankings();
     const fighterRanks = rankings.filter((r: any) => r.fighter_username === params.username);
-    return { fighter, fighterRanks };
+    const overallRank = getRanked(fighter.division).find(
+      (f) => f.username === fighter.username,
+    )?.displayRank;
+    return { fighter, fighterRanks, overallRank };
   },
   head: ({ loaderData }) => ({
     meta: loaderData
@@ -45,7 +49,7 @@ export const Route = createFileRoute("/boxers/$username")({
           },
           {
             name: "description",
-            content: `${loaderData.fighter.displayName} — ${loaderData.fighter.division}, ranked ${loaderData.fighter.rank === 0 ? "Champion" : `#${loaderData.fighter.rank}`}. Record ${loaderData.fighter.wins}-${loaderData.fighter.losses}-${loaderData.fighter.draws}.`,
+            content: `${loaderData.fighter.displayName} — ${loaderData.fighter.division}, ranked ${loaderData.overallRank === 0 ? "Champion" : `#${loaderData.overallRank}`}. Record ${loaderData.fighter.wins}-${loaderData.fighter.losses}-${loaderData.fighter.draws}.`,
           },
           {
             property: "og:title",
@@ -71,7 +75,7 @@ export const Route = createFileRoute("/boxers/$username")({
 
 function FighterProfilePage() {
   const router = useRouter();
-  const { fighter: f, fighterRanks } = Route.useLoaderData();
+  const { fighter: f, fighterRanks, overallRank } = Route.useLoaderData();
   const news = getNewsForFighter(f.username);
   const videos = getVideosForFighter(f.username);
   const kos = Math.round((f.kos / Math.max(f.wins, 1)) * 100);
@@ -128,7 +132,7 @@ function FighterProfilePage() {
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground">
-                {f.rank === 0 ? getChampionTitle(f.beltsHeld) : `Ranked #${f.rank}`}
+                {overallRank === 0 ? getChampionTitle(f.beltsHeld) : `Ranked #${overallRank}`}
               </span>
               {f.beltsHeld
                 ? f.beltsHeld.split(",").map((name) => (
