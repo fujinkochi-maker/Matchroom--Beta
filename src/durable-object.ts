@@ -9,9 +9,11 @@ export class DiscordGatewayDO_v2 {
   ws: WebSocket | null = null;
   heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   contextTimer: ReturnType<typeof setInterval> | null = null;
+  reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   botUserId: string | null = null;
   botToken: string | null = null;
   destroyed = false;
+  connecting = false;
   processedMessages: Set<string> = new Set();
 
   constructor(state: any, env: Record<string, any>) {
@@ -27,8 +29,13 @@ export class DiscordGatewayDO_v2 {
       console.log(
         `[DO] Wakeup — botToken set: ${this.botToken ? "yes (" + this.botToken.slice(0, 20) + "...)" : "NO"}`,
       );
-      this.cleanup();
-      this.connect();
+      if (this.ws?.readyState !== WebSocket.OPEN) {
+        console.log("[DO] WS not open, reconnecting");
+        this.cleanup();
+        this.connect();
+      } else {
+        console.log("[DO] Already connected, refreshing context only");
+      }
       this.refreshContext();
       return new Response("OK", { status: 200 });
     }
@@ -84,12 +91,14 @@ export class DiscordGatewayDO_v2 {
   }
 
   async connect() {
-    if (this.destroyed) return;
+    if (this.destroyed || this.connecting) return;
+    this.connecting = true;
     try {
       this.ws = new WebSocket(GATEWAY_URL);
 
       this.ws.onopen = () => {
         console.log("[DO] Gateway connected");
+        this.connecting = false;
         this.startContextTimer();
       };
 
@@ -104,13 +113,18 @@ export class DiscordGatewayDO_v2 {
       this.ws.onclose = (event) => {
         console.log(`[DO] Gateway closed: ${event.code}`);
         this.cleanup();
-        if (!this.destroyed) setTimeout(() => this.connect(), RECONNECT_DELAY);
+        if (!this.destroyed)
+          this.reconnectTimer = setTimeout(() => this.connect(), RECONNECT_DELAY);
       };
 
-      this.ws.onerror = () => console.error("[DO] Gateway error");
+      this.ws.onerror = () => {
+        console.error("[DO] Gateway error");
+        this.connecting = false;
+      };
     } catch (err) {
       console.error("[DO] Connect error:", err);
-      if (!this.destroyed) setTimeout(() => this.connect(), RECONNECT_DELAY);
+      this.connecting = false;
+      if (!this.destroyed) this.reconnectTimer = setTimeout(() => this.connect(), RECONNECT_DELAY);
     }
   }
 
@@ -165,9 +179,14 @@ export class DiscordGatewayDO_v2 {
   }
 
   cleanup() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.stopHeartbeat();
     this.stopContextTimer();
     this.ws = null;
+    this.connecting = false;
   }
 
   async handleDispatch(data: any) {
