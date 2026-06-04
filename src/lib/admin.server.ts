@@ -13,8 +13,7 @@ function discordHeaders() {
   };
 }
 
-async function updateDiscordNickname(discordId: string, nickname: string) {
-  const guildId = process.env.DISCORD_GUILD_ID;
+async function updateDiscordNickname(guildId: string, discordId: string, nickname: string) {
   if (!guildId || !process.env.DISCORD_BOT_TOKEN) return;
   try {
     await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordId}`, {
@@ -296,7 +295,7 @@ export const updateFighter = createServerFn({ method: "POST" })
       .eq("username", data.username)
       .single();
     if (updated?.discord_id) {
-      updateDiscordNickname(updated.discord_id, formatNickname(updated));
+      updateDiscordNickname(updated.guild_id, updated.discord_id, formatNickname(updated));
       if (updated.guild_id && updated.wins >= 3) {
         discordAddRole(updated.guild_id, updated.discord_id, PRO_BOXER_ROLE);
         discordRemoveRole(updated.guild_id, updated.discord_id, AMATEUR_ROLE);

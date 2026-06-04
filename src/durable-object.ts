@@ -1,6 +1,6 @@
 const DISCORD_API = "https://discord.com/api/v10";
 const GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json";
-const RECONNECT_DELAY = 5000;
+const RECONNECT_DELAY = 30000;
 const CONTEXT_TTL = 60_000;
 
 export class DiscordGatewayDO_v2 {
@@ -24,7 +24,9 @@ export class DiscordGatewayDO_v2 {
 
     if (url.pathname === "/wakeup") {
       this.botToken = url.searchParams.get("token") || this.env.DISCORD_BOT_TOKEN || "";
-      console.log(`[DO] Wakeup — botToken set: ${this.botToken ? "yes (" + this.botToken.slice(0, 20) + "...)" : "NO"}`);
+      console.log(
+        `[DO] Wakeup — botToken set: ${this.botToken ? "yes (" + this.botToken.slice(0, 20) + "...)" : "NO"}`,
+      );
       this.cleanup();
       this.connect();
       this.refreshContext();
@@ -43,7 +45,9 @@ export class DiscordGatewayDO_v2 {
         botUserId: this.botUserId,
         hasToken: !!this.botToken,
         hasEnvToken: !!this.env.DISCORD_BOT_TOKEN,
-        envTokenPrefix: this.env.DISCORD_BOT_TOKEN ? this.env.DISCORD_BOT_TOKEN.slice(0, 15) + "..." : null,
+        envTokenPrefix: this.env.DISCORD_BOT_TOKEN
+          ? this.env.DISCORD_BOT_TOKEN.slice(0, 15) + "..."
+          : null,
         destroyed: this.destroyed,
       };
       return new Response(JSON.stringify(info, null, 2), {
@@ -172,7 +176,8 @@ export class DiscordGatewayDO_v2 {
       this.botUserId = event.user.id;
       console.log(`[DO] Ready as ${event.user.username}`);
     } else if (type === "MESSAGE_CREATE") {
-      await this.handleMessageCreate(event);
+      // @mention replies disabled (was causing reconnect loops)
+      // await this.handleMessageCreate(event);
     }
   }
 
