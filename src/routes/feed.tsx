@@ -443,7 +443,12 @@ function PostCard({
 
           {post.imageUrl && (
             <div className="mt-3 overflow-hidden rounded-lg border border-border">
-              <img src={post.imageUrl} alt="" className="w-full object-cover" loading="lazy" />
+              <img
+                src={post.imageUrl}
+                alt=""
+                className="w-full object-cover max-h-96"
+                loading="lazy"
+              />
             </div>
           )}
 

@@ -9,6 +9,7 @@ import { DIVISIONS, type Division } from "@/data/types";
 export const Route = createFileRoute("/boxers/")({
   loader: async () => {
     await ensureFightersLoaded();
+    return { fighters: FIGHTERS, champs: getChampions() };
   },
   head: () => ({
     meta: [
@@ -40,7 +41,7 @@ const FILTERS: { id: Filter; label: string }[] = [
 
 function BoxersPage() {
   const router = useRouter();
-  const champs = getChampions();
+  const { fighters, champs } = Route.useLoaderData();
   const [q, setQ] = useState("");
   const [division, setDivision] = useState<Division | "all">("all");
   const [filter, setFilter] = useState<Filter>("all");
@@ -54,21 +55,29 @@ function BoxersPage() {
 
   const results = useMemo(() => {
     const needle = q.toLowerCase();
-    return FIGHTERS.filter((f) => {
-      if (division !== "all" && f.division !== division) return false;
-      if (filter === "champion" && f.rank !== 0) return false;
-      if (filter === "top" && f.rank > 3) return false;
-      if (filter === "undefeated" && f.losses > 0) return false;
-      if (filter === "ko" && f.kos / Math.max(f.wins, 1) < 0.6) return false;
-      if (!needle) return true;
-      return (
-        f.username.toLowerCase().includes(needle) ||
-        f.displayName.toLowerCase().includes(needle) ||
-        f.nickname.toLowerCase().includes(needle) ||
-        f.division.toLowerCase().includes(needle) ||
-        `${f.wins}-${f.losses}-${f.draws}`.includes(needle)
-      );
-    }).sort((a, b) => a.rank - b.rank);
+    return fighters
+      .filter((f) => {
+        if (division !== "all" && f.division !== division) return false;
+        if (filter === "champion" && f.rank !== 0) return false;
+        if (filter === "top" && f.rank > 3) return false;
+        if (filter === "undefeated" && f.losses > 0) return false;
+        if (filter === "ko" && f.kos / Math.max(f.wins, 1) < 0.6) return false;
+        if (!needle) return true;
+        return (
+          f.username.toLowerCase().includes(needle) ||
+          f.displayName.toLowerCase().includes(needle) ||
+          f.nickname.toLowerCase().includes(needle) ||
+          f.division.toLowerCase().includes(needle) ||
+          `${f.wins}-${f.losses}-${f.draws}`.includes(needle)
+        );
+      })
+      .sort((a, b) => {
+        if (a.rank === 0 && b.rank !== 0) return -1;
+        if (b.rank === 0 && a.rank !== 0) return 1;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (a.losses !== b.losses) return a.losses - b.losses;
+        return a.displayRank - b.displayRank;
+      });
   }, [q, division, filter]);
 
   return (
