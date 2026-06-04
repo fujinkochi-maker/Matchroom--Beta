@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import { FighterAvatar } from "./FighterAvatar";
 import type { Fighter } from "@/data/types";
+import { getChampionTitle } from "@/data/fighters";
 
 const BODY_COLORS: Record<string, string> = {
   WBC: "bg-green-700",
@@ -37,7 +38,7 @@ export const ChampionCard = memo(function ChampionCard({
             </div>
           ) : (
             <div className="absolute left-3 top-3 bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary-foreground">
-              Champion
+              {getChampionTitle(fighter.beltsHeld)}
             </div>
           )}
           <div className="absolute inset-x-0 bottom-0 p-4">

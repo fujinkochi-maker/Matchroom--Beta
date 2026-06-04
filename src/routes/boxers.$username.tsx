@@ -14,6 +14,7 @@ import {
   ensureVideosLoaded,
   ensurePostsLoaded,
   refreshFighter,
+  getChampionTitle,
 } from "@/data/fighters";
 import { hashHue } from "@/lib/utils";
 import { getFighterSession } from "@/lib/discord-auth";
@@ -127,7 +128,7 @@ function FighterProfilePage() {
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground">
-                {f.rank === 0 ? "Champion" : `Ranked #${f.rank}`}
+                {f.rank === 0 ? getChampionTitle(f.beltsHeld) : `Ranked #${f.rank}`}
               </span>
               {f.beltsHeld
                 ? f.beltsHeld.split(",").map((name) => (
@@ -178,7 +179,7 @@ function FighterProfilePage() {
           Current ranking per sanctioning body.
           {fighterRanks.some((r: any) => r.rank === 0) && (
             <span className="ml-2 inline-flex items-center gap-1 bg-primary px-2 py-0.5 text-xs font-bold uppercase text-primary-foreground">
-              <Trophy className="h-3 w-3" /> Unified Champion
+              <Trophy className="h-3 w-3" /> {getChampionTitle(f.beltsHeld)}
             </span>
           )}
         </p>

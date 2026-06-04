@@ -40,6 +40,16 @@ function formatNickname(f: {
 /* ── Discord role helpers ── */
 const AMATEUR_ROLE = "1510667124006457496";
 const PRO_BOXER_ROLE = "1510665774052806780";
+const WORLD_CHAMPION_ROLE = "1511957885892956160";
+const UNIFIED_CHAMPION_ROLE = "1511959744955285596";
+const UNDISPUTED_ROLE = "1511959750865059870";
+const FORMER_WORLD_CHAMPION_ROLE = "1511961430985932818";
+const BELT_ROLES: Record<string, string> = {
+  WBC: "1511958029954846810",
+  WBA: "1511958114986098748",
+  IBF: "1511958120014942300",
+  WBO: "1511958030353305600",
+};
 
 async function discordAddRole(guildId: string, userId: string, roleId: string) {
   try {
@@ -211,6 +221,14 @@ export const updateFighter = createServerFn({ method: "POST" })
     const kos = auto ? auto.kos : data.kos;
     const streak = auto ? auto.streak : data.streak;
 
+    // Check if fighter previously had belts (for Former World Champion logic)
+    const { data: oldFighter } = await supabase
+      .from("fighters")
+      .select("belts_held")
+      .eq("username", data.originalUsername)
+      .single();
+    const hadBelts = !!(oldFighter?.belts_held ?? "");
+
     const { error } = await supabase.from("fighters").upsert({
       username: data.username,
       display_name: data.displayName,
@@ -274,7 +292,7 @@ export const updateFighter = createServerFn({ method: "POST" })
     // Update Discord nickname with new record
     const { data: updated } = await supabase
       .from("fighters")
-      .select("discord_id, display_name, wins, losses, draws, kos, guild_id")
+      .select("discord_id, display_name, wins, losses, draws, kos, guild_id, belts_held")
       .eq("username", data.username)
       .single();
     if (updated?.discord_id) {
@@ -282,6 +300,39 @@ export const updateFighter = createServerFn({ method: "POST" })
       if (updated.guild_id && updated.wins >= 3) {
         discordAddRole(updated.guild_id, updated.discord_id, PRO_BOXER_ROLE);
         discordRemoveRole(updated.guild_id, updated.discord_id, AMATEUR_ROLE);
+      }
+
+      // Update Discord champion roles based on belts_held
+      if (updated.guild_id) {
+        for (const roleId of [
+          WORLD_CHAMPION_ROLE,
+          UNIFIED_CHAMPION_ROLE,
+          UNDISPUTED_ROLE,
+          FORMER_WORLD_CHAMPION_ROLE,
+        ]) {
+          await discordRemoveRole(updated.guild_id, updated.discord_id, roleId);
+        }
+        for (const roleId of Object.values(BELT_ROLES)) {
+          await discordRemoveRole(updated.guild_id, updated.discord_id, roleId);
+        }
+        const belts = (data.beltsHeld || "").split(",").filter(Boolean);
+        if (belts.length > 0) {
+          for (const belt of belts) {
+            const roleId = BELT_ROLES[belt];
+            if (roleId) {
+              await discordAddRole(updated.guild_id, updated.discord_id, roleId);
+            }
+          }
+          if (belts.length === 4) {
+            await discordAddRole(updated.guild_id, updated.discord_id, UNDISPUTED_ROLE);
+          } else if (belts.length >= 2) {
+            await discordAddRole(updated.guild_id, updated.discord_id, UNIFIED_CHAMPION_ROLE);
+          } else {
+            await discordAddRole(updated.guild_id, updated.discord_id, WORLD_CHAMPION_ROLE);
+          }
+        } else if (hadBelts) {
+          await discordAddRole(updated.guild_id, updated.discord_id, FORMER_WORLD_CHAMPION_ROLE);
+        }
       }
     }
 

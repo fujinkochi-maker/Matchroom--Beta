@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import { FighterAvatar } from "./FighterAvatar";
 import type { Fighter } from "@/data/types";
+import { getChampionTitle } from "@/data/fighters";
 
 export const FighterCard = memo(function FighterCard({ fighter }: { fighter: Fighter }) {
   const kos = Math.round((fighter.kos / Math.max(fighter.wins, 1)) * 100);
@@ -11,7 +12,7 @@ export const FighterCard = memo(function FighterCard({ fighter }: { fighter: Fig
         <div className="relative">
           <FighterAvatar name={fighter.displayName} src={fighter.image} />
           <div className="absolute left-0 top-0 bg-primary px-2 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground">
-            {fighter.rank === 0 ? "Champion" : `#${fighter.rank}`}
+            {fighter.rank === 0 ? getChampionTitle(fighter.beltsHeld) : `#${fighter.rank}`}
           </div>
           {fighter.beltsHeld ? (
             <div className="absolute right-0 top-0 flex flex-wrap gap-0.5">

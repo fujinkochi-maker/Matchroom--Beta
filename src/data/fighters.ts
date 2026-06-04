@@ -29,12 +29,18 @@ export const FIGHTERS = _fighters;
 export const getChampion = (division: Division) =>
   FIGHTERS.find((f) => f.division === division && f.rank === 0);
 export const getChampions = () => DIVISIONS.map((d) => getChampion(d)).filter(Boolean) as Fighter[];
+export const getChampionTitle = (beltsHeld: string): string => {
+  const count = beltsHeld ? beltsHeld.split(",").filter(Boolean).length : 0;
+  if (count === 0) return "Champion";
+  if (count === 4) return "Undisputed";
+  if (count >= 2) return "Unified Champion";
+  return "World Champion";
+};
+
 export const getByUsername = (u: string) =>
   FIGHTERS.find((f) => f.username.toLowerCase() === u.toLowerCase());
 export const getRanked = (division: Division) => {
-  const fighters = FIGHTERS.filter((f) => f.division === division).sort(
-    (a, b) => a.rank - b.rank,
-  );
+  const fighters = FIGHTERS.filter((f) => f.division === division).sort((a, b) => a.rank - b.rank);
   let displayRank = 1;
   return fighters.map((f) => ({
     ...f,
