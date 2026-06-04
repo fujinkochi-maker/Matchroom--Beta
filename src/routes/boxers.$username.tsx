@@ -439,8 +439,13 @@ function FighterFeed({ username }: { username: string }) {
               <div className="min-w-0 flex-1">
                 <p className="whitespace-pre-wrap text-sm">{p.content}</p>
                 {p.imageUrl && (
-                  <div className="mt-2 overflow-hidden rounded-lg border border-border">
-                    <img src={p.imageUrl} alt="" className="w-full object-cover" loading="lazy" />
+                  <div className="mt-2 overflow-hidden rounded-lg border border-border aspect-square">
+                    <img
+                      src={p.imageUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
                   </div>
                 )}
                 {p.videoUrl && (

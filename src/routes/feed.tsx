@@ -442,11 +442,11 @@ function PostCard({
           <p className="mt-2 whitespace-pre-wrap text-sm">{post.content}</p>
 
           {post.imageUrl && (
-            <div className="mt-3 overflow-hidden rounded-lg border border-border">
+            <div className="mt-3 overflow-hidden rounded-lg border border-border aspect-square">
               <img
                 src={post.imageUrl}
                 alt=""
-                className="w-full object-cover max-h-96"
+                className="w-full h-full object-cover"
                 loading="lazy"
               />
             </div>
