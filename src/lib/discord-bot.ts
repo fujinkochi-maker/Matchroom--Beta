@@ -636,7 +636,7 @@ export function createHandler(
         await refreshDOContext();
 
         if (guildId) {
-          setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
+          await setNickname(guildId, discordId, `${displayName} | 0-0-0 | 0KOs`);
         }
 
         await editDeferredResponse(
@@ -733,9 +733,9 @@ export function createHandler(
         const roleGuildId = fighter.guild_id || interaction.guild_id;
         if (roleGuildId) {
           const roleId = DIVISION_ROLES[division];
-          if (roleId) addRole(roleGuildId, discordId, roleId);
-          addRole(roleGuildId, discordId, AMATEUR_ROLE);
-          setNickname(roleGuildId, discordId, `${fighter.display_name} | 0-0-0 | 0KOs`);
+          if (roleId) await addRole(roleGuildId, discordId, roleId);
+          await addRole(roleGuildId, discordId, AMATEUR_ROLE);
+          await setNickname(roleGuildId, discordId, `${fighter.display_name} | 0-0-0 | 0KOs`);
         }
 
         await loadDataFromSupabase();
