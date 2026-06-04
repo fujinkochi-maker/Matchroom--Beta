@@ -14,7 +14,7 @@ export const Route = createFileRoute("/rankings")({
   loader: async () => {
     await ensureFightersLoaded();
     const { rankings } = await getPublicRankings();
-    return { rankings };
+    return { rankings, fighters: FIGHTERS };
   },
   head: () => ({
     meta: [
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/rankings")({
 });
 
 function RankingsPage() {
-  const { rankings } = Route.useLoaderData();
+  const { rankings, fighters } = Route.useLoaderData();
   const [division, setDivision] = useState<Division>("Heavyweight");
   const [body, setBody] = useState<Body>("OVERALL");
 
@@ -90,7 +90,7 @@ function RankingsPage() {
         </div>
 
         <div className="mt-6">
-          <RankingTable division={division} body={body} rankings={rankings} />
+          <RankingTable division={division} body={body} rankings={rankings} fighters={fighters} />
         </div>
       </section>
     </>
@@ -101,13 +101,15 @@ function RankingTable({
   division,
   body,
   rankings,
+  fighters,
 }: {
   division: Division;
   body: Body;
   rankings: any[];
+  fighters: typeof FIGHTERS;
 }) {
   if (body === "OVERALL") {
-    return <OverallTable division={division} />;
+    return <OverallTable division={division} fighters={fighters} />;
   }
 
   const bodyRankings = rankings
@@ -129,13 +131,13 @@ function RankingTable({
           <tr>
             <th className="w-16 px-4 py-3 text-left">{body} Rank</th>
             <th className="px-4 py-3 text-left">Fighter</th>
-            <th className="px-4 py-3 text-left">Points</th>
+            <th className="px-4 py-3 text-left">Record</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {bodyRankings.map((r: any) => {
             const isChamp = r.rank === 0;
-            const fighter = FIGHTERS.find((f) => f.username === r.fighter_username);
+            const fighter = fighters.find((f) => f.username === r.fighter_username);
             return (
               <tr
                 key={`${r.fighter_username}-${r.body}`}
@@ -157,7 +159,11 @@ function RankingTable({
                     className="group flex items-center gap-3"
                   >
                     <div className="h-10 w-10 shrink-0">
-                      <FighterAvatar name={fighter?.displayName ?? r.fighter_username} square src={fighter?.image} />
+                      <FighterAvatar
+                        name={fighter?.displayName ?? r.fighter_username}
+                        square
+                        src={fighter?.image}
+                      />
                     </div>
                     <div>
                       <p className="font-semibold group-hover:text-primary">
@@ -167,7 +173,9 @@ function RankingTable({
                     </div>
                   </Link>
                 </td>
-                <td className="px-4 py-3 font-mono text-muted-foreground">{r.points}</td>
+                <td className="px-4 py-3 font-mono">
+                  {fighter ? `${fighter.wins}-${fighter.losses}-${fighter.draws}` : "-"}
+                </td>
               </tr>
             );
           })}
@@ -177,8 +185,8 @@ function RankingTable({
   );
 }
 
-function OverallTable({ division }: { division: Division }) {
-  const ranked = getRanked(division);
+function OverallTable({ division, fighters }: { division: Division; fighters: typeof FIGHTERS }) {
+  const ranked = getRanked(division, fighters);
   if (ranked.length === 0) {
     return (
       <p className="py-8 text-center text-muted-foreground">

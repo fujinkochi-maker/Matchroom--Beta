@@ -19,7 +19,7 @@ import {
   ensureArticlesLoaded,
   ensureVideosLoaded,
 } from "@/data/fighters";
-import { DIVISIONS } from "@/data/types";
+import { DIVISIONS, type Division, type Fighter } from "@/data/types";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
@@ -29,11 +29,24 @@ export const Route = createFileRoute("/")({
       ensureArticlesLoaded(),
       ensureVideosLoaded(),
     ]);
+    const eventObj = nextEvent();
+    const mainEventFighters = eventObj
+      ? {
+          a: getByUsername(eventObj.mainEvent.a),
+          b: getByUsername(eventObj.mainEvent.b),
+        }
+      : null;
+    const topRanked = DIVISIONS.slice(0, 3).map((div) => ({
+      division: div,
+      fighters: getRanked(div).slice(0, 5),
+    }));
     return {
       fighterCount: FIGHTERS.length,
       eventCount: EVENTS.length,
       champs: getChampions(),
-      event: nextEvent(),
+      event: eventObj,
+      mainEventFighters,
+      topRanked,
       articles: ARTICLES.slice(0, 3),
       videos: VIDEOS.slice(0, 4),
       _t: Date.now(),
@@ -59,13 +72,24 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const { fighterCount, eventCount, champs, event, articles, videos } = Route.useLoaderData();
+  const {
+    fighterCount,
+    eventCount,
+    champs,
+    event,
+    mainEventFighters,
+    topRanked,
+    articles,
+    videos,
+  } = Route.useLoaderData();
   return (
     <>
       <Hero fighterCount={fighterCount} eventCount={eventCount} />
       <ChampionsStrip champs={champs} />
-      {event && <NextEvent event={event} />}
-      <RankingsTeaser />
+      {event && mainEventFighters?.a && mainEventFighters?.b && (
+        <NextEvent event={event} a={mainEventFighters.a} b={mainEventFighters.b} />
+      )}
+      <RankingsTeaser topRanked={topRanked} />
       <LatestNews articles={articles} />
       <FeaturedVideos videos={videos} />
       <StoreTeaser />
@@ -197,11 +221,15 @@ function ChampionsStrip({ champs }: { champs: ReturnType<typeof getChampions> })
   );
 }
 
-function NextEvent({ event }: { event: NonNullable<ReturnType<typeof nextEvent>> }) {
-  if (!event) return null;
-  const a = getByUsername(event.mainEvent.a);
-  const b = getByUsername(event.mainEvent.b);
-  if (!a || !b) return null;
+function NextEvent({
+  event,
+  a,
+  b,
+}: {
+  event: NonNullable<ReturnType<typeof nextEvent>>;
+  a: Fighter;
+  b: Fighter;
+}) {
   return (
     <section className="bg-foreground text-background">
       <div className="container-x grid gap-10 py-16 md:py-20 lg:grid-cols-2 lg:items-center">
@@ -252,8 +280,11 @@ function NextEvent({ event }: { event: NonNullable<ReturnType<typeof nextEvent>>
   );
 }
 
-function RankingsTeaser() {
-  const featured = DIVISIONS.slice(0, 3);
+function RankingsTeaser({
+  topRanked,
+}: {
+  topRanked: { division: Division; fighters: Fighter[] }[];
+}) {
   return (
     <section className="container-x py-16 md:py-24">
       <SectionHeader
@@ -269,40 +300,38 @@ function RankingsTeaser() {
         }
       />
       <div className="grid gap-6 md:grid-cols-3">
-        {featured.map((div) => (
-          <div key={div} className="border border-border bg-card">
+        {topRanked.map(({ division, fighters }) => (
+          <div key={division} className="border border-border bg-card">
             <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3">
-              <p className="font-display text-sm uppercase tracking-[0.2em]">{div}</p>
+              <p className="font-display text-sm uppercase tracking-[0.2em]">{division}</p>
               <Trophy className="h-4 w-4 text-primary" />
             </div>
             <ul className="divide-y divide-border">
-              {getRanked(div)
-                .slice(0, 5)
-                .map((f) => (
-                  <li key={f.username}>
-                    <Link
-                      to="/boxers/$username"
-                      params={{ username: f.username }}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-surface"
+              {fighters.map((f) => (
+                <li key={f.username}>
+                  <Link
+                    to="/boxers/$username"
+                    params={{ username: f.username }}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-surface"
+                  >
+                    <span
+                      className={`w-6 font-mono text-sm font-bold ${f.displayRank === 0 ? "text-primary" : "text-muted-foreground"}`}
                     >
-                      <span
-                        className={`w-6 font-mono text-sm font-bold ${f.displayRank === 0 ? "text-primary" : "text-muted-foreground"}`}
-                      >
-                        {f.displayRank === 0 ? "C" : f.displayRank}
-                      </span>
-                      <div className="h-9 w-9 shrink-0">
-                        <FighterAvatar name={f.displayName} square src={f.image} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">{f.displayName}</p>
-                        <p className="truncate text-xs text-muted-foreground">@{f.username}</p>
-                      </div>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {f.wins}-{f.losses}-{f.draws}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
+                      {f.displayRank === 0 ? "C" : f.displayRank}
+                    </span>
+                    <div className="h-9 w-9 shrink-0">
+                      <FighterAvatar name={f.displayName} square src={f.image} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{f.displayName}</p>
+                      <p className="truncate text-xs text-muted-foreground">@{f.username}</p>
+                    </div>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {f.wins}-{f.losses}-{f.draws}
+                    </span>
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         ))}
