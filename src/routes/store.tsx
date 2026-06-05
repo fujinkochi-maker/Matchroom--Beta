@@ -4,8 +4,12 @@ import { useState } from "react";
 import { PRODUCTS, CATS, ensureProductsLoaded } from "@/data/fighters";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/store")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: StoreSkeleton,
   loader: async () => {
     await ensureProductsLoaded();
     return { products: PRODUCTS };
@@ -147,6 +151,41 @@ function StorePage() {
                 >
                   <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
                 </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function StoreSkeleton() {
+  return (
+    <>
+      <section className="bg-foreground text-background">
+        <div className="container-x py-14">
+          <Skeleton className="h-3 w-32 bg-background/20" />
+          <Skeleton className="mt-2 h-12 w-64 bg-background/20" />
+          <Skeleton className="mt-2 h-4 w-40 bg-background/20" />
+          <Skeleton className="mt-3 h-8 w-24 bg-background/20" />
+        </div>
+      </section>
+      <section className="container-x py-12">
+        <div className="mb-8 flex gap-2">
+          {[1, 2, 3, 4].map((c) => (
+            <Skeleton key={c} className="h-8 w-24 rounded-full" />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((p) => (
+            <div key={p} className="border border-border bg-card">
+              <Skeleton className="aspect-square w-full rounded-none" />
+              <div className="p-4">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="mt-1 h-4 w-full" />
+                <Skeleton className="mt-2 h-6 w-16" />
+                <Skeleton className="mt-3 h-10 w-full" />
               </div>
             </div>
           ))}

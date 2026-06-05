@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Play } from "lucide-react";
 import { VIDEOS, VIDEO_CATS, ensureVideosLoaded } from "@/data/fighters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/videos")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: VideosSkeleton,
   loader: async () => {
     await ensureVideosLoaded();
     return { videos: VIDEOS };
@@ -122,5 +126,36 @@ function VideoCard({ v }: { v: (typeof VIDEOS)[number] }) {
       <p className="mt-2 text-sm font-semibold group-hover:text-primary">{v.title}</p>
       <p className="text-xs text-muted-foreground">{v.views} views</p>
     </div>
+  );
+}
+
+function VideosSkeleton() {
+  return (
+    <>
+      <section className="bg-foreground/10 text-background">
+        <div className="container-x py-14">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="mt-2 h-12 w-72" />
+          <Skeleton className="mt-3 h-4 w-48" />
+          <Skeleton className="mt-6 h-12 w-40" />
+        </div>
+      </section>
+      <section className="container-x py-12">
+        {[1, 2, 3].map((c) => (
+          <div key={c} className="mb-10">
+            <Skeleton className="h-6 w-32" />
+            <div className="mt-4 flex gap-4">
+              {[1, 2, 3].map((v) => (
+                <div key={v} className="w-72 shrink-0">
+                  <Skeleton className="aspect-video w-full rounded-none" />
+                  <Skeleton className="mt-2 h-4 w-3/4" />
+                  <Skeleton className="mt-1 h-3 w-24" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+    </>
   );
 }

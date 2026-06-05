@@ -1,8 +1,9 @@
-import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, notFound } from "@tanstack/react-router";
 import { useState } from "react";
 import { updateArticle } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ensureFightersLoaded, ensureArticlesLoaded, FIGHTERS, ARTICLES } from "@/data/fighters";
+import { ArrowLeft } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import {
   ADMIN_INPUT,
@@ -79,8 +80,15 @@ function EditArticle() {
   };
   return (
     <div>
-      {" "}
-      <h1 className={ADMIN_HEADING}>Edit Article</h1> <p className={ADMIN_SUBTITLE}>{slug}</p>{" "}
+      <div className="mb-4 flex items-center gap-3">
+        <Link to="/admin/articles" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className={ADMIN_HEADING}>Edit Article</h1>
+          <p className={ADMIN_SUBTITLE}>{slug}</p>
+        </div>
+      </div>
       <div className={adminCard("3xl")}>
         {" "}
         <form onSubmit={handleSubmit} className="space-y-6">

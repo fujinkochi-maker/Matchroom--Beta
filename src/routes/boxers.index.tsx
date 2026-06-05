@@ -4,9 +4,13 @@ import { Search, RefreshCw } from "lucide-react";
 import { ChampionCard } from "@/components/ChampionCard";
 import { FighterCard } from "@/components/FighterCard";
 import { FIGHTERS, getChampions, ensureFightersLoaded } from "@/data/fighters";
-import { DIVISIONS, type Division } from "@/data/types";
+import { DIVISIONS, REGIONS, type Division } from "@/data/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/boxers/")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: BoxersSkeleton,
   loader: async () => {
     await ensureFightersLoaded();
     return { fighters: FIGHTERS, champs: getChampions() };
@@ -44,6 +48,7 @@ function BoxersPage() {
   const { fighters, champs } = Route.useLoaderData();
   const [q, setQ] = useState("");
   const [division, setDivision] = useState<Division | "all">("all");
+  const [region, setRegion] = useState<string>("all");
   const [filter, setFilter] = useState<Filter>("all");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -58,6 +63,7 @@ function BoxersPage() {
     return fighters
       .filter((f) => {
         if (division !== "all" && f.division !== division) return false;
+        if (region !== "all" && f.region !== region) return false;
         if (filter === "champion" && f.rank !== 0) return false;
         if (filter === "top" && f.rank > 3) return false;
         if (filter === "undefeated" && f.losses > 0) return false;
@@ -78,7 +84,7 @@ function BoxersPage() {
         if (a.losses !== b.losses) return a.losses - b.losses;
         return a.displayRank - b.displayRank;
       });
-  }, [q, division, filter]);
+  }, [q, division, region, filter]);
 
   return (
     <>
@@ -146,6 +152,21 @@ function BoxersPage() {
             </button>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
+            {["all", ...REGIONS].map((r) => (
+              <button
+                key={r}
+                onClick={() => setRegion(r)}
+                className={`border px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+                  region === r
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background hover:border-primary hover:text-primary"
+                }`}
+              >
+                {r === "all" ? "All Regions" : r}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
             {FILTERS.map((f) => (
               <button
                 key={f.id}
@@ -173,6 +194,42 @@ function BoxersPage() {
             No fighters match those filters.
           </p>
         )}
+      </section>
+    </>
+  );
+}
+
+function BoxersSkeleton() {
+  return (
+    <>
+      <section className="bg-foreground text-background">
+        <div className="container-x py-14">
+          <Skeleton className="h-3 w-16 bg-background/20" />
+          <Skeleton className="mt-2 h-14 w-40 bg-background/20" />
+        </div>
+      </section>
+      <section className="container-x py-12">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="border border-border bg-card">
+              <Skeleton className="aspect-[3/4] w-full rounded-none" />
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="container-x pb-16">
+        <div className="flex gap-3">
+          <Skeleton className="h-11 flex-1" />
+          <Skeleton className="h-11 w-40" />
+          <Skeleton className="h-11 w-24" />
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+            <div key={i} className="border border-border bg-card">
+              <Skeleton className="aspect-[3/4] w-full rounded-none" />
+            </div>
+          ))}
+        </div>
       </section>
     </>
   );

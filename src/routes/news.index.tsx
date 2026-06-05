@@ -8,8 +8,12 @@ import {
   ensureArticlesLoaded,
   ensureFightersLoaded,
 } from "@/data/fighters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/news/")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: NewsSkeleton,
   loader: async () => {
     await Promise.all([ensureArticlesLoaded(), ensureFightersLoaded()]);
     return { articles: ARTICLES, featured: featuredArticle() };
@@ -148,6 +152,43 @@ function NewsPage() {
             </div>
           </>
         )}
+      </section>
+    </>
+  );
+}
+
+function NewsSkeleton() {
+  return (
+    <>
+      <section className="bg-foreground text-background">
+        <div className="container-x py-14">
+          <Skeleton className="h-3 w-24 bg-background/20" />
+          <Skeleton className="mt-3 h-14 w-40 bg-background/20" />
+        </div>
+      </section>
+      <section className="container-x py-12">
+        <div className="grid overflow-hidden border border-border bg-card md:grid-cols-[1.4fr_1fr]">
+          <Skeleton className="aspect-[16/10] w-full rounded-none md:aspect-auto" />
+          <div className="p-6 md:p-10">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-3 h-12 w-full" />
+            <Skeleton className="mt-3 h-4 w-3/4" />
+            <Skeleton className="mt-4 h-3 w-48" />
+          </div>
+        </div>
+        <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex flex-col border border-border bg-card">
+              <Skeleton className="aspect-[16/10] w-full rounded-none" />
+              <div className="flex-1 p-5">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="mt-2 h-6 w-full" />
+                <Skeleton className="mt-2 h-4 w-full" />
+                <Skeleton className="mt-1 h-4 w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
     </>
   );

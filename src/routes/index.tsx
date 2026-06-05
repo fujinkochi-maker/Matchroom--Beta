@@ -21,7 +21,12 @@ import {
 } from "@/data/fighters";
 import { DIVISIONS, type Division, type Fighter } from "@/data/types";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 export const Route = createFileRoute("/")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: HomeSkeleton,
   loader: async () => {
     await Promise.all([
       ensureFightersLoaded(),
@@ -476,5 +481,33 @@ function StoreTeaser() {
         </div>
       </div>
     </section>
+  );
+}
+
+function HomeSkeleton() {
+  return (
+    <>
+      <section className="bg-foreground text-background">
+        <div className="container-x py-20">
+          <Skeleton className="h-3 w-48 bg-background/20" />
+          <Skeleton className="mt-3 h-24 w-96 bg-background/20" />
+          <Skeleton className="mt-3 h-4 w-80 bg-background/20" />
+          <div className="mt-8 flex gap-3">
+            <Skeleton className="h-12 w-44 bg-background/20" />
+            <Skeleton className="h-12 w-44 bg-background/20" />
+          </div>
+        </div>
+      </section>
+      <section className="container-x py-16">
+        <Skeleton className="h-6 w-48" />
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="border border-border bg-card">
+              <Skeleton className="aspect-[3/4] w-full rounded-none" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }

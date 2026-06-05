@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "@/lib/supabase-admin";
+import { REGIONS } from "./types";
 
 const BODIES = ["WBC", "WBA", "IBF", "WBO", "OVERALL"] as const;
 export type RankingBody = (typeof BODIES)[number];
@@ -40,18 +41,29 @@ function calculatePoints(
   return FORMULAS[body](fighter);
 }
 
-export async function recalculateDivision(division: string) {
+export async function recalculateDivision(division: string, region?: string) {
   const supabase = getAdminSupabase();
 
-  const { data: fighters } = await supabase
+  let query = supabase
     .from("fighters")
-    .select("username, wins, losses, draws, kos, streak, belts_held")
+    .select("username, wins, losses, draws, kos, streak, belts_held, region")
     .eq("division", division);
+
+  if (region && region !== "all") {
+    query = query.eq("region", region);
+  }
+
+  const { data: fighters } = await query;
 
   if (!fighters?.length) return;
 
-  // Delete old rankings for this division
-  await supabase.from("rankings").delete().eq("division", division);
+  // Delete old rankings for this division + region combo
+  const delQuery = supabase.from("rankings").delete().eq("division", division);
+  if (region && region !== "all") {
+    await delQuery.eq("region", region);
+  } else {
+    await delQuery;
+  }
 
   const newRankings: {
     fighter_username: string;
@@ -59,7 +71,10 @@ export async function recalculateDivision(division: string) {
     rank: number;
     division: string;
     points: number;
+    region: string;
   }[] = [];
+
+  const rankingRegion = region === "all" ? "" : (region ?? "");
 
   for (const body of BODIES) {
     const champions = new Set(
@@ -81,6 +96,7 @@ export async function recalculateDivision(division: string) {
         rank: 0,
         division,
         points: 9999,
+        region: rankingRegion,
       });
     }
 
@@ -91,6 +107,7 @@ export async function recalculateDivision(division: string) {
         rank: i + 1,
         division,
         points: f.points,
+        region: rankingRegion,
       });
     });
   }
@@ -103,18 +120,26 @@ export async function recalculateDivision(division: string) {
 export async function recalculateAll() {
   for (const div of DIVISIONS) {
     await recalculateDivision(div);
+    for (const region of REGIONS) {
+      await recalculateDivision(div, region);
+    }
   }
 }
 
-export async function getRankings(division: string, body: RankingBody = "OVERALL") {
+export async function getRankings(
+  division: string,
+  body: RankingBody = "OVERALL",
+  region?: string,
+) {
   const supabase = getAdminSupabase();
-  const { data } = await supabase
-    .from("rankings")
-    .select("*")
-    .eq("division", division)
-    .eq("body", body)
-    .order("rank", { ascending: true });
-  return data ?? [];
+  let query = supabase.from("rankings").select("*").eq("division", division).eq("body", body);
+
+  if (region && region !== "all") {
+    query = query.eq("region", region);
+  }
+
+  query = query.order("rank", { ascending: true });
+  return (await query).data ?? [];
 }
 
 export async function getRankingsForFighter(username: string) {

@@ -258,6 +258,17 @@ export function createHandler(
     })),
   ].map((row) => ({ type: 1, components: row }));
 
+  const REGION_BUTTONS = [
+    {
+      type: 1,
+      components: [
+        { type: 2, style: 3, label: "🌏 ASIA", custom_id: "reg_asia" },
+        { type: 2, style: 3, label: "🌍 EUROPE", custom_id: "reg_europe" },
+        { type: 2, style: 3, label: "🌎 NORTH AMERICA", custom_id: "reg_north_america" },
+      ],
+    },
+  ];
+
   const DIVISION_ROLES: Record<string, string> = {
     Flyweight: "1510667123549147136",
     Bantamweight: "1510667122932449552",
@@ -412,9 +423,11 @@ export function createHandler(
 
   function handleRankingsCommand(interaction: any): Response {
     const division = getOptionValue(interaction.data.options, "division");
+    const region = getOptionValue(interaction.data.options, "region");
+
     if (!division) return ephemeral("Please choose a division.");
 
-    const fighters = getRanked(division as any).slice(0, 10);
+    const fighters = getRanked(division as any, undefined, region).slice(0, 10);
     if (!fighters.length) return ephemeral(`No fighters found in **${division}**.`);
 
     return jsonResponse({
@@ -428,7 +441,7 @@ export function createHandler(
               icon_url:
                 "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
             },
-            title: `Boxing ${division} Rankings`,
+            title: `Boxing ${division} Rankings${region && region !== "all" ? ` — ${region}` : ""}`,
             description: `"Let's look at the **${division}** division. Some hungry fighters here..."`,
             fields: fighters.map((f: any, i: number) => ({
               name: `${f.rank === 0 ? "Crown" : "#" + (i + 1)} ${f.displayName} (@${f.username})`,
@@ -589,8 +602,14 @@ export function createHandler(
 
     const displayName = getValue("display_name");
     const username = getValue("username");
+    const rawStance = getValue("fighting_style").trim();
+
+    const VALID_STANCES = ["Orthodox", "Southpaw", "Switch"];
+    const resolvedStance = VALID_STANCES.find((s) => s.toLowerCase() === rawStance.toLowerCase());
 
     if (!displayName || !username) return ephemeral("All fields are required.");
+    if (!resolvedStance)
+      return ephemeral("Fighting Style must be one of: Orthodox, Southpaw, or Switch.");
 
     const appId = interaction.application_id;
     const intToken = interaction.token;
@@ -610,7 +629,7 @@ export function createHandler(
           losses: 0,
           draws: 0,
           kos: 0,
-          stance: "Orthodox",
+          stance: resolvedStance,
           belts: 0,
           belts_held: "",
           debut: new Date().toISOString().split("T")[0],
@@ -744,8 +763,8 @@ export function createHandler(
         await editDeferredResponse(
           appId,
           intToken,
-          `Division locked in. **${fighter.display_name}** is now fighting at **${division}**. The Promoter is watching.`,
-          [],
+          `Division locked in! One last thing — which region will **${fighter.display_name}** fight out of?`,
+          REGION_BUTTONS,
         );
       } catch (err) {
         console.error("[DivisionButton] Background error:", err);
@@ -759,6 +778,80 @@ export function createHandler(
 
     if (waitUntil) waitUntil(bgTask);
 
+    return jsonResponse({ type: 6 });
+  }
+
+  async function handleRegionButton(interaction: any): Promise<Response> {
+    const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+    if (!discordId) return ephemeral("Could not identify you.");
+
+    const customId = interaction.data.custom_id;
+    const region = customId.replace("reg_", "").toUpperCase().replace(/-/g, " ");
+
+    const VALID_REGIONS = ["ASIA", "EUROPE", "NORTH AMERICA"];
+    if (!VALID_REGIONS.includes(region)) return ephemeral("Invalid region.");
+
+    const appId = interaction.application_id;
+    const intToken = interaction.token;
+
+    const bgTask = (async () => {
+      try {
+        const supabase = getSupabaseAdmin();
+
+        const { data: fighter, error: lookupErr } = await supabase
+          .from("fighters")
+          .select("display_name, guild_id, division, discord_id, region")
+          .eq("discord_id", discordId)
+          .single();
+
+        if (lookupErr || !fighter) {
+          await editDeferredResponse(
+            appId,
+            intToken,
+            "You're not registered! Use `/register` first.",
+          );
+          return;
+        }
+
+        if (fighter.region) {
+          await editDeferredResponse(
+            appId,
+            intToken,
+            `You already picked a region (**${fighter.region}**)! One shot per fighter.`,
+            [],
+          );
+          return;
+        }
+
+        const { error } = await supabase
+          .from("fighters")
+          .update({ region })
+          .eq("discord_id", discordId);
+        if (error) {
+          await editDeferredResponse(appId, intToken, "❌ Failed to set region. Try again later.");
+          return;
+        }
+
+        await loadDataFromSupabase();
+        await refreshDOContext();
+
+        await editDeferredResponse(
+          appId,
+          intToken,
+          `Registration complete! **${fighter.display_name}** is fighting at **${fighter.division}** out of **${region}**. Time to climb the ranks, kid.`,
+          [],
+        );
+      } catch (err) {
+        console.error("[RegionButton] Background error:", err);
+        await editDeferredResponse(
+          appId,
+          intToken,
+          "❌ Something went wrong. Try `/register` again.",
+        );
+      }
+    })();
+
+    if (waitUntil) waitUntil(bgTask);
     return jsonResponse({ type: 6 });
   }
 
@@ -823,6 +916,21 @@ export function createHandler(
                     },
                   ],
                 },
+                {
+                  type: 1,
+                  components: [
+                    {
+                      type: 4,
+                      custom_id: "fighting_style",
+                      label: "Fighting Style",
+                      style: 1,
+                      placeholder: "Orthodox, Southpaw, or Switch",
+                      min_length: 1,
+                      max_length: 20,
+                      required: true,
+                    },
+                  ],
+                },
               ],
             },
           });
@@ -846,6 +954,9 @@ export function createHandler(
         const customId = interaction.data.custom_id;
         if (customId?.startsWith("div_")) {
           return handleDivisionButton(interaction);
+        }
+        if (customId?.startsWith("reg_")) {
+          return handleRegionButton(interaction);
         }
       }
 
@@ -897,6 +1008,18 @@ export function createHandler(
               { name: "Light Heavyweight", value: "Light Heavyweight" },
               { name: "Cruiserweight", value: "Cruiserweight" },
               { name: "Heavyweight", value: "Heavyweight" },
+            ],
+          },
+          {
+            type: 3,
+            name: "region",
+            description: "Filter by region (optional)",
+            required: false,
+            choices: [
+              { name: "All Regions", value: "all" },
+              { name: "🌏 ASIA", value: "ASIA" },
+              { name: "🌍 EUROPE", value: "EUROPE" },
+              { name: "🌎 NORTH AMERICA", value: "NORTH AMERICA" },
             ],
           },
         ],

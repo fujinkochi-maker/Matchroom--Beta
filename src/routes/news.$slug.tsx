@@ -8,8 +8,12 @@ import {
   ensureArticlesLoaded,
   ensureFightersLoaded,
 } from "@/data/fighters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/news/$slug")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: ArticleSkeleton,
   loader: async ({ params }) => {
     await Promise.all([ensureArticlesLoaded(), ensureFightersLoaded()]);
     const article = getArticleBySlug(params.slug);
@@ -19,23 +23,8 @@ export const Route = createFileRoute("/news/$slug")({
     return { article, related, articleFighters, fighters: FIGHTERS };
   },
   head: ({ loaderData }) => ({
-    meta: loaderData
-      ? [
-          { title: `${loaderData.article.title} — Matchroom Boxing Beta` },
-          { name: "description", content: loaderData.article.excerpt },
-          { property: "og:title", content: loaderData.article.title },
-          { property: "og:description", content: loaderData.article.excerpt },
-        ]
-      : [],
+    meta: [{ title: `${loaderData.article.title} — Matchroom Boxing Beta` }],
   }),
-  notFoundComponent: () => (
-    <div className="container-x py-24 text-center">
-      <h1 className="font-display text-4xl uppercase">Article not found</h1>
-      <Link to="/news" className="mt-4 inline-block text-primary">
-        ← Back to News
-      </Link>
-    </div>
-  ),
   component: ArticlePage,
 });
 
@@ -136,6 +125,40 @@ function ArticlePage() {
               </li>
             ))}
           </ul>
+        </aside>
+      </div>
+    </article>
+  );
+}
+
+function ArticleSkeleton() {
+  return (
+    <article>
+      <header className="border-b border-border bg-foreground/10 text-background">
+        <div className="container-x py-16">
+          <Skeleton className="h-3 w-24 bg-background/20" />
+          <Skeleton className="mt-4 h-4 w-20 bg-background/20" />
+          <Skeleton className="mt-3 h-16 w-3/4 bg-background/20" />
+          <Skeleton className="mt-3 h-3 w-48 bg-background/20" />
+        </div>
+      </header>
+      <div className="container-x grid gap-10 py-12 lg:grid-cols-[2fr_1fr]">
+        <div>
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="mt-5 h-4 w-full" />
+          <Skeleton className="mt-3 h-4 w-full" />
+          <Skeleton className="mt-3 h-4 w-3/4" />
+        </div>
+        <aside>
+          <Skeleton className="h-6 w-24" />
+          <div className="mt-3 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border border-border bg-card p-3">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="mt-1 h-4 w-full" />
+              </div>
+            ))}
+          </div>
         </aside>
       </div>
     </article>

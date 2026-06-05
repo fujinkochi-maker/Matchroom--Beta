@@ -5,8 +5,12 @@ import { FighterAvatar } from "@/components/FighterAvatar";
 import { EVENTS, FIGHTERS, ensureEventsLoaded, ensureFightersLoaded } from "@/data/fighters";
 import type { Fighter } from "@/data/types";
 import { hashHue } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/events")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: EventsSkeleton,
   loader: async () => {
     await Promise.all([ensureEventsLoaded(), ensureFightersLoaded()]);
     return { events: EVENTS, fighters: FIGHTERS };
@@ -176,5 +180,44 @@ function FighterMini({ f, side }: { f: Fighter | undefined; side: "left" | "righ
         {f.wins}-{f.losses}-{f.draws}
       </p>
     </div>
+  );
+}
+
+function EventsSkeleton() {
+  return (
+    <>
+      <section className="bg-foreground text-background">
+        <div className="container-x py-14">
+          <Skeleton className="h-3 w-24 bg-background/20" />
+          <Skeleton className="mt-3 h-14 w-48 bg-background/20" />
+        </div>
+      </section>
+      <section className="container-x py-12">
+        <Skeleton className="h-8 w-36" />
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="border border-border bg-card">
+              <div className="bg-foreground p-6">
+                <Skeleton className="h-3 w-32 bg-background/20" />
+                <Skeleton className="mt-1 h-8 w-64 bg-background/20" />
+                <Skeleton className="mt-1 h-3 w-48 bg-background/20" />
+                <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  <Skeleton className="h-20 w-20 rounded-full bg-background/20" />
+                  <Skeleton className="h-8 w-12 bg-background/20" />
+                  <Skeleton className="h-20 w-20 rounded-full bg-background/20" />
+                </div>
+              </div>
+              <div className="p-5">
+                <Skeleton className="h-3 w-20" />
+                {[1, 2, 3].map((j) => (
+                  <Skeleton key={j} className="mt-2 h-5 w-full" />
+                ))}
+                <Skeleton className="mt-4 h-12 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }

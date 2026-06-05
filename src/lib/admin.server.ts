@@ -243,6 +243,7 @@ const fighterSchema = z.object({
   debut: z.string().min(1),
   streak: z.string().default(""),
   bio: z.string().default(""),
+  region: z.string().default(""),
   imageUrl: z.string().optional(),
   history: z.array(historyEntrySchema).optional(),
 });
@@ -269,6 +270,7 @@ export const createFighter = createServerFn({ method: "POST" })
       bio: data.bio,
       image_url: data.imageUrl ?? null,
       belts_held: data.beltsHeld,
+      region: data.region,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -313,6 +315,7 @@ export const updateFighter = createServerFn({ method: "POST" })
       bio: data.bio,
       image_url: data.imageUrl ?? null,
       belts_held: data.beltsHeld,
+      region: data.region,
     });
     if (error) throw new Error(error.message);
 
@@ -362,6 +365,11 @@ export const updateFighter = createServerFn({ method: "POST" })
     recalculateDivision(data.division).catch((err: any) =>
       console.error("Ranking recalculation failed:", err),
     );
+    for (const r of ["ASIA", "EUROPE", "NORTH AMERICA"] as const) {
+      recalculateDivision(data.division, r).catch((err: any) =>
+        console.error(`Ranking recalculation failed for ${r}:`, err),
+      );
+    }
 
     // Update Discord nickname with new record
     const { data: updated } = await supabase
@@ -986,6 +994,44 @@ export const deletePost = createServerFn({ method: "POST" })
 
     const { error } = await supabase.from("posts").delete().eq("id", data.postId);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const updatePostSchema = z.object({
+  token: z.string(),
+  postId: z.string(),
+  content: z.string().min(1).max(2000),
+  imageUrl: z.string().optional(),
+  videoUrl: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+});
+
+export const updatePost = createServerFn({ method: "POST" })
+  .inputValidator(updatePostSchema)
+  .handler(async ({ data }) => {
+    const supabase = getAdminSupabase();
+    if (!validateToken(data.token)) throw new Error("Unauthorized");
+
+    const { error: uErr } = await supabase
+      .from("posts")
+      .update({
+        content: data.content,
+        image_url: data.imageUrl ?? null,
+        video_url: data.videoUrl ?? null,
+      })
+      .eq("id", data.postId);
+
+    if (uErr) throw new Error(uErr.message);
+
+    // Replace tags
+    await supabase.from("post_tags").delete().eq("post_id", data.postId);
+    if (data.tags.length > 0) {
+      const { error: tErr } = await supabase
+        .from("post_tags")
+        .insert(data.tags.map((u) => ({ post_id: data.postId, fighter_username: u })));
+      if (tErr) throw new Error(tErr.message);
+    }
+
     return { ok: true };
   });
 

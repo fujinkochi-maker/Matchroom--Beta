@@ -23,6 +23,9 @@ export const DIVISIONS: Division[] = [
 
 export type Stance = "Orthodox" | "Southpaw" | "Switch";
 
+export type Region = "ASIA" | "EUROPE" | "NORTH AMERICA";
+export const REGIONS: Region[] = ["ASIA", "EUROPE", "NORTH AMERICA"];
+
 export interface FightRecord {
   opponent: string;
   result: "W" | "L" | "D";
@@ -48,6 +51,7 @@ export interface Fighter {
   streak: string;
   bio: string;
   history: FightRecord[];
+  region: Region | "";
   image?: string; // URL to fighter photo
   discordId?: string;
   guildId?: string;

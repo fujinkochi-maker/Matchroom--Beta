@@ -1,34 +1,39 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, notFound } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { createPost } from "@/lib/admin.server";
+import { updatePost } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
-import { ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
-import { ArrowLeft } from "lucide-react";
+import { ensurePostsLoaded, ensureFightersLoaded, POSTS, FIGHTERS } from "@/data/fighters";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import {
   ADMIN_INPUT,
   ADMIN_HEADING,
+  ADMIN_SUBTITLE,
   ADMIN_LABEL,
   ADMIN_BTN_PRIMARY,
   ADMIN_ERROR,
   adminCard,
 } from "@/lib/admin-styles";
 
-export const Route = createFileRoute("/admin/posts/new")({
+export const Route = createFileRoute("/admin/posts/$id/edit")({
   loader: async () => {
-    await ensureFightersLoaded();
+    await Promise.all([ensurePostsLoaded(), ensureFightersLoaded()]);
   },
-  component: NewPost,
+  component: EditPost,
 });
 
-function NewPost() {
+function EditPost() {
+  const { id } = Route.useParams();
   const router = useRouter();
   const fighters = FIGHTERS;
-  const [content, setContent] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
-  const [selectedFighters, setSelectedFighters] = useState<string[]>([]);
+  const post = POSTS.find((p) => p.id === id);
+  if (!post) throw notFound();
+
+  const [content, setContent] = useState(post.content);
+  const [imageUrl, setImageUrl] = useState(post.imageUrl ?? "");
+  const [videoUrl, setVideoUrl] = useState(post.videoUrl ?? "");
+  const [selectedFighters, setSelectedFighters] = useState<string[]>(post.tags);
   const [error, setError] = useState("");
 
   const toggleFighter = (username: string) => {
@@ -46,21 +51,24 @@ function NewPost() {
       return;
     }
     try {
-      await createPost({
+      await updatePost({
         data: {
           token,
+          postId: id,
           content,
           imageUrl: imageUrl || undefined,
           videoUrl: videoUrl || undefined,
           tags: selectedFighters,
         },
       });
-      toast.success("Post created");
+      toast.success("Post updated");
       router.navigate({ to: "/admin/posts" });
     } catch (err) {
-      setError((err as Error).message ?? "Failed to create post");
+      setError((err as Error).message ?? "Failed to update post");
     }
   };
+
+  const charCount = content.length;
 
   return (
     <div>
@@ -68,7 +76,10 @@ function NewPost() {
         <Link to="/admin/posts" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className={ADMIN_HEADING}>New Post</h1>
+        <div>
+          <h1 className={ADMIN_HEADING}>Edit Post</h1>
+          <p className={ADMIN_SUBTITLE}>{id}</p>
+        </div>
       </div>
       <div className={adminCard("3xl")}>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -81,7 +92,7 @@ function NewPost() {
               maxLength={2000}
               required
             />
-            <p className="mt-1 text-xs text-muted-foreground">{content.length}/2000</p>
+            <p className="mt-1 text-xs text-muted-foreground">{charCount}/2000</p>
           </div>
 
           <div>
@@ -118,7 +129,7 @@ function NewPost() {
 
           {error && <p className={ADMIN_ERROR}>{error}</p>}
           <button type="submit" className={ADMIN_BTN_PRIMARY} disabled={!content.trim()}>
-            Create Post
+            Save Changes
           </button>
         </form>
       </div>

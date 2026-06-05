@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { Fighter } from "@/data/types";
+import { REGIONS } from "@/data/types";
 import { ImageUpload } from "./ImageUpload";
 import { Plus, Trash2 } from "lucide-react";
 import { ADMIN_INPUT, ADMIN_LABEL, ADMIN_BTN_PRIMARY, ADMIN_ERROR } from "@/lib/admin-styles";
@@ -41,6 +42,7 @@ export interface FighterFormData {
   streak: string;
   bio: string;
   imageUrl?: string;
+  region?: string;
   history?: { opponent: string; result: string; method: string; date: string; event: string }[];
 }
 
@@ -64,6 +66,7 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
     debut: defaultValues?.debut ?? "",
     streak: defaultValues?.streak ?? "",
     bio: defaultValues?.bio ?? "",
+    region: defaultValues?.region ?? "",
     imageUrl: defaultValues?.image ?? "",
     history: defaultValues?.history ? defaultValues.history.map((h) => ({ ...h })) : [],
   });
@@ -153,6 +156,18 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
             {STANCES.map((s) => (
               <option key={s}>{s}</option>
             ))}
+          </select>
+        </Field>
+        <Field label="Region">
+          <select
+            value={form.region}
+            onChange={(e) => set("region", e.target.value)}
+            className={inp()}
+          >
+            <option value="">-- None --</option>
+            <option value="ASIA">ASIA</option>
+            <option value="EUROPE">EUROPE</option>
+            <option value="NORTH AMERICA">NORTH AMERICA</option>
           </select>
         </Field>
         <Field label="Wins">
@@ -342,6 +357,7 @@ function OpponentInput({ value, onChange }: { value: string; onChange: (v: strin
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value);
   const ref = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const matches = FIGHTERS.filter(
     (f) =>
@@ -357,14 +373,20 @@ function OpponentInput({ value, onChange }: { value: string; onChange: (v: strin
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
+
   return (
     <div ref={ref} className="relative">
       <input
         value={query}
         onChange={(e) => {
-          setQuery(e.target.value);
+          const val = e.target.value;
+          setQuery(val);
           setOpen(true);
-          onChange(e.target.value);
+          clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => onChange(val), 200);
         }}
         onFocus={() => setOpen(true)}
         placeholder="Opponent"

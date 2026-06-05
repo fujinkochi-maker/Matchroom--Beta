@@ -1,8 +1,9 @@
-import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, notFound } from "@tanstack/react-router";
 import { useState } from "react";
 import { updateProduct } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ensureProductsLoaded, PRODUCTS } from "@/data/fighters";
+import { ArrowLeft } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import {
   ADMIN_INPUT,
@@ -58,8 +59,15 @@ function EditProduct() {
   };
   return (
     <div>
-      {" "}
-      <h1 className={ADMIN_HEADING}>Edit Product</h1> <p className={ADMIN_SUBTITLE}>{id}</p>{" "}
+      <div className="mb-4 flex items-center gap-3">
+        <Link to="/admin/products" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className={ADMIN_HEADING}>Edit Product</h1>
+          <p className={ADMIN_SUBTITLE}>{id}</p>
+        </div>
+      </div>
       <div className={adminCard("2xl")}>
         {" "}
         <form onSubmit={handleSubmit} className="space-y-6">

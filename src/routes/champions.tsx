@@ -2,9 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ChampionCard } from "@/components/ChampionCard";
 import { getChampions, ensureFightersLoaded } from "@/data/fighters";
 import { getPublicRankings } from "@/lib/admin.server";
+import { Skeleton } from "@/components/ui/skeleton";
 import beltImg from "@/assets/belt.jpg";
 
 export const Route = createFileRoute("/champions")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: ChampionsSkeleton,
   loader: async () => {
     await ensureFightersLoaded();
     const { rankings } = await getPublicRankings();
@@ -75,6 +79,30 @@ function ChampionsPage() {
           <p className="text-muted-foreground">No champions yet.</p>
         </section>
       )}
+    </>
+  );
+}
+
+function ChampionsSkeleton() {
+  return (
+    <>
+      <section className="relative isolate overflow-hidden bg-foreground text-background">
+        <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40" />
+        <div className="container-x relative py-20">
+          <Skeleton className="h-3 w-32 bg-background/20" />
+          <Skeleton className="mt-4 h-16 w-96 bg-background/20" />
+          <Skeleton className="mt-3 h-4 w-80 bg-background/20" />
+        </div>
+      </section>
+      <section className="container-x py-12 md:py-16">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="border border-border bg-card">
+              <Skeleton className="aspect-[3/4] w-full rounded-none" />
+            </div>
+          ))}
+        </div>
+      </section>
     </>
   );
 }

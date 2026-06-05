@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack/react-router";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ensureProductsLoaded, PRODUCTS } from "@/data/fighters";
 import { deleteProduct } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ADMIN_HEADING,
   ADMIN_SUBTITLE,
@@ -13,18 +13,91 @@ import {
   ADMIN_TABLE_WRAP,
   ADMIN_TABLE_ROW,
 } from "@/lib/admin-styles";
+import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 20;
+const CATEGORIES = ["Hoodies", "Shirts", "Gloves", "Caps", "Champion Collection", "Limited Drop"];
+
 export const Route = createFileRoute("/admin/products")({
   loader: async () => {
     await ensureProductsLoaded();
   },
   component: AdminProducts,
 });
+
+function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
+  if (!active) return <ChevronUp className="ml-1 inline h-3 w-3 opacity-30" />;
+  return dir === "asc" ? (
+    <ChevronUp className="ml-1 inline h-3 w-3" />
+  ) : (
+    <ChevronDown className="ml-1 inline h-3 w-3" />
+  );
+}
+
 function AdminProducts() {
   const router = useRouter();
   const location = useLocation();
   const products = PRODUCTS;
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  };
+
+  const filtered = useMemo(() => {
+    return products.filter((p) => {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        !search.trim() || p.id.toLowerCase().includes(q) || p.name.toLowerCase().includes(q);
+      const matchesCategory = categoryFilter === "All" || p.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, search, categoryFilter]);
+
+  const sorted = useMemo(() => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "id":
+          cmp = a.id.localeCompare(b.id);
+          break;
+        case "name":
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case "category":
+          cmp = a.category.localeCompare(b.category);
+          break;
+        case "price":
+          cmp = a.price - b.price;
+          break;
+        case "stock":
+          cmp = (a.stock ?? 0) - (b.stock ?? 0);
+          break;
+        case "limited":
+          cmp = (a.limited ? 1 : 0) - (b.limited ? 1 : 0);
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+
   if (location.pathname !== "/admin/products") return <Outlet />;
+
   const handleDelete = async (id: string) => {
     const token = getAdminToken();
     if (!token) return;
@@ -32,94 +105,151 @@ function AdminProducts() {
     await router.invalidate();
     toast.success("Product deleted");
   };
+
+  function SortTh({
+    label,
+    sortKey: sk,
+    className,
+  }: {
+    label: string;
+    sortKey: string;
+    className?: string;
+  }) {
+    const active = sortKey === sk;
+    return (
+      <th
+        className={cn("cursor-pointer px-4 py-3 font-semibold select-none", className)}
+        onClick={() => handleSort(sk)}
+      >
+        {label}
+        <SortIcon active={active} dir={sortDir} />
+      </th>
+    );
+  }
+
   return (
     <div>
-      {" "}
       <div className="flex items-center justify-between">
-        {" "}
         <div>
-          {" "}
-          <h1 className={ADMIN_HEADING}>Products</h1>{" "}
-          <p className={ADMIN_SUBTITLE}>{products.length} products</p>{" "}
-        </div>{" "}
+          <h1 className={ADMIN_HEADING}>Products</h1>
+          <p className={ADMIN_SUBTITLE}>{products.length} products</p>
+        </div>
         <Link to="/admin/products/new" className={ADMIN_BTN_ADD}>
-          {" "}
-          <Plus className="h-4 w-4" /> New Product{" "}
-        </Link>{" "}
-      </div>{" "}
+          <Plus className="h-4 w-4" /> New Product
+        </Link>
+      </div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          placeholder="Search by ID or name..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        />
+        <select
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setPage(1);
+          }}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="All">All Categories</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted-foreground">
+          {sorted.length} of {products.length} products
+        </p>
+      </div>
       <div className={ADMIN_TABLE_WRAP}>
-        {" "}
         <table className="w-full text-sm">
-          {" "}
           <thead className="bg-muted/50 text-left">
-            {" "}
             <tr className="border-b border-border">
-              {" "}
-              <th className="px-4 py-3 font-semibold">ID</th>{" "}
-              <th className="px-4 py-3 font-semibold">Name</th>{" "}
-              <th className="px-4 py-3 font-semibold">Category</th>{" "}
-              <th className="px-4 py-3 font-semibold">Price</th>{" "}
-              <th className="px-4 py-3 font-semibold">Limited</th>{" "}
-              <th className="px-4 py-3 font-semibold">Stock</th>{" "}
-              <th className="px-4 py-3 font-semibold" />{" "}
-            </tr>{" "}
-          </thead>{" "}
+              <SortTh label="ID" sortKey="id" />
+              <SortTh label="Name" sortKey="name" />
+              <SortTh label="Category" sortKey="category" />
+              <SortTh label="Price" sortKey="price" />
+              <SortTh label="Limited" sortKey="limited" />
+              <SortTh label="Stock" sortKey="stock" />
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
           <tbody>
-            {" "}
-            {products.map((p) => (
+            {paginated.map((p) => (
               <tr key={p.id} className={ADMIN_TABLE_ROW}>
-                {" "}
-                <td className="px-4 py-3 font-medium">{p.id}</td>{" "}
-                <td className="px-4 py-3">{p.name}</td>{" "}
-                <td className="px-4 py-3 text-muted-foreground">{p.category}</td>{" "}
-                <td className="px-4 py-3">£{p.price}</td>{" "}
+                <td className="px-4 py-3 font-medium">{p.id}</td>
+                <td className="px-4 py-3">{p.name}</td>
+                <td className="px-4 py-3 text-muted-foreground">{p.category}</td>
+                <td className="px-4 py-3">£{p.price}</td>
                 <td className="px-4 py-3">
-                  {" "}
                   {p.limited ? (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                      {" "}
-                      Limited{" "}
+                      Limited
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
-                  )}{" "}
-                </td>{" "}
-                <td className="px-4 py-3 text-muted-foreground">{p.stock}</td>{" "}
+                  )}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{p.stock}</td>
                 <td className="px-4 py-3">
-                  {" "}
                   <div className="flex items-center gap-2">
-                    {" "}
                     <Link
                       to="/admin/products/$id/edit"
                       params={{ id: p.id }}
                       className="rounded p-1 text-muted-foreground hover:text-foreground"
                     >
-                      {" "}
-                      <Pencil className="h-4 w-4" />{" "}
-                    </Link>{" "}
+                      <Pencil className="h-4 w-4" />
+                    </Link>
                     <button
                       onClick={() => setDeleteTarget(p.id)}
                       className="rounded p-1 text-muted-foreground hover:text-destructive"
                     >
-                      {" "}
-                      <Trash2 className="h-4 w-4" />{" "}
-                    </button>{" "}
-                  </div>{" "}
-                </td>{" "}
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
               </tr>
-            ))}{" "}
-            {products.length === 0 && (
+            ))}
+            {paginated.length === 0 && (
               <tr>
-                {" "}
                 <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                  {" "}
-                  No products yet.{" "}
-                </td>{" "}
+                  No products yet.
+                </td>
               </tr>
-            )}{" "}
-          </tbody>{" "}
-        </table>{" "}
-      </div>{" "}
+            )}
+          </tbody>
+        </table>
+      </div>
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between px-1">
+          <p className="text-xs text-muted-foreground">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-md border border-input px-3 py-1 text-sm disabled:opacity-40"
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded-md border border-input px-3 py-1 text-sm disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
       <ConfirmDelete
         open={deleteTarget !== null}
         onOpenChange={(o) => {
@@ -130,7 +260,7 @@ function AdminProducts() {
         }}
         title="Delete Product"
         description={`Are you sure you want to delete "${deleteTarget}"? This cannot be undone.`}
-      />{" "}
+      />
     </div>
   );
 }

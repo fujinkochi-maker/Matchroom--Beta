@@ -1,9 +1,10 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { createArticle } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
+import { ArrowLeft } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import {
   ADMIN_INPUT,
@@ -78,8 +79,12 @@ function NewArticle() {
   };
   return (
     <div>
-      {" "}
-      <h1 className={ADMIN_HEADING}>New Article</h1>{" "}
+      <div className="mb-4 flex items-center gap-3">
+        <Link to="/admin/articles" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <h1 className={ADMIN_HEADING}>New Article</h1>
+      </div>
       <div className={adminCard("3xl")}>
         {" "}
         <form onSubmit={handleSubmit} className="space-y-6">

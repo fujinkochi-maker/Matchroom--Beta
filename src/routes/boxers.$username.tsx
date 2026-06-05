@@ -22,8 +22,12 @@ import { getFighterSession } from "@/lib/discord-auth";
 import { getPublicRankings, likePost, unlikePost, deletePost } from "@/lib/admin.server";
 import { toast } from "sonner";
 import type { Post } from "@/data/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/boxers/$username")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: ProfileSkeleton,
   loader: async ({ params }) => {
     await Promise.all([
       ensureFightersLoaded(),
@@ -40,7 +44,7 @@ export const Route = createFileRoute("/boxers/$username")({
     const computedRank = getRanked(fighter.division).find(
       (f) => f.username === fighter.username,
     )?.displayRank;
-    const overallRank = overallEntry?.rank ?? computedRank;
+    const overallRank = computedRank ?? overallEntry?.rank;
     const news = getNewsForFighter(fighter.username);
     const videos = getVideosForFighter(fighter.username);
     const opponents = FIGHTERS.filter(
@@ -151,6 +155,11 @@ function FighterProfilePage() {
             <p className="mt-2 text-lg italic text-background/70">
               "{f.nickname}" • @{f.username}
             </p>
+            {f.region && (
+              <p className="mt-1 text-xs font-bold uppercase tracking-wider text-background/60">
+                {f.region}
+              </p>
+            )}
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground">
                 {overallRank === 0 ? getChampionTitle(f.beltsHeld) : `Ranked #${overallRank}`}
@@ -406,139 +415,33 @@ function FighterProfilePage() {
   );
 }
 
-function FighterFeed({
-  username,
-  posts,
-  fighters,
-}: {
-  username: string;
-  posts: Post[];
-  fighters: typeof FIGHTERS;
-}) {
-  const session = getFighterSession();
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
-  const router = useRouter();
-
-  const handleLike = async (postId: string) => {
-    if (!session?.token) return;
-    try {
-      if (likedPosts.has(postId)) {
-        await unlikePost({ data: { token: session.token, postId } });
-        setLikedPosts((prev) => {
-          const next = new Set(prev);
-          next.delete(postId);
-          return next;
-        });
-      } else {
-        await likePost({ data: { token: session.token, postId } });
-        setLikedPosts((prev) => {
-          const next = new Set(prev);
-          next.add(postId);
-          return next;
-        });
-      }
-    } catch {
-      /* best-effort */
-    }
-  };
-
-  const handleDelete = async (postId: string) => {
-    if (!session?.token) return;
-    try {
-      await deletePost({ data: { token: session.token, postId } });
-      await router.invalidate();
-      toast.success("Post deleted");
-    } catch (err) {
-      toast.error((err as Error).message || "Failed to delete");
-    }
-  };
-
-  if (posts.length === 0) {
-    return <p className="text-sm text-muted-foreground">No activity yet.</p>;
-  }
-
+function ProfileSkeleton() {
   return (
     <>
-      {[...posts]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map((p) => (
-          <div key={p.id} className="rounded-lg border border-border bg-card p-3">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="whitespace-pre-wrap text-sm">{p.content}</p>
-                {p.imageUrl && (
-                  <div className="mt-2 overflow-hidden rounded-lg border border-border aspect-square">
-                    <img
-                      src={p.imageUrl}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-                {p.videoUrl && (
-                  <div className="mt-2 overflow-hidden rounded-lg border border-border">
-                    <iframe
-                      src={p.videoUrl.replace("watch?v=", "embed/").split("&")[0]}
-                      className="aspect-video w-full"
-                      allowFullScreen
-                      title="Video"
-                    />
-                  </div>
-                )}
-                {p.tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {p.tags.map((t) => {
-                      const fighter = fighters.find((f) => f.username === t);
-                      return (
-                        <Link
-                          key={t}
-                          to="/boxers/$username"
-                          params={{ username: t }}
-                          className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground hover:text-primary"
-                        >
-                          @{fighter?.displayName ?? t}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-                <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                  <button
-                    onClick={() => handleLike(p.id)}
-                    disabled={!session?.token}
-                    className={`inline-flex items-center gap-1 ${likedPosts.has(p.id) ? "text-primary" : ""} hover:text-primary disabled:opacity-50`}
-                  >
-                    <Heart className={`h-3 w-3 ${likedPosts.has(p.id) ? "fill-current" : ""}`} />
-                  </button>
-                  <span>{formatTime(p.createdAt)}</span>
-                  {session?.username === p.authorUsername && (
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="ml-auto text-muted-foreground hover:text-destructive"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
+      <section className="bg-foreground text-background">
+        <div className="container-x grid gap-8 py-12 md:grid-cols-[280px_1fr]">
+          <Skeleton className="aspect-[3/4] w-full max-w-[280px] bg-background/20" />
+          <div>
+            <Skeleton className="h-3 w-24 bg-background/20" />
+            <Skeleton className="mt-1 h-16 w-72 bg-background/20" />
+            <Skeleton className="mt-2 h-4 w-48 bg-background/20" />
+            <div className="mt-4 flex gap-2">
+              <Skeleton className="h-6 w-28 bg-background/20" />
+              <Skeleton className="h-6 w-16 bg-background/20" />
             </div>
           </div>
+        </div>
+      </section>
+      <section className="container-x mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[1, 2, 3, 4].map((s) => (
+          <div key={s} className="border border-border bg-card p-4">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="mt-1 h-8 w-16" />
+          </div>
         ))}
+      </section>
     </>
   );
-}
-
-function formatTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return new Date(iso).toLocaleDateString();
 }
 
 function Meta({ l, v }: { l: string; v: string | number }) {

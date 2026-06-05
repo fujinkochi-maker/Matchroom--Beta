@@ -3,14 +3,18 @@ import { Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { FighterAvatar } from "@/components/FighterAvatar";
-import { DIVISIONS, type Division } from "@/data/types";
+import { DIVISIONS, REGIONS, type Division } from "@/data/types";
 import { getRanked, ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
 import { getPublicRankings } from "@/lib/admin.server";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const BODIES = ["OVERALL", "WBC", "WBA", "IBF", "WBO"] as const;
 type Body = (typeof BODIES)[number];
 
 export const Route = createFileRoute("/rankings")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: RankingsSkeleton,
   loader: async () => {
     await ensureFightersLoaded();
     const { rankings } = await getPublicRankings();
@@ -38,6 +42,7 @@ function RankingsPage() {
   const { rankings, fighters } = Route.useLoaderData();
   const [division, setDivision] = useState<Division>("Heavyweight");
   const [body, setBody] = useState<Body>("OVERALL");
+  const [region, setRegion] = useState("all");
 
   const bodyLabel = (b: Body) => (b === "OVERALL" ? "Overall" : b);
 
@@ -89,8 +94,30 @@ function RankingsPage() {
           ))}
         </div>
 
+        <div className="mt-4 flex gap-1.5 overflow-x-auto pb-2">
+          {["all", ...REGIONS].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRegion(r)}
+              className={`shrink-0 rounded-full px-4 py-1 text-xs font-bold uppercase tracking-wider transition-colors ${
+                region === r
+                  ? "bg-card text-foreground border border-primary"
+                  : "border border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
+              }`}
+            >
+              {r === "all" ? "All Regions" : r}
+            </button>
+          ))}
+        </div>
+
         <div className="mt-6">
-          <RankingTable division={division} body={body} rankings={rankings} fighters={fighters} />
+          <RankingTable
+            division={division}
+            body={body}
+            region={region}
+            rankings={rankings}
+            fighters={fighters}
+          />
         </div>
       </section>
     </>
@@ -100,20 +127,27 @@ function RankingsPage() {
 function RankingTable({
   division,
   body,
+  region,
   rankings,
   fighters,
 }: {
   division: Division;
   body: Body;
+  region: string;
   rankings: any[];
   fighters: typeof FIGHTERS;
 }) {
   if (body === "OVERALL") {
-    return <OverallTable division={division} fighters={fighters} />;
+    return <OverallTable division={division} region={region} fighters={fighters} />;
   }
 
   const bodyRankings = rankings
-    .filter((r: any) => r.division === division && r.body === body)
+    .filter(
+      (r: any) =>
+        r.division === division &&
+        r.body === body &&
+        (!region || region === "all" || r.region === region),
+    )
     .sort((a: any, b: any) => a.rank - b.rank);
 
   if (bodyRankings.length === 0) {
@@ -185,8 +219,16 @@ function RankingTable({
   );
 }
 
-function OverallTable({ division, fighters }: { division: Division; fighters: typeof FIGHTERS }) {
-  const ranked = getRanked(division, fighters);
+function OverallTable({
+  division,
+  region,
+  fighters,
+}: {
+  division: Division;
+  region: string;
+  fighters: typeof FIGHTERS;
+}) {
+  const ranked = getRanked(division, fighters, region);
   if (ranked.length === 0) {
     return (
       <p className="py-8 text-center text-muted-foreground">
@@ -253,5 +295,43 @@ function OverallTable({ division, fighters }: { division: Division; fighters: ty
         </tbody>
       </table>
     </div>
+  );
+}
+
+function RankingsSkeleton() {
+  return (
+    <>
+      <section className="bg-foreground text-background">
+        <div className="container-x py-14">
+          <Skeleton className="h-3 w-32 bg-background/20" />
+          <Skeleton className="mt-3 h-14 w-56 bg-background/20" />
+        </div>
+      </section>
+      <section className="container-x py-12">
+        <div className="flex gap-1.5">
+          {[1, 2, 3].map((d) => (
+            <Skeleton key={d} className="h-8 w-28 rounded-full" />
+          ))}
+        </div>
+        <div className="mt-4 flex gap-1.5">
+          {[1, 2, 3, 4, 5].map((b) => (
+            <Skeleton key={b} className="h-7 w-20 rounded-full" />
+          ))}
+        </div>
+        <div className="mt-6 border border-border">
+          {[1, 2, 3, 4, 5].map((r) => (
+            <div key={r} className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <Skeleton className="h-5 w-8" />
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="flex-1">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="mt-1 h-3 w-24" />
+              </div>
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }

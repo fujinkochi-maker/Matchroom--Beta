@@ -1,4 +1,5 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { FighterForm, type FighterFormData } from "@/components/admin/FighterForm";
 import { createFighter, upsertFightHistory } from "@/lib/admin.server";
@@ -23,8 +24,12 @@ function NewFighter() {
   };
   return (
     <div>
-      {" "}
-      <h1 className={ADMIN_HEADING}>New Fighter</h1>{" "}
+      <div className="mb-4 flex items-center gap-3">
+        <Link to="/admin/fighters" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <h1 className={ADMIN_HEADING}>New Fighter</h1>
+      </div>
       <div className={adminCard("2xl")}>
         {" "}
         <FighterForm onSubmit={handleSubmit} submitLabel="Create Fighter" />{" "}

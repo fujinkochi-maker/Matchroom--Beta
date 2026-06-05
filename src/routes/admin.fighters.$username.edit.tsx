@@ -1,8 +1,9 @@
-import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, notFound } from "@tanstack/react-router";
 import { FighterForm, type FighterFormData } from "@/components/admin/FighterForm";
 import { updateFighter, upsertFightHistory } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ensureFightersLoaded, getByUsername, clearFightersCache } from "@/data/fighters";
+import { ArrowLeft } from "lucide-react";
 import { ADMIN_HEADING, ADMIN_SUBTITLE, adminCard } from "@/lib/admin-styles";
 export const Route = createFileRoute("/admin/fighters/$username/edit")({
   loader: async () => {
@@ -24,8 +25,15 @@ function EditFighter() {
   };
   return (
     <div>
-      {" "}
-      <h1 className={ADMIN_HEADING}>Edit Fighter</h1> <p className={ADMIN_SUBTITLE}>@{username}</p>{" "}
+      <div className="mb-4 flex items-center gap-3">
+        <Link to="/admin/fighters" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className={ADMIN_HEADING}>Edit Fighter</h1>
+          <p className={ADMIN_SUBTITLE}>@{username}</p>
+        </div>
+      </div>
       <div className={adminCard("2xl")}>
         {" "}
         <FighterForm

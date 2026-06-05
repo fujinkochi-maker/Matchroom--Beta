@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack/react-router";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ensureEventsLoaded, EVENTS } from "@/data/fighters";
 import { deleteEvent } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ADMIN_HEADING,
   ADMIN_SUBTITLE,
@@ -13,18 +13,85 @@ import {
   ADMIN_TABLE_WRAP,
   ADMIN_TABLE_ROW,
 } from "@/lib/admin-styles";
+import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 20;
+
 export const Route = createFileRoute("/admin/events")({
   loader: async () => {
     await ensureEventsLoaded();
   },
   component: AdminEvents,
 });
+
+function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
+  if (!active) return <ChevronUp className="ml-1 inline h-3 w-3 opacity-30" />;
+  return dir === "asc" ? (
+    <ChevronUp className="ml-1 inline h-3 w-3" />
+  ) : (
+    <ChevronDown className="ml-1 inline h-3 w-3" />
+  );
+}
+
 function AdminEvents() {
   const router = useRouter();
   const location = useLocation();
   const events = EVENTS;
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  };
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return events;
+    const q = search.toLowerCase();
+    return events.filter(
+      (e) =>
+        e.slug.toLowerCase().includes(q) ||
+        e.name.toLowerCase().includes(q) ||
+        e.mainEvent.a.toLowerCase().includes(q) ||
+        e.mainEvent.b.toLowerCase().includes(q),
+    );
+  }, [events, search]);
+
+  const sorted = useMemo(() => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "slug":
+          cmp = a.slug.localeCompare(b.slug);
+          break;
+        case "name":
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case "date":
+          cmp = a.date.localeCompare(b.date);
+          break;
+        case "status":
+          cmp = a.status.localeCompare(b.status);
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+
   if (location.pathname !== "/admin/events") return <Outlet />;
+
   const handleDelete = async (slug: string) => {
     const token = getAdminToken();
     if (!token) return;
@@ -32,93 +99,134 @@ function AdminEvents() {
     await router.invalidate();
     toast.success("Event deleted");
   };
+
+  function SortTh({
+    label,
+    sortKey: sk,
+    className,
+  }: {
+    label: string;
+    sortKey: string;
+    className?: string;
+  }) {
+    const active = sortKey === sk;
+    return (
+      <th
+        className={cn("cursor-pointer px-4 py-3 font-semibold select-none", className)}
+        onClick={() => handleSort(sk)}
+      >
+        {label}
+        <SortIcon active={active} dir={sortDir} />
+      </th>
+    );
+  }
+
   return (
     <div>
-      {" "}
       <div className="flex items-center justify-between">
-        {" "}
         <div>
-          {" "}
-          <h1 className={ADMIN_HEADING}>Events</h1>{" "}
-          <p className={ADMIN_SUBTITLE}>{events.length} events</p>{" "}
-        </div>{" "}
+          <h1 className={ADMIN_HEADING}>Events</h1>
+          <p className={ADMIN_SUBTITLE}>{events.length} events</p>
+        </div>
         <Link to="/admin/events/new" className={ADMIN_BTN_ADD}>
-          {" "}
-          <Plus className="h-4 w-4" /> New Event{" "}
-        </Link>{" "}
-      </div>{" "}
+          <Plus className="h-4 w-4" /> New Event
+        </Link>
+      </div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          placeholder="Search by slug, name, or fighters..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        />
+        <p className="text-xs text-muted-foreground">
+          {sorted.length} of {events.length} events
+        </p>
+      </div>
       <div className={ADMIN_TABLE_WRAP}>
-        {" "}
         <table className="w-full text-sm">
-          {" "}
           <thead className="bg-muted/50 text-left">
-            {" "}
             <tr className="border-b border-border">
-              {" "}
-              <th className="px-4 py-3 font-semibold">Slug</th>{" "}
-              <th className="px-4 py-3 font-semibold">Name</th>{" "}
-              <th className="px-4 py-3 font-semibold">Date</th>{" "}
-              <th className="px-4 py-3 font-semibold">Main Event</th>{" "}
-              <th className="px-4 py-3 font-semibold">Status</th>{" "}
-              <th className="px-4 py-3 font-semibold" />{" "}
-            </tr>{" "}
-          </thead>{" "}
+              <SortTh label="Slug" sortKey="slug" />
+              <SortTh label="Name" sortKey="name" />
+              <SortTh label="Date" sortKey="date" />
+              <th className="px-4 py-3 font-semibold">Main Event</th>
+              <SortTh label="Status" sortKey="status" />
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
           <tbody>
-            {" "}
-            {events.map((e) => (
+            {paginated.map((e) => (
               <tr key={e.slug} className={ADMIN_TABLE_ROW}>
-                {" "}
-                <td className="px-4 py-3 font-medium">{e.slug}</td>{" "}
-                <td className="px-4 py-3">{e.name}</td>{" "}
-                <td className="px-4 py-3 text-muted-foreground">{e.date}</td>{" "}
+                <td className="px-4 py-3 font-medium">{e.slug}</td>
+                <td className="px-4 py-3">{e.name}</td>
+                <td className="px-4 py-3 text-muted-foreground">{e.date}</td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {" "}
-                  {e.mainEvent.a} vs {e.mainEvent.b}{" "}
-                </td>{" "}
+                  {e.mainEvent.a} vs {e.mainEvent.b}
+                </td>
                 <td className="px-4 py-3">
-                  {" "}
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${e.status === "upcoming" ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}
                   >
-                    {" "}
-                    {e.status}{" "}
-                  </span>{" "}
-                </td>{" "}
+                    {e.status}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
-                  {" "}
                   <div className="flex items-center gap-2">
-                    {" "}
                     <Link
                       to="/admin/events/$slug/edit"
                       params={{ slug: e.slug }}
                       className="rounded p-1 text-muted-foreground hover:text-foreground"
                     >
-                      {" "}
-                      <Pencil className="h-4 w-4" />{" "}
-                    </Link>{" "}
+                      <Pencil className="h-4 w-4" />
+                    </Link>
                     <button
                       onClick={() => setDeleteTarget(e.slug)}
                       className="rounded p-1 text-muted-foreground hover:text-destructive"
                     >
-                      {" "}
-                      <Trash2 className="h-4 w-4" />{" "}
-                    </button>{" "}
-                  </div>{" "}
-                </td>{" "}
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
               </tr>
-            ))}{" "}
-            {events.length === 0 && (
+            ))}
+            {paginated.length === 0 && (
               <tr>
-                {" "}
                 <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  {" "}
-                  No events yet.{" "}
-                </td>{" "}
+                  No events yet.
+                </td>
               </tr>
-            )}{" "}
-          </tbody>{" "}
-        </table>{" "}
-      </div>{" "}
+            )}
+          </tbody>
+        </table>
+      </div>
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between px-1">
+          <p className="text-xs text-muted-foreground">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-md border border-input px-3 py-1 text-sm disabled:opacity-40"
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded-md border border-input px-3 py-1 text-sm disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
       <ConfirmDelete
         open={deleteTarget !== null}
         onOpenChange={(o) => {
@@ -129,7 +237,7 @@ function AdminEvents() {
         }}
         title="Delete Event"
         description={`Are you sure you want to delete "${deleteTarget}"? This cannot be undone.`}
-      />{" "}
+      />
     </div>
   );
 }

@@ -39,10 +39,10 @@ export const getChampionTitle = (beltsHeld: string): string => {
 
 export const getByUsername = (u: string) =>
   FIGHTERS.find((f) => f.username.toLowerCase() === u.toLowerCase());
-export const getRanked = (division: Division, source?: Fighter[]) => {
+export const getRanked = (division: Division, source?: Fighter[], region?: string) => {
   const pool = source ?? FIGHTERS;
   const fighters = pool
-    .filter((f) => f.division === division)
+    .filter((f) => f.division === division && (!region || region === "all" || f.region === region))
     .sort((a, b) => {
       if (a.rank === 0) return -1;
       if (b.rank === 0) return 1;
@@ -484,6 +484,7 @@ function rowToFighter(row: any): Fighter {
     streak: row.streak ?? "",
     bio: row.bio ?? "",
     history: [],
+    region: row.region ?? "",
     image: row.image_url ?? undefined,
     discordId: row.discord_id ?? undefined,
     guildId: row.guild_id ?? undefined,

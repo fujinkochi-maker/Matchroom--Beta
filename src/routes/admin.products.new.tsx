@@ -1,8 +1,9 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { createProduct } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
+import { ArrowLeft } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import {
   ADMIN_INPUT,
@@ -51,8 +52,12 @@ function NewProduct() {
   };
   return (
     <div>
-      {" "}
-      <h1 className={ADMIN_HEADING}>New Product</h1>{" "}
+      <div className="mb-4 flex items-center gap-3">
+        <Link to="/admin/products" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <h1 className={ADMIN_HEADING}>New Product</h1>
+      </div>
       <div className={adminCard("2xl")}>
         {" "}
         <form onSubmit={handleSubmit} className="space-y-6">

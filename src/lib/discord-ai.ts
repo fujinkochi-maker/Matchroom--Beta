@@ -1,28 +1,47 @@
 import { createClient } from "@supabase/supabase-js";
 
 const DIVISIONS = [
-  "Flyweight", "Bantamweight", "Featherweight", "Lightweight",
-  "Welterweight", "Middleweight", "Light Heavyweight", "Cruiserweight", "Heavyweight",
+  "Flyweight",
+  "Bantamweight",
+  "Featherweight",
+  "Lightweight",
+  "Welterweight",
+  "Middleweight",
+  "Light Heavyweight",
+  "Cruiserweight",
+  "Heavyweight",
 ];
 
 export async function buildContext(env: Record<string, any>): Promise<string> {
   const supabase = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
 
-  const [
-    fightersRes,
-    championsRes,
-    postsRes,
-    eventsRes,
-    articlesRes,
-    productsRes,
-  ] = await Promise.all([
-    supabase.from("fighters").select("display_name, division, wins, losses, draws, kos, streak, rank").order("rank", { ascending: true }),
-    supabase.from("fighters").select("display_name, division, wins, losses, draws, kos").eq("rank", 0),
-    supabase.from("posts").select("content, created_at, author_type").order("created_at", { ascending: false }).limit(5),
-    supabase.from("events").select("name, date, arena, status, main_event_title").order("date", { ascending: true }).limit(5),
-    supabase.from("articles").select("title, excerpt, category, date").order("date", { ascending: false }).limit(5),
-    supabase.from("products").select("name, category, price, limited").limit(10),
-  ]);
+  const [fightersRes, championsRes, postsRes, eventsRes, articlesRes, productsRes] =
+    await Promise.all([
+      supabase
+        .from("fighters")
+        .select("display_name, division, wins, losses, draws, kos, streak, rank")
+        .order("rank", { ascending: true }),
+      supabase
+        .from("fighters")
+        .select("display_name, division, wins, losses, draws, kos")
+        .eq("rank", 0),
+      supabase
+        .from("posts")
+        .select("content, created_at, author_type")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("events")
+        .select("name, date, arena, status, main_event_title")
+        .order("date", { ascending: true })
+        .limit(5),
+      supabase
+        .from("articles")
+        .select("title, excerpt, category, date")
+        .order("date", { ascending: false })
+        .limit(5),
+      supabase.from("products").select("name, category, price, limited").limit(10),
+    ]);
 
   let ctx = "";
 
@@ -44,10 +63,12 @@ export async function buildContext(env: Record<string, any>): Promise<string> {
     const inDiv = fighters.filter((f: any) => f.division === div);
     if (inDiv.length === 0) continue;
     ctx += `${div}: `;
-    ctx += inDiv.map((f: any) => {
-      const label = f.rank === 0 ? "CHAMPION" : `#${f.rank}`;
-      return `${f.display_name} (${label}, ${f.wins}-${f.losses}-${f.draws}, ${f.kos}KO, streak: ${f.streak || "N/A"})`;
-    }).join(" | ");
+    ctx += inDiv
+      .map((f: any) => {
+        const label = f.rank === 0 ? "CHAMPION" : `#${f.rank}`;
+        return `${f.display_name} (${label}, ${f.wins}-${f.losses}-${f.draws}, ${f.kos}KO, streak: ${f.streak || "N/A"})`;
+      })
+      .join(" | ");
     ctx += "\n";
   }
 
@@ -110,7 +131,8 @@ DATABASE DUMP:\n${context}`;
       ],
     });
     return (
-      (result as any).response || "I got nothing on that one, boss. Ask me about a fighter, a matchup, or what's new in the gym."
+      (result as any).response ||
+      "I got nothing on that one, boss. Ask me about a fighter, a matchup, or what's new in the gym."
     );
   } catch (err) {
     console.error("[AI] Error:", err);

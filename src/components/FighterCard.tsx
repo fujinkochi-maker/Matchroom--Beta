@@ -43,6 +43,7 @@ export const FighterCard = memo(function FighterCard({ fighter }: { fighter: Fig
           <span className="font-semibold uppercase tracking-wider text-muted-foreground">
             {fighter.division}
           </span>
+          {fighter.region && <span className="text-muted-foreground">{fighter.region}</span>}
           <span className="font-mono text-foreground">
             {fighter.wins}-{fighter.losses}-{fighter.draws}
           </span>

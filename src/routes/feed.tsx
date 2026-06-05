@@ -16,8 +16,12 @@ import { toast, Toaster } from "sonner";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import { FighterAvatar } from "@/components/FighterAvatar";
 import type { Post } from "@/data/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/feed")({
+  pendingMs: 200,
+  pendingMinMs: 300,
+  pendingComponent: FeedSkeleton,
   loader: async () => {
     await Promise.all([ensureFightersLoaded(), ensurePostsLoaded()]);
     return { posts: POSTS, fighters: FIGHTERS };
@@ -519,4 +523,28 @@ function formatTime(iso: string): string {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d`;
   return new Date(iso).toLocaleDateString();
+}
+
+function FeedSkeleton() {
+  return (
+    <div className="container-x py-12">
+      <div className="mx-auto max-w-2xl">
+        <Skeleton className="h-8 w-48" />
+        <div className="mt-8 space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-lg border border-border bg-card p-4">
+              <div className="flex items-start gap-3">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="mt-2 h-4 w-full" />
+                  <Skeleton className="mt-1 h-4 w-3/4" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
