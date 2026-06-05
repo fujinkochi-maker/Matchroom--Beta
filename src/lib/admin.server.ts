@@ -14,15 +14,26 @@ function discordHeaders() {
 }
 
 async function updateDiscordNickname(guildId: string, discordId: string, nickname: string) {
-  if (!guildId || !process.env.DISCORD_BOT_TOKEN) return;
+  if (!guildId) {
+    console.warn("[Discord] Skipping nickname update — no guildId");
+    return;
+  }
+  if (!process.env.DISCORD_BOT_TOKEN) {
+    console.warn("[Discord] Skipping nickname update — DISCORD_BOT_TOKEN not set");
+    return;
+  }
   try {
-    await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordId}`, {
+    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordId}`, {
       method: "PATCH",
       headers: discordHeaders(),
       body: JSON.stringify({ nick: nickname }),
     });
-  } catch {
-    // nickname update is best-effort
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn(`[Discord] Nickname update failed (${res.status}): ${text}`);
+    }
+  } catch (err) {
+    console.warn("[Discord] Nickname update error:", err);
   }
 }
 
@@ -349,10 +360,16 @@ export const updateFighter = createServerFn({ method: "POST" })
     // Recalculate division ranks for fighters table
     const { data: divFighters } = await supabase
       .from("fighters")
-      .select("username, rank")
-      .eq("division", data.division)
-      .order("rank", { ascending: true });
+      .select("username, rank, wins, losses")
+      .eq("division", data.division);
     if (divFighters) {
+      divFighters.sort((a, b) => {
+        if (a.rank === 0) return -1;
+        if (b.rank === 0) return 1;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (a.losses !== b.losses) return a.losses - b.losses;
+        return a.rank - b.rank;
+      });
       let nextRank = 1;
       for (const f of divFighters) {
         if (f.rank === 0) continue;
@@ -362,13 +379,9 @@ export const updateFighter = createServerFn({ method: "POST" })
 
     // Recalculate rankings for this division (rankings table)
     const { recalculateDivision } = await import("@/data/rankings");
-    recalculateDivision(data.division).catch((err: any) =>
-      console.error("Ranking recalculation failed:", err),
-    );
+    await recalculateDivision(data.division);
     for (const r of ["ASIA", "EUROPE", "NORTH AMERICA"] as const) {
-      recalculateDivision(data.division, r).catch((err: any) =>
-        console.error(`Ranking recalculation failed for ${r}:`, err),
-      );
+      await recalculateDivision(data.division, r);
     }
 
     // Update Discord nickname with new record

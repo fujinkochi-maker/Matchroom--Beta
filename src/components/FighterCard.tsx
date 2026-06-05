@@ -4,15 +4,22 @@ import { FighterAvatar } from "./FighterAvatar";
 import type { Fighter } from "@/data/types";
 import { getChampionTitle } from "@/data/fighters";
 
-export const FighterCard = memo(function FighterCard({ fighter }: { fighter: Fighter }) {
+export const FighterCard = memo(function FighterCard({
+  fighter,
+  displayRank,
+}: {
+  fighter: Fighter;
+  displayRank?: number;
+}) {
   const kos = Math.round((fighter.kos / Math.max(fighter.wins, 1)) * 100);
+  const rank = displayRank ?? fighter.rank;
   return (
     <div className="group relative overflow-hidden border border-border bg-card shadow-card transition-shadow duration-200 hover:-translate-y-1 hover:shadow-red">
       <Link to="/boxers/$username" params={{ username: fighter.username }} className="block">
         <div className="relative">
           <FighterAvatar name={fighter.displayName} src={fighter.image} />
           <div className="absolute left-0 top-0 bg-primary px-2 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground">
-            {fighter.rank === 0 ? getChampionTitle(fighter.beltsHeld) : `#${fighter.rank}`}
+            {fighter.rank === 0 ? getChampionTitle(fighter.beltsHeld) : `#${rank}`}
           </div>
           {fighter.beltsHeld ? (
             <div className="absolute right-0 top-0 flex flex-wrap gap-0.5">

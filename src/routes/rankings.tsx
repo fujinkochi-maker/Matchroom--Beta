@@ -143,12 +143,20 @@ function RankingTable({
 
   const bodyRankings = rankings
     .filter(
-      (r: any) =>
-        r.division === division &&
-        r.body === body &&
-        (!region || region === "all" || r.region === region),
+      (r: {
+        division: string;
+        body: string;
+        region: string;
+        rank: number;
+        fighter_username: string;
+      }) => {
+        if (r.division !== division || r.body !== body) return false;
+        if (region === "all") return !r.region;
+        if (!region) return true;
+        return r.region === region;
+      },
     )
-    .sort((a: any, b: any) => a.rank - b.rank);
+    .sort((a: { rank: number }, b: { rank: number }) => a.rank - b.rank);
 
   if (bodyRankings.length === 0) {
     return (
@@ -228,7 +236,7 @@ function OverallTable({
   region: string;
   fighters: typeof FIGHTERS;
 }) {
-  const ranked = getRanked(division, fighters, region);
+  const ranked = getRanked(division, fighters, region === "all" ? undefined : region);
   if (ranked.length === 0) {
     return (
       <p className="py-8 text-center text-muted-foreground">

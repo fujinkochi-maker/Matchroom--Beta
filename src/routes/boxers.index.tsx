@@ -60,31 +60,35 @@ function BoxersPage() {
 
   const results = useMemo(() => {
     const needle = q.toLowerCase();
-    return fighters
-      .filter((f) => {
-        if (division !== "all" && f.division !== division) return false;
-        if (region !== "all" && f.region !== region) return false;
-        if (filter === "champion" && f.rank !== 0) return false;
-        if (filter === "top" && f.rank > 3) return false;
-        if (filter === "undefeated" && f.losses > 0) return false;
-        if (filter === "ko" && f.kos / Math.max(f.wins, 1) < 0.6) return false;
-        if (!needle) return true;
-        return (
-          f.username.toLowerCase().includes(needle) ||
-          f.displayName.toLowerCase().includes(needle) ||
-          f.nickname.toLowerCase().includes(needle) ||
-          f.division.toLowerCase().includes(needle) ||
-          `${f.wins}-${f.losses}-${f.draws}`.includes(needle)
-        );
-      })
-      .sort((a, b) => {
-        if (a.rank === 0 && b.rank !== 0) return -1;
-        if (b.rank === 0 && a.rank !== 0) return 1;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (a.losses !== b.losses) return a.losses - b.losses;
-        return a.displayRank - b.displayRank;
-      });
-  }, [q, division, region, filter]);
+    const filtered = fighters.filter((f) => {
+      if (division !== "all" && f.division !== division) return false;
+      if (region !== "all" && f.region !== region) return false;
+      if (filter === "champion" && f.rank !== 0) return false;
+      if (filter === "top" && f.rank > 3) return false;
+      if (filter === "undefeated" && f.losses > 0) return false;
+      if (filter === "ko" && f.kos / Math.max(f.wins, 1) < 0.6) return false;
+      if (!needle) return true;
+      return (
+        f.username.toLowerCase().includes(needle) ||
+        f.displayName.toLowerCase().includes(needle) ||
+        f.nickname.toLowerCase().includes(needle) ||
+        f.division.toLowerCase().includes(needle) ||
+        `${f.wins}-${f.losses}-${f.draws}`.includes(needle)
+      );
+    });
+    filtered.sort((a, b) => {
+      if (a.rank === 0 && b.rank !== 0) return -1;
+      if (b.rank === 0 && a.rank !== 0) return 1;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (a.losses !== b.losses) return a.losses - b.losses;
+      return a.displayRank - b.displayRank;
+    });
+    let dRank = 1;
+    return filtered.map((f) => ({
+      ...f,
+      displayRank: f.rank === 0 ? 0 : dRank++,
+    }));
+  }, [q, division, region, filter, fighters]);
 
   return (
     <>
@@ -186,7 +190,7 @@ function BoxersPage() {
         <p className="mt-6 text-sm text-muted-foreground">{results.length} fighters</p>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {results.map((f) => (
-            <FighterCard key={f.username} fighter={f} />
+            <FighterCard key={f.username} fighter={f} displayRank={f.displayRank} />
           ))}
         </div>
         {results.length === 0 && (

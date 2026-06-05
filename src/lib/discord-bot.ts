@@ -365,11 +365,18 @@ export function createHandler(
       const supabase = getSupabaseAdmin();
       const { data: fighters } = await supabase
         .from("fighters")
-        .select("username, rank")
-        .eq("division", division)
-        .order("rank", { ascending: true });
+        .select("username, rank, wins, losses")
+        .eq("division", division);
 
       if (!fighters) return;
+
+      fighters.sort((a, b) => {
+        if (a.rank === 0) return -1;
+        if (b.rank === 0) return 1;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (a.losses !== b.losses) return a.losses - b.losses;
+        return a.rank - b.rank;
+      });
 
       let nextRank = 1;
       for (const f of fighters) {

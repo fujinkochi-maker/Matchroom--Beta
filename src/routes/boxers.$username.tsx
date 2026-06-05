@@ -271,10 +271,7 @@ function FighterProfilePage() {
                 <p className="text-sm text-muted-foreground">No activity yet.</p>
               ) : (
                 [...fighterPosts]
-                  .sort(
-                    (a, b) =>
-                      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-                  )
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                   .map((p) => (
                     <div key={p.id} className="rounded-lg border border-border bg-card p-3">
                       <p className="whitespace-pre-wrap text-sm">{p.content}</p>
