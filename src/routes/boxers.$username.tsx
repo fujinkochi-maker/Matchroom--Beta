@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { Trophy, ArrowLeft, Play, RefreshCw, Heart } from "lucide-react";
+import { Trophy, ArrowLeft, Play, RefreshCw } from "lucide-react";
 import { FighterAvatar } from "@/components/FighterAvatar";
 import {
   getByUsername,
@@ -9,7 +9,6 @@ import {
   getPostsForFighter,
   getRanked,
   FIGHTERS,
-  POSTS,
   ensureFightersLoaded,
   ensureArticlesLoaded,
   ensureVideosLoaded,
@@ -18,10 +17,7 @@ import {
   getChampionTitle,
 } from "@/data/fighters";
 import { hashHue } from "@/lib/utils";
-import { getFighterSession } from "@/lib/discord-auth";
-import { getPublicRankings, likePost, unlikePost, deletePost } from "@/lib/admin.server";
-import { toast } from "sonner";
-import type { Post } from "@/data/types";
+import { getPublicRankings } from "@/lib/admin.server";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/boxers/$username")({
@@ -271,7 +267,20 @@ function FighterProfilePage() {
               Recent Activity
             </h3>
             <div className="mt-4 space-y-3">
-              <FighterFeed username={f.username} posts={fighterPosts} fighters={fighters} />
+              {fighterPosts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No activity yet.</p>
+              ) : (
+                [...fighterPosts]
+                  .sort(
+                    (a, b) =>
+                      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                  )
+                  .map((p) => (
+                    <div key={p.id} className="rounded-lg border border-border bg-card p-3">
+                      <p className="whitespace-pre-wrap text-sm">{p.content}</p>
+                    </div>
+                  ))
+              )}
             </div>
 
             <h3 className="mt-10 font-display text-2xl uppercase">

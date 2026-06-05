@@ -40,6 +40,7 @@ import { Route as AdminEventsNewRouteImport } from './routes/admin.events.new'
 import { Route as AdminArticlesNewRouteImport } from './routes/admin.articles.new'
 import { Route as AdminVideosIdEditRouteImport } from './routes/admin.videos.$id.edit'
 import { Route as AdminProductsIdEditRouteImport } from './routes/admin.products.$id.edit'
+import { Route as AdminPostsIdEditRouteImport } from './routes/admin.posts.$id.edit'
 import { Route as AdminFightersUsernameEditRouteImport } from './routes/admin.fighters.$username.edit'
 import { Route as AdminEventsSlugEditRouteImport } from './routes/admin.events.$slug.edit'
 import { Route as AdminArticlesSlugEditRouteImport } from './routes/admin.articles.$slug.edit'
@@ -199,6 +200,11 @@ const AdminProductsIdEditRoute = AdminProductsIdEditRouteImport.update({
   path: '/$id/edit',
   getParentRoute: () => AdminProductsRoute,
 } as any)
+const AdminPostsIdEditRoute = AdminPostsIdEditRouteImport.update({
+  id: '/$id/edit',
+  path: '/$id/edit',
+  getParentRoute: () => AdminPostsRoute,
+} as any)
 const AdminFightersUsernameEditRoute =
   AdminFightersUsernameEditRouteImport.update({
     id: '/$username/edit',
@@ -249,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/admin/articles/$slug/edit': typeof AdminArticlesSlugEditRoute
   '/admin/events/$slug/edit': typeof AdminEventsSlugEditRoute
   '/admin/fighters/$username/edit': typeof AdminFightersUsernameEditRoute
+  '/admin/posts/$id/edit': typeof AdminPostsIdEditRoute
   '/admin/products/$id/edit': typeof AdminProductsIdEditRoute
   '/admin/videos/$id/edit': typeof AdminVideosIdEditRoute
 }
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/admin/articles/$slug/edit': typeof AdminArticlesSlugEditRoute
   '/admin/events/$slug/edit': typeof AdminEventsSlugEditRoute
   '/admin/fighters/$username/edit': typeof AdminFightersUsernameEditRoute
+  '/admin/posts/$id/edit': typeof AdminPostsIdEditRoute
   '/admin/products/$id/edit': typeof AdminProductsIdEditRoute
   '/admin/videos/$id/edit': typeof AdminVideosIdEditRoute
 }
@@ -321,6 +329,7 @@ export interface FileRoutesById {
   '/admin/articles/$slug/edit': typeof AdminArticlesSlugEditRoute
   '/admin/events/$slug/edit': typeof AdminEventsSlugEditRoute
   '/admin/fighters/$username/edit': typeof AdminFightersUsernameEditRoute
+  '/admin/posts/$id/edit': typeof AdminPostsIdEditRoute
   '/admin/products/$id/edit': typeof AdminProductsIdEditRoute
   '/admin/videos/$id/edit': typeof AdminVideosIdEditRoute
 }
@@ -359,6 +368,7 @@ export interface FileRouteTypes {
     | '/admin/articles/$slug/edit'
     | '/admin/events/$slug/edit'
     | '/admin/fighters/$username/edit'
+    | '/admin/posts/$id/edit'
     | '/admin/products/$id/edit'
     | '/admin/videos/$id/edit'
   fileRoutesByTo: FileRoutesByTo
@@ -394,6 +404,7 @@ export interface FileRouteTypes {
     | '/admin/articles/$slug/edit'
     | '/admin/events/$slug/edit'
     | '/admin/fighters/$username/edit'
+    | '/admin/posts/$id/edit'
     | '/admin/products/$id/edit'
     | '/admin/videos/$id/edit'
   id:
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/admin/articles/$slug/edit'
     | '/admin/events/$slug/edit'
     | '/admin/fighters/$username/edit'
+    | '/admin/posts/$id/edit'
     | '/admin/products/$id/edit'
     | '/admin/videos/$id/edit'
   fileRoutesById: FileRoutesById
@@ -670,6 +682,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsIdEditRouteImport
       parentRoute: typeof AdminProductsRoute
     }
+    '/admin/posts/$id/edit': {
+      id: '/admin/posts/$id/edit'
+      path: '/$id/edit'
+      fullPath: '/admin/posts/$id/edit'
+      preLoaderRoute: typeof AdminPostsIdEditRouteImport
+      parentRoute: typeof AdminPostsRoute
+    }
     '/admin/fighters/$username/edit': {
       id: '/admin/fighters/$username/edit'
       path: '/$username/edit'
@@ -738,10 +757,12 @@ const AdminFightersRouteWithChildren = AdminFightersRoute._addFileChildren(
 
 interface AdminPostsRouteChildren {
   AdminPostsNewRoute: typeof AdminPostsNewRoute
+  AdminPostsIdEditRoute: typeof AdminPostsIdEditRoute
 }
 
 const AdminPostsRouteChildren: AdminPostsRouteChildren = {
   AdminPostsNewRoute: AdminPostsNewRoute,
+  AdminPostsIdEditRoute: AdminPostsIdEditRoute,
 }
 
 const AdminPostsRouteWithChildren = AdminPostsRoute._addFileChildren(
