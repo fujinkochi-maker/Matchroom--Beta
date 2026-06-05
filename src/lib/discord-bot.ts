@@ -269,6 +269,12 @@ export function createHandler(
     },
   ];
 
+  const REGION_ROLES: Record<string, string> = {
+    ASIA: "1512287388498657360",
+    EUROPE: "1512287401534427289",
+    "NORTH AMERICA": "1512287406609535146",
+  };
+
   const DIVISION_ROLES: Record<string, string> = {
     Flyweight: "1510667123549147136",
     Bantamweight: "1510667122932449552",
@@ -834,6 +840,12 @@ export function createHandler(
 
         await loadDataFromSupabase();
         await refreshDOContext();
+
+        // Assign region role
+        const regionRoleId = REGION_ROLES[region];
+        if (regionRoleId && fighter.guild_id) {
+          await addRole(fighter.guild_id, discordId, regionRoleId);
+        }
 
         await editDeferredResponse(
           appId,
