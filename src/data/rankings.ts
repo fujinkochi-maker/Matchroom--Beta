@@ -1,20 +1,19 @@
 import { getAdminSupabase } from "@/lib/supabase-admin";
-import { REGIONS } from "./types";
+import type { Fighter, Division } from "./types";
 
 const BODIES = ["WBC", "WBA", "IBF", "WBO", "OVERALL"] as const;
 export type RankingBody = (typeof BODIES)[number];
 
-const DIVISIONS = [
-  "Flyweight",
-  "Bantamweight",
-  "Featherweight",
-  "Lightweight",
-  "Welterweight",
-  "Middleweight",
-  "Light Heavyweight",
-  "Cruiserweight",
-  "Heavyweight",
-];
+interface FighterRow {
+  username: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  kos: number;
+  streak: string;
+  belts_held: string | null;
+  region: string | null;
+}
 
 function streakBonus(streak: string): number {
   if (!streak) return 0;
@@ -35,36 +34,55 @@ const FORMULAS: Record<
 };
 
 function calculatePoints(
-  fighter: { wins: number; losses: number; kos: number; streak: string },
+  f: { wins: number; losses: number; kos: number; streak: string },
   body: RankingBody,
 ): number {
-  return FORMULAS[body](fighter);
+  return FORMULAS[body](f);
 }
 
-export async function recalculateDivision(division: string, region?: string) {
+/** Compute body rankings for a set of fighters */
+export function computeRankings(fighters: Fighter[], body: RankingBody, region?: string) {
+  const pool = region ? fighters.filter((f) => f.region === region) : fighters;
+
+  const champions = new Set(
+    pool.filter((f) => (f.beltsHeld ?? "").includes(body)).map((f) => f.username),
+  );
+
+  const contenders = pool
+    .filter((f) => !champions.has(f.username))
+    .map((f) => ({ username: f.username, points: calculatePoints(f, body) }))
+    .sort((a, b) => b.points - a.points);
+
+  const result: { fighter_username: string; rank: number; points: number }[] = [];
+
+  for (const champ of champions) {
+    result.push({ fighter_username: champ, rank: 0, points: 9999 });
+  }
+  contenders.forEach((f, i) => {
+    result.push({ fighter_username: f.username, rank: i + 1, points: f.points });
+  });
+
+  return result;
+}
+
+/** Store global rankings in the db */
+export async function recalculateDivision(division: string) {
   const supabase = getAdminSupabase();
 
-  let query = supabase
+  const { data: raw, error } = await supabase
     .from("fighters")
     .select("username, wins, losses, draws, kos, streak, belts_held, region")
     .eq("division", division);
 
-  if (region && region !== "all") {
-    query = query.eq("region", region);
+  if (error) {
+    console.error(`[${division}] Query error:`, error.message);
+    return;
   }
+  if (!raw?.length) return;
 
-  const { data: fighters } = await query;
+  const fighters = raw as FighterRow[];
 
-  if (!fighters?.length) return;
-
-  // Delete old rankings for this division + region combo
-  const delQuery = supabase.from("rankings").delete().eq("division", division);
-  if (region && region !== "all") {
-    await delQuery.eq("region", region);
-  } else {
-    // Global: only delete entries with no region (don't nuke regional rankings)
-    await delQuery.eq("region", "");
-  }
+  await supabase.from("rankings").delete().eq("division", division);
 
   const newRankings: {
     fighter_username: string;
@@ -75,16 +93,13 @@ export async function recalculateDivision(division: string, region?: string) {
     region: string;
   }[] = [];
 
-  const rankingRegion = region === "all" ? "" : (region ?? "");
-
   for (const body of BODIES) {
     const champions = new Set(
-      fighters.filter((f: any) => (f.belts_held ?? "").includes(body)).map((f: any) => f.username),
+      fighters.filter((f) => (f.belts_held ?? "").includes(body)).map((f) => f.username),
     );
-
     const contenders = fighters
-      .filter((f: any) => !champions.has(f.username))
-      .map((f: any) => ({
+      .filter((f) => !champions.has(f.username))
+      .map((f) => ({
         username: f.username,
         points: calculatePoints(f, body),
       }))
@@ -97,10 +112,9 @@ export async function recalculateDivision(division: string, region?: string) {
         rank: 0,
         division,
         points: 9999,
-        region: rankingRegion,
+        region: "",
       });
     }
-
     contenders.forEach((f, i) => {
       newRankings.push({
         fighter_username: f.username,
@@ -108,22 +122,31 @@ export async function recalculateDivision(division: string, region?: string) {
         rank: i + 1,
         division,
         points: f.points,
-        region: rankingRegion,
+        region: "",
       });
     });
   }
 
   if (newRankings.length > 0) {
-    await supabase.from("rankings").insert(newRankings);
+    const { error: insErr } = await supabase.from("rankings").insert(newRankings);
+    if (insErr) console.error(`[${division}] Insert error:`, insErr.message);
   }
 }
 
 export async function recalculateAll() {
-  for (const div of DIVISIONS) {
+  const allDivisions: Division[] = [
+    "Flyweight",
+    "Bantamweight",
+    "Featherweight",
+    "Lightweight",
+    "Welterweight",
+    "Middleweight",
+    "Light Heavyweight",
+    "Cruiserweight",
+    "Heavyweight",
+  ];
+  for (const div of allDivisions) {
     await recalculateDivision(div);
-    for (const region of REGIONS) {
-      await recalculateDivision(div, region);
-    }
   }
 }
 
@@ -132,15 +155,61 @@ export async function getRankings(
   body: RankingBody = "OVERALL",
   region?: string,
 ) {
-  const supabase = getAdminSupabase();
-  let query = supabase.from("rankings").select("*").eq("division", division).eq("body", body);
-
+  // For regional views, compute on-the-fly from global rankings filtered by region
   if (region && region !== "all") {
-    query = query.eq("region", region);
+    const supabase = getAdminSupabase();
+    const { data: raw } = await supabase
+      .from("fighters")
+      .select("username, wins, losses, draws, kos, streak, belts_held, region")
+      .eq("division", division)
+      .eq("region", region);
+    if (!raw?.length) return [];
+    const fighters = raw as FighterRow[];
+
+    const champions = new Set(
+      fighters.filter((f) => (f.belts_held ?? "").includes(body)).map((f) => f.username),
+    );
+    const contenders = fighters
+      .filter((f) => !champions.has(f.username))
+      .map((f) => ({
+        fighter_username: f.username,
+        points: calculatePoints(f, body),
+      }))
+      .sort((a, b) => b.points - a.points);
+
+    const result: {
+      fighter_username: string;
+      rank: number;
+      points: number;
+      body: string;
+      division: string;
+      region: string;
+    }[] = [];
+    for (const champ of champions) {
+      result.push({ fighter_username: champ, body, rank: 0, division, points: 9999, region });
+    }
+    contenders.forEach((f, i) => {
+      result.push({
+        fighter_username: f.username,
+        body,
+        rank: i + 1,
+        division,
+        points: f.points,
+        region,
+      });
+    });
+    return result;
   }
 
-  query = query.order("rank", { ascending: true });
-  return (await query).data ?? [];
+  // Global view: read from stored db table
+  const supabase = getAdminSupabase();
+  const { data } = await supabase
+    .from("rankings")
+    .select("*")
+    .eq("division", division)
+    .eq("body", body)
+    .order("rank", { ascending: true });
+  return data ?? [];
 }
 
 export async function getRankingsForFighter(username: string) {

@@ -377,12 +377,9 @@ export const updateFighter = createServerFn({ method: "POST" })
       }
     }
 
-    // Recalculate rankings for this division (rankings table)
+    // Recalculate rankings for this division (global + all regions)
     const { recalculateDivision } = await import("@/data/rankings");
     await recalculateDivision(data.division);
-    for (const r of ["ASIA", "EUROPE", "NORTH AMERICA"] as const) {
-      await recalculateDivision(data.division, r);
-    }
 
     // Update Discord nickname with new record
     const { data: updated } = await supabase

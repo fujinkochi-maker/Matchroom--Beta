@@ -5,7 +5,6 @@ import { useState } from "react";
 import { FighterAvatar } from "@/components/FighterAvatar";
 import { DIVISIONS, REGIONS, type Division } from "@/data/types";
 import { getRanked, ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
-import { getPublicRankings } from "@/lib/admin.server";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const BODIES = ["OVERALL", "WBC", "WBA", "IBF", "WBO"] as const;
@@ -17,8 +16,7 @@ export const Route = createFileRoute("/rankings")({
   pendingComponent: RankingsSkeleton,
   loader: async () => {
     await ensureFightersLoaded();
-    const { rankings } = await getPublicRankings();
-    return { rankings, fighters: FIGHTERS };
+    return { fighters: FIGHTERS };
   },
   head: () => ({
     meta: [
@@ -39,7 +37,7 @@ export const Route = createFileRoute("/rankings")({
 });
 
 function RankingsPage() {
-  const { rankings, fighters } = Route.useLoaderData();
+  const { fighters } = Route.useLoaderData();
   const [division, setDivision] = useState<Division>("Heavyweight");
   const [body, setBody] = useState<Body>("OVERALL");
   const [region, setRegion] = useState("all");
@@ -111,13 +109,7 @@ function RankingsPage() {
         </div>
 
         <div className="mt-6">
-          <RankingTable
-            division={division}
-            body={body}
-            region={region}
-            rankings={rankings}
-            fighters={fighters}
-          />
+          <RankingTable division={division} body={body} region={region} fighters={fighters} />
         </div>
       </section>
     </>
@@ -128,43 +120,55 @@ function RankingTable({
   division,
   body,
   region,
-  rankings,
   fighters,
 }: {
   division: Division;
   body: Body;
   region: string;
-  rankings: any[];
   fighters: typeof FIGHTERS;
 }) {
   if (body === "OVERALL") {
     return <OverallTable division={division} region={region} fighters={fighters} />;
   }
 
-  const bodyRankings = rankings
-    .filter(
-      (r: {
-        division: string;
-        body: string;
-        region: string;
-        rank: number;
-        fighter_username: string;
-      }) => {
-        if (r.division !== division || r.body !== body) return false;
-        if (region === "all") return !r.region;
-        if (!region) return true;
-        return r.region === region;
-      },
-    )
-    .sort((a: { rank: number }, b: { rank: number }) => a.rank - b.rank);
+  // For regional + body-specific, compute on-the-fly from fighters
+  const pool = fighters.filter((f) => {
+    if (f.division !== division) return false;
+    if (region && region !== "all" && f.region !== region) return false;
+    return true;
+  });
 
-  if (bodyRankings.length === 0) {
+  if (pool.length === 0) {
     return (
       <p className="py-8 text-center text-muted-foreground">
         No {body} rankings for {division} yet.
       </p>
     );
   }
+
+  const FORMULAS: Record<string, (f: (typeof fighters)[number]) => number> = {
+    OVERALL: (f) => f.wins * 10 + f.kos * 5 - f.losses * 8,
+    WBC: (f) => f.wins * 10 + f.kos * 8 - f.losses * 6,
+    WBA: (f) => f.wins * 12 - f.losses * 10,
+    IBF: (f) => f.wins * 8 + f.kos * 3 - f.losses * 10,
+    WBO: (f) =>
+      f.wins * 10 + (parseInt(f.streak, 10) || 0) * (f.streak.endsWith("W") ? 3 : 0) - f.losses * 7,
+  };
+
+  const calcPoints = FORMULAS[body];
+  const champions = pool.filter((f) => (f.beltsHeld ?? "").includes(body));
+  const contenders = pool
+    .filter((f) => !(f.beltsHeld ?? "").includes(body))
+    .map((f) => ({ fighter: f, points: calcPoints(f) }))
+    .sort((a, b) => b.points - a.points);
+
+  const bodyRankings: { fighter: (typeof fighters)[number]; rank: number; points: number }[] = [];
+  for (const c of champions) {
+    bodyRankings.push({ fighter: c, rank: 0, points: 9999 });
+  }
+  contenders.forEach((c, i) => {
+    bodyRankings.push({ fighter: c.fighter, rank: i + 1, points: c.points });
+  });
 
   return (
     <div className="overflow-hidden border border-border">
@@ -177,12 +181,11 @@ function RankingTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {bodyRankings.map((r: any) => {
+          {bodyRankings.map((r) => {
             const isChamp = r.rank === 0;
-            const fighter = fighters.find((f) => f.username === r.fighter_username);
             return (
               <tr
-                key={`${r.fighter_username}-${r.body}`}
+                key={`${r.fighter.username}-${body}`}
                 className={isChamp ? "bg-primary/5" : "bg-card"}
               >
                 <td className="px-4 py-3">
@@ -197,26 +200,22 @@ function RankingTable({
                 <td className="px-4 py-3">
                   <Link
                     to="/boxers/$username"
-                    params={{ username: r.fighter_username }}
+                    params={{ username: r.fighter.username }}
                     className="group flex items-center gap-3"
                   >
                     <div className="h-10 w-10 shrink-0">
-                      <FighterAvatar
-                        name={fighter?.displayName ?? r.fighter_username}
-                        square
-                        src={fighter?.image}
-                      />
+                      <FighterAvatar name={r.fighter.displayName} square src={r.fighter.image} />
                     </div>
                     <div>
                       <p className="font-semibold group-hover:text-primary">
-                        {fighter?.displayName ?? r.fighter_username}
+                        {r.fighter.displayName}
                       </p>
-                      <p className="text-xs text-muted-foreground">@{r.fighter_username}</p>
+                      <p className="text-xs text-muted-foreground">@{r.fighter.username}</p>
                     </div>
                   </Link>
                 </td>
                 <td className="px-4 py-3 font-mono">
-                  {fighter ? `${fighter.wins}-${fighter.losses}-${fighter.draws}` : "-"}
+                  {r.fighter.wins}-{r.fighter.losses}-{r.fighter.draws}
                 </td>
               </tr>
             );
