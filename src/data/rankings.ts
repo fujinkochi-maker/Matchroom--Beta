@@ -62,7 +62,8 @@ export async function recalculateDivision(division: string, region?: string) {
   if (region && region !== "all") {
     await delQuery.eq("region", region);
   } else {
-    await delQuery;
+    // Global: only delete entries with no region (don't nuke regional rankings)
+    await delQuery.eq("region", "");
   }
 
   const newRankings: {

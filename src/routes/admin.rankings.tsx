@@ -53,7 +53,7 @@ function AdminRankings() {
 
   const grouped = rankings.reduce(
     (acc: Record<string, any[]>, r: any) => {
-      const key = `${r.division}::${r.body}`;
+      const key = `${r.division}::${r.body}::${r.region || "Global"}`;
       if (!acc[key]) acc[key] = [];
       acc[key].push(r);
       return acc;
@@ -85,11 +85,12 @@ function AdminRankings() {
       )}
 
       {Object.entries(grouped).map(([key, entries]) => {
-        const [division, body] = key.split("::");
+        const [division, body, region2] = key.split("::");
         return (
           <div key={key} className="mt-6">
             <h2 className="mb-2 font-display text-lg uppercase">
               {division} — {body === "OVERALL" ? "Overall" : body}
+              <span className="ml-2 text-sm font-normal text-muted-foreground">({region2})</span>
             </h2>
             <div className={ADMIN_TABLE_WRAP}>
               <table className="w-full text-sm">
