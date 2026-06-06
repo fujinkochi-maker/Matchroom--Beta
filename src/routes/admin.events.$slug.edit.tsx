@@ -9,6 +9,7 @@ import {
   EVENTS,
   ensureSignupsLoaded,
   EVENT_SIGNUPS,
+  FIGHTERS,
 } from "@/data/fighters";
 import { DIVISIONS } from "@/data/types";
 import { ArrowLeft } from "lucide-react";
@@ -232,7 +233,7 @@ function EditEvent() {
                     key={s.id}
                     className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
                   >
-                    {s.fighterUsername}
+                    {FIGHTERS.find((f) => f.username === s.fighterUsername)?.displayName ?? s.fighterUsername}
                     <button
                       type="button"
                       onClick={() => handleRemoveSignup(s.id)}
