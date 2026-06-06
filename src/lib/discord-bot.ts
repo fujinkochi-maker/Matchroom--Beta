@@ -997,6 +997,24 @@ export function createHandler(
     return jsonResponse({ type: 5 });
   }
 
+  async function handleHelpCommand(): Promise<Response> {
+    const lines = [
+      "**🥊 Matchroom Boxing Beta — Commands**",
+      "",
+      "`/register` — Create your fighter profile",
+      "`/signup` — Sign up for an upcoming event",
+      "`/stats` — View your fighter record",
+      "`/rankings` — See top fighters in a division",
+      "`/champions` — List all division champions",
+      "`/fighter` — Look up another fighter's profile",
+      "`/unregister` — Delete your fighter permanently",
+      "`/help` — Show this message",
+      "",
+      "**Tip:** Type `/` in any channel to see available commands!",
+    ];
+    return ephemeral(lines.join("\n"));
+  }
+
   async function handleDiscordInteraction(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
 
@@ -1084,6 +1102,7 @@ export function createHandler(
         if (commandName === "fighter") return handleFighterCommand(interaction);
         if (commandName === "unregister") return handleUnregisterCommand(interaction);
         if (commandName === "signup") return handleSignupCommand(interaction);
+        if (commandName === "help") return handleHelpCommand();
       }
 
       if (
@@ -1206,6 +1225,12 @@ export function createHandler(
             required: true,
           },
         ],
+      },
+      {
+        name: "help",
+        description: "Show available commands and how to use them",
+        type: 1,
+        contexts: [0, 1, 2],
       },
     ];
 

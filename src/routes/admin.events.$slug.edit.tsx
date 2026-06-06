@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter, notFound } from "@tanstack/react-router";
 import { useState } from "react";
-import { updateEvent } from "@/lib/admin.server";
+import { toast } from "sonner";
+import { updateEvent, adminAddSignup, removeSignup } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import {
   ensureFightersLoaded,
@@ -8,7 +9,6 @@ import {
   EVENTS,
   ensureSignupsLoaded,
   EVENT_SIGNUPS,
-  FIGHTERS,
 } from "@/data/fighters";
 import { DIVISIONS } from "@/data/types";
 import { ArrowLeft } from "lucide-react";
@@ -58,12 +58,37 @@ function EditEvent() {
     })),
   );
   const [error, setError] = useState("");
+  const [importUsername, setImportUsername] = useState("");
 
   const eventSignups = EVENT_SIGNUPS.filter((s) => s.eventSlug === slug);
-  const signedUpFighters = eventSignups
-    .map((s) => FIGHTERS.find((f) => f.username === s.fighterUsername))
-    .filter(Boolean);
   const signupUsernames = eventSignups.map((s) => s.fighterUsername);
+
+  const handleImportSignup = async () => {
+    const token = getAdminToken();
+    if (!token || !importUsername.trim()) return;
+    try {
+      await adminAddSignup({
+        data: { token, eventSlug: slug, fighterUsername: importUsername.trim() },
+      });
+      setImportUsername("");
+      toast.success(`${importUsername.trim()} signed up`);
+      router.invalidate();
+    } catch (err) {
+      toast.error(err?.message ?? "Failed to add signup");
+    }
+  };
+
+  const handleRemoveSignup = async (id: number) => {
+    const token = getAdminToken();
+    if (!token) return;
+    try {
+      await removeSignup({ data: { token, id } });
+      toast.success("Signup removed");
+      router.invalidate();
+    } catch (err) {
+      toast.error(err?.message ?? "Failed to remove signup");
+    }
+  };
 
   const addCardRow = (slot = "maincard") => {
     setCard([...card, { fighterA: "", fighterB: "", weight: "Heavyweight", slot, title: "" }]);
@@ -179,23 +204,50 @@ function EditEvent() {
             <ImageUpload bucket="event-images" value={imageUrl} onUploaded={setImageUrl} />
           </div>
 
-          {signedUpFighters.length > 0 && (
-            <div className="rounded border border-border bg-muted/30 p-3">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Signed-up fighters ({signedUpFighters.length})
-              </p>
+          <div className="rounded border border-border bg-muted/30 p-3">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Signed-up fighters ({eventSignups.length})
+            </p>
+            <div className="mb-2 flex gap-2">
+              <input
+                className={ADMIN_INPUT}
+                value={importUsername}
+                onChange={(e) => setImportUsername(e.target.value)}
+                placeholder="Fighter username to import"
+                onKeyDown={(e) => e.key === "Enter" && handleImportSignup()}
+              />
+              <button
+                type="button"
+                onClick={handleImportSignup}
+                disabled={!importUsername.trim()}
+                className="h-10 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                Import
+              </button>
+            </div>
+            {eventSignups.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {signedUpFighters.map((f: any) => (
+                {eventSignups.map((s) => (
                   <span
-                    key={f.username}
-                    className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                    key={s.id}
+                    className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
                   >
-                    {f.username}
+                    {s.fighterUsername}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSignup(s.id)}
+                      className="ml-0.5 text-primary/60 hover:text-destructive"
+                    >
+                      &times;
+                    </button>
                   </span>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+            {eventSignups.length === 0 && (
+              <p className="text-xs text-muted-foreground">No signups yet.</p>
+            )}
+          </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">

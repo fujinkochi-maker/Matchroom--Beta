@@ -191,11 +191,50 @@ export class DiscordGatewayDO_v2 {
     this.connecting = false;
   }
 
+  async sendDM(userId: string, content: string) {
+    const token = this.botToken || this.env.DISCORD_BOT_TOKEN;
+    if (!token) return;
+    try {
+      const chRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ recipient_id: userId }),
+      });
+      if (!chRes.ok) return;
+      const { id: channelId } = await chRes.json();
+      await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      });
+    } catch (err) {
+      console.error("[DO] sendDM error:", err);
+    }
+  }
+
   async handleDispatch(data: any) {
     const { t: type, d: event } = data;
     if (type === "READY") {
       this.botUserId = event.user.id;
       console.log(`[DO] Ready as ${event.user.username}`);
+    } else if (type === "GUILD_MEMBER_ADD") {
+      const userId = event.user?.id;
+      if (userId) {
+        this.sendDM(
+          userId,
+          "**👋 Welcome to Matchroom Boxing Beta!**\n\n" +
+            "To get started, type `/register` to create your fighter profile.\n\n" +
+            "**Tip:** Type `/` in any channel to see all available commands.\n" +
+            "Use `/help` anytime for a full list.\n\n" +
+            "Good luck, champ! 🥊",
+        );
+      }
     } else if (type === "MESSAGE_CREATE") {
       // @mention replies disabled (was causing reconnect loops)
       // await this.handleMessageCreate(event);

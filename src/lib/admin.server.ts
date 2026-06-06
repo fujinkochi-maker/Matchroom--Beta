@@ -713,6 +713,26 @@ export const signupForEvent = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminAddSignup = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      token: z.string(),
+      eventSlug: z.string(),
+      fighterUsername: z.string(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!validateToken(data.token)) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    const { error } = await supabase
+      .from("event_signups")
+      .insert({ event_slug: data.eventSlug, fighter_username: data.fighterUsername });
+    if (error) throw new Error(error.message);
+    const { clearSignupsCache } = await import("@/data/fighters");
+    clearSignupsCache();
+    return { ok: true };
+  });
+
 export const removeSignup = createServerFn({ method: "POST" })
   .inputValidator(z.object({ token: z.string(), id: z.number() }))
   .handler(async ({ data }) => {

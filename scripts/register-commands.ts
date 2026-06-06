@@ -91,6 +91,12 @@ const commands: Command[] = [
       },
     ],
   },
+  {
+    name: "help",
+    description: "Show available commands and how to use them",
+    type: 1,
+    contexts: [0, 1, 2],
+  },
 ];
 
 async function main() {
