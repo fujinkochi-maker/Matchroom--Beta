@@ -20,6 +20,7 @@ interface CardRow {
   fighterA: string;
   fighterB: string;
   weight: string;
+  slot: string;
 }
 export const Route = createFileRoute("/admin/events/$slug/edit")({
   loader: async () => {
@@ -43,11 +44,11 @@ function EditEvent() {
   const [tagline, setTagline] = useState(event.tagline);
   const [imageUrl, setImageUrl] = useState(event.image ?? "");
   const [card, setCard] = useState<CardRow[]>(
-    event.card.map((c) => ({ fighterA: c.a, fighterB: c.b, weight: c.weight })),
+    event.card.map((c) => ({ fighterA: c.a, fighterB: c.b, weight: c.weight, slot: c.slot })),
   );
   const [error, setError] = useState("");
   const addCardRow = () => {
-    setCard([...card, { fighterA: "", fighterB: "", weight: "Heavyweight" }]);
+    setCard([...card, { fighterA: "", fighterB: "", weight: "Heavyweight", slot: "maincard" }]);
   };
   const removeCardRow = (idx: number) => {
     setCard(card.filter((_, i) => i !== idx));
@@ -223,7 +224,7 @@ function EditEvent() {
               </button>{" "}
             </div>{" "}
             {card.map((row, idx) => (
-              <div key={idx} className="mb-2 grid gap-2 sm:grid-cols-4">
+              <div key={idx} className="mb-2 grid gap-2 sm:grid-cols-5">
                 {" "}
                 <select
                   className={ADMIN_INPUT}
@@ -268,6 +269,17 @@ function EditEvent() {
                       {d}{" "}
                     </option>
                   ))}{" "}
+                </select>{" "}
+                <select
+                  className={ADMIN_INPUT}
+                  value={row.slot}
+                  onChange={(e) => updateCardRow(idx, "slot", e.target.value)}
+                  required
+                >
+                  <option value="prelim">Prelim</option>
+                  <option value="maincard">Main Card</option>
+                  <option value="comain">Co-Main</option>
+                  <option value="main">Main Event</option>
                 </select>{" "}
                 <button
                   type="button"

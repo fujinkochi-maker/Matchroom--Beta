@@ -21,6 +21,7 @@ import { Route as NewsIndexRouteImport } from './routes/news.index'
 import { Route as BoxersIndexRouteImport } from './routes/boxers.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as NewsSlugRouteImport } from './routes/news.$slug'
+import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as BoxersUsernameRouteImport } from './routes/boxers.$username'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
@@ -104,6 +105,11 @@ const NewsSlugRoute = NewsSlugRouteImport.update({
   id: '/news/$slug',
   path: '/news/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const EventsSlugRoute = EventsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => EventsRoute,
 } as any)
 const BoxersUsernameRoute = BoxersUsernameRouteImport.update({
   id: '/boxers/$username',
@@ -226,7 +232,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/champions': typeof ChampionsRoute
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/feed': typeof FeedRoute
   '/rankings': typeof RankingsRoute
   '/store': typeof StoreRoute
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/admin/videos': typeof AdminVideosRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
+  '/events/$slug': typeof EventsSlugRoute
   '/news/$slug': typeof NewsSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/boxers/': typeof BoxersIndexRoute
@@ -262,7 +269,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/champions': typeof ChampionsRoute
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/feed': typeof FeedRoute
   '/rankings': typeof RankingsRoute
   '/store': typeof StoreRoute
@@ -277,6 +284,7 @@ export interface FileRoutesByTo {
   '/admin/videos': typeof AdminVideosRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
+  '/events/$slug': typeof EventsSlugRoute
   '/news/$slug': typeof NewsSlugRoute
   '/admin': typeof AdminIndexRoute
   '/boxers': typeof BoxersIndexRoute
@@ -300,7 +308,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/champions': typeof ChampionsRoute
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/feed': typeof FeedRoute
   '/rankings': typeof RankingsRoute
   '/store': typeof StoreRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/admin/videos': typeof AdminVideosRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/boxers/$username': typeof BoxersUsernameRoute
+  '/events/$slug': typeof EventsSlugRoute
   '/news/$slug': typeof NewsSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/boxers/': typeof BoxersIndexRoute
@@ -354,6 +363,7 @@ export interface FileRouteTypes {
     | '/admin/videos'
     | '/auth/login'
     | '/boxers/$username'
+    | '/events/$slug'
     | '/news/$slug'
     | '/admin/'
     | '/boxers/'
@@ -390,6 +400,7 @@ export interface FileRouteTypes {
     | '/admin/videos'
     | '/auth/login'
     | '/boxers/$username'
+    | '/events/$slug'
     | '/news/$slug'
     | '/admin'
     | '/boxers'
@@ -427,6 +438,7 @@ export interface FileRouteTypes {
     | '/admin/videos'
     | '/auth/login'
     | '/boxers/$username'
+    | '/events/$slug'
     | '/news/$slug'
     | '/admin/'
     | '/boxers/'
@@ -450,7 +462,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   ChampionsRoute: typeof ChampionsRoute
-  EventsRoute: typeof EventsRoute
+  EventsRoute: typeof EventsRouteWithChildren
   FeedRoute: typeof FeedRoute
   RankingsRoute: typeof RankingsRoute
   StoreRoute: typeof StoreRoute
@@ -548,6 +560,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/news/$slug'
       preLoaderRoute: typeof NewsSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/events/$slug': {
+      id: '/events/$slug'
+      path: '/$slug'
+      fullPath: '/events/$slug'
+      preLoaderRoute: typeof EventsSlugRouteImport
+      parentRoute: typeof EventsRoute
     }
     '/boxers/$username': {
       id: '/boxers/$username'
@@ -823,11 +842,22 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface EventsRouteChildren {
+  EventsSlugRoute: typeof EventsSlugRoute
+}
+
+const EventsRouteChildren: EventsRouteChildren = {
+  EventsSlugRoute: EventsSlugRoute,
+}
+
+const EventsRouteWithChildren =
+  EventsRoute._addFileChildren(EventsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   ChampionsRoute: ChampionsRoute,
-  EventsRoute: EventsRoute,
+  EventsRoute: EventsRouteWithChildren,
   FeedRoute: FeedRoute,
   RankingsRoute: RankingsRoute,
   StoreRoute: StoreRoute,

@@ -9,6 +9,8 @@ import type {
   Product,
   Post,
   Notification,
+  EventSignup,
+  CardSlot,
 } from "./types";
 import { DIVISIONS } from "./types";
 import { getSupabase } from "@/lib/supabase";
@@ -22,6 +24,7 @@ const _videos: Video[] = [];
 const _products: Product[] = [];
 const _posts: Post[] = [];
 const _notifications: Notification[] = [];
+const _eventSignups: EventSignup[] = [];
 
 /* ============ Public exports ============ */
 
@@ -86,8 +89,15 @@ export const CATS = [
 ] as const;
 
 export const EVENTS = _events;
+export const EVENT_SIGNUPS: ReadonlyArray<EventSignup> = _eventSignups;
 export const upcomingEvents = () => EVENTS.filter((e) => e.status === "upcoming");
 export const nextEvent = () => upcomingEvents()[0];
+export const getSignupsForEvent = (slug: string) =>
+  _eventSignups.filter((s) => s.eventSlug === slug);
+export const getSignedUpFighters = (slug: string) => {
+  const usernames = new Set(getSignupsForEvent(slug).map((s) => s.fighterUsername));
+  return _fighters.filter((f) => usernames.has(f.username));
+};
 
 export const ARTICLES = _articles;
 export const getArticleBySlug = (s: string) => ARTICLES.find((a) => a.slug === s);
@@ -201,6 +211,34 @@ async function _loadTable<T>(
   }
 }
 
+export function clearSignupsCache() {
+  delete _lastLoaded["_eventSignups"];
+  _eventSignups.length = 0;
+}
+
+export async function ensureSignupsLoaded() {
+  const k = "_eventSignups";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable(
+    "event_signups",
+    _eventSignups,
+    rowToSignupFromRow,
+    undefined,
+    "event_signups",
+  );
+  await _loadPromises[k];
+  _loadPromises[k] = null;
+}
+
+function rowToSignupFromRow(row: any): EventSignup {
+  return {
+    id: row.id,
+    eventSlug: row.event_slug,
+    fighterUsername: row.fighter_username,
+    signedUpAt: row.signed_up_at,
+  };
+}
+
 export function clearFightersCache() {
   delete _lastLoaded["_fighters"];
 }
@@ -284,7 +322,12 @@ export async function ensureEventsLoaded() {
           const ec = cards.filter((c: any) => c.event_slug === e.slug);
           _events[i] = {
             ...e,
-            card: ec.map((c: any) => ({ a: c.fighter_a, b: c.fighter_b, weight: c.weight })),
+            card: ec.map((c: any) => ({
+              a: c.fighter_a,
+              b: c.fighter_b,
+              weight: c.weight,
+              slot: c.slot ?? "maincard",
+            })),
           };
         }
       },
@@ -498,7 +541,12 @@ function rowToEvent(row: any, cards: any[]): BoxingEvent {
     date: row.date,
     arena: row.arena,
     mainEvent: { a: row.main_event_a, b: row.main_event_b, title: row.main_event_title },
-    card: cards.map((c: any) => ({ a: c.fighter_a, b: c.fighter_b, weight: c.weight })),
+    card: cards.map((c: any) => ({
+      a: c.fighter_a,
+      b: c.fighter_b,
+      weight: c.weight,
+      slot: c.slot ?? "maincard",
+    })),
     status: row.status,
     tagline: row.tagline,
     image: row.image_url ?? undefined,
@@ -571,7 +619,12 @@ export async function loadDataFromSupabase() {
               const ec = cards.filter((c: any) => c.event_slug === e.slug);
               _events[i] = {
                 ...e,
-                card: ec.map((c: any) => ({ a: c.fighter_a, b: c.fighter_b, weight: c.weight })),
+                card: ec.map((c: any) => ({
+                  a: c.fighter_a,
+                  b: c.fighter_b,
+                  weight: c.weight,
+                  slot: c.slot ?? "maincard",
+                })),
               };
             }
           },
@@ -640,6 +693,7 @@ export async function loadDataFromSupabase() {
         undefined,
         "notifications",
       ),
+      _loadTable("event_signups", _eventSignups, rowToSignupFromRow, undefined, "event_signups"),
     ]);
   } catch {
     // Data will load on next access if Supabase is unavailable

@@ -239,3 +239,17 @@ ALTER TABLE products DROP COLUMN IF EXISTS hue;
 ALTER TABLE fighters ADD COLUMN IF NOT EXISTS guild_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE fighters ADD COLUMN IF NOT EXISTS region TEXT NOT NULL DEFAULT '';
 ALTER TABLE rankings ADD COLUMN IF NOT EXISTS region TEXT NOT NULL DEFAULT '';
+
+-- Event signups
+CREATE TABLE IF NOT EXISTS event_signups (
+  id SERIAL PRIMARY KEY,
+  event_slug TEXT NOT NULL REFERENCES events(slug) ON DELETE CASCADE,
+  fighter_username TEXT NOT NULL REFERENCES fighters(username) ON DELETE CASCADE,
+  signed_up_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (event_slug, fighter_username)
+);
+CREATE INDEX IF NOT EXISTS idx_event_signups_event ON event_signups(event_slug);
+
+-- Slot for card positioning
+ALTER TABLE event_cards ADD COLUMN IF NOT EXISTS slot TEXT NOT NULL DEFAULT 'maincard'
+  CHECK (slot IN ('prelim', 'maincard', 'comain', 'main'));

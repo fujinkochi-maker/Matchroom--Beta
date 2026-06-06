@@ -557,6 +557,7 @@ const cardSchema = z.object({
   fighterA: z.string(),
   fighterB: z.string(),
   weight: z.enum(DIVISIONS),
+  slot: z.enum(["prelim", "maincard", "comain", "main"]).default("maincard"),
 });
 
 const eventSchema = z.object({
@@ -600,6 +601,7 @@ export const createEvent = createServerFn({ method: "POST" })
           fighter_a: c.fighterA,
           fighter_b: c.fighterB,
           weight: c.weight,
+          slot: c.slot,
         })),
       );
       if (cardErr) throw new Error(cardErr.message);
@@ -634,6 +636,7 @@ export const updateEvent = createServerFn({ method: "POST" })
           fighter_a: c.fighterA,
           fighter_b: c.fighterB,
           weight: c.weight,
+          slot: c.slot,
         })),
       );
       if (cardErr) throw new Error(cardErr.message);
@@ -649,6 +652,71 @@ export const deleteEvent = createServerFn({ method: "POST" })
     const { error } = await supabase.from("events").delete().eq("slug", data.slug);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/* ============ Event Signups ============ */
+
+export const signupForEvent = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      eventSlug: z.string(),
+      fighterUsername: z.string(),
+      adminWebhookUrl: z.string().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const supabase = getAdminSupabase();
+    const { error } = await supabase
+      .from("event_signups")
+      .insert({ event_slug: data.eventSlug, fighter_username: data.fighterUsername });
+    if (error) throw new Error(error.message);
+
+    const { data: fighter } = await supabase
+      .from("fighters")
+      .select("display_name, wins, losses, draws, kos, division")
+      .eq("username", data.fighterUsername)
+      .single();
+
+    const webhookUrl = data.adminWebhookUrl || process.env.ADMIN_WEBHOOK_URL;
+    if (webhookUrl) {
+      const record = fighter
+        ? `${fighter.display_name} (${fighter.division}) — ${fighter.wins}-${fighter.losses}-${fighter.draws} (${fighter.kos} KOs)`
+        : data.fighterUsername;
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: `🥊 **New Signup**\nFighter: ${record}` }),
+      }).catch(() => {});
+    }
+
+    const { clearSignupsCache } = await import("@/data/fighters");
+    clearSignupsCache();
+    return { ok: true };
+  });
+
+export const removeSignup = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), id: z.number() }))
+  .handler(async ({ data }) => {
+    if (!validateToken(data.token)) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    await supabase.from("event_signups").delete().eq("id", data.id);
+    const { clearSignupsCache } = await import("@/data/fighters");
+    clearSignupsCache();
+    return { ok: true };
+  });
+
+export const getEventSignups = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), eventSlug: z.string() }))
+  .handler(async ({ data }) => {
+    if (!validateToken(data.token)) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    const { data: signups } = await supabase
+      .from("event_signups")
+      .select(
+        "*, fighters:fighter_username(display_name, wins, losses, draws, kos, division, region)",
+      )
+      .eq("event_slug", data.eventSlug);
+    return { signups: signups ?? [] };
   });
 
 /* ============ Articles ============ */

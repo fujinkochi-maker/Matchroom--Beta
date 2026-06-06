@@ -57,16 +57,32 @@ export interface Fighter {
   guildId?: string;
 }
 
+export type CardSlot = "prelim" | "maincard" | "comain" | "main";
+export const CARD_SLOTS: CardSlot[] = ["prelim", "maincard", "comain", "main"];
+export const CARD_SLOT_LABELS: Record<CardSlot, string> = {
+  prelim: "Preliminary",
+  maincard: "Main Card",
+  comain: "Co-Main Event",
+  main: "Main Event",
+};
+
 export interface BoxingEvent {
   slug: string;
   name: string;
   date: string; // ISO
   arena: string;
   mainEvent: { a: string; b: string; title: string };
-  card: { a: string; b: string; weight: Division }[];
+  card: { a: string; b: string; weight: Division; slot: CardSlot }[];
   status: "upcoming" | "past";
   tagline: string;
   image?: string;
+}
+
+export interface EventSignup {
+  id: number;
+  eventSlug: string;
+  fighterUsername: string;
+  signedUpAt: string;
 }
 
 export interface Article {

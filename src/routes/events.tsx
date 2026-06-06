@@ -1,8 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { MapPin, Play } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { MapPin, Play, Users } from "lucide-react";
 import { Countdown } from "@/components/Countdown";
 import { FighterAvatar } from "@/components/FighterAvatar";
-import { EVENTS, FIGHTERS, ensureEventsLoaded, ensureFightersLoaded } from "@/data/fighters";
+import {
+  EVENTS,
+  FIGHTERS,
+  ensureEventsLoaded,
+  ensureFightersLoaded,
+  ensureSignupsLoaded,
+  getSignupsForEvent,
+} from "@/data/fighters";
 import type { Fighter } from "@/data/types";
 import { hashHue } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +19,7 @@ export const Route = createFileRoute("/events")({
   pendingMinMs: 300,
   pendingComponent: EventsSkeleton,
   loader: async () => {
-    await Promise.all([ensureEventsLoaded(), ensureFightersLoaded()]);
+    await Promise.all([ensureEventsLoaded(), ensureFightersLoaded(), ensureSignupsLoaded()]);
     return { events: EVENTS, fighters: FIGHTERS };
   },
   head: () => ({
@@ -108,63 +115,74 @@ function EventCard({
   const a = fighters.find((f) => f.username === event.mainEvent.a);
   const b = fighters.find((f) => f.username === event.mainEvent.b);
   if (!a || !b) return null;
+  const signupCount = getSignupsForEvent(event.slug).length;
   return (
-    <article className="overflow-hidden border border-border bg-card shadow-card">
-      <div className="relative bg-foreground p-6 text-background">
-        <div
-          className="absolute inset-0 opacity-40"
-          style={{
-            background: `linear-gradient(120deg, hsl(${hashHue(a.displayName)} 70% 30%), hsl(${hashHue(b.displayName)} 70% 30%))`,
-          }}
-        />
-        <div className="relative">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-            {event.mainEvent.title}
-          </p>
-          <h3 className="mt-1 font-display text-3xl uppercase leading-none">{event.name}</h3>
-          <p className="mt-1 text-xs text-background/70">
-            {new Date(event.date).toLocaleDateString(undefined, {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}{" "}
-            • {event.arena}
-          </p>
+    <Link to="/events/$slug" params={{ slug: event.slug }} className="group block">
+      <article className="overflow-hidden border border-border bg-card shadow-card transition-colors group-hover:border-primary">
+        <div className="relative bg-foreground p-6 text-background">
+          <div
+            className="absolute inset-0 opacity-40"
+            style={{
+              background: `linear-gradient(120deg, hsl(${hashHue(a.displayName)} 70% 30%), hsl(${hashHue(b.displayName)} 70% 30%))`,
+            }}
+          />
+          <div className="relative">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+              {event.mainEvent.title}
+            </p>
+            <h3 className="mt-1 font-display text-3xl uppercase leading-none">{event.name}</h3>
+            <p className="mt-1 text-xs text-background/70">
+              {new Date(event.date).toLocaleDateString(undefined, {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}{" "}
+              • {event.arena}
+            </p>
 
-          <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <FighterMini f={a} side="left" />
-            <span className="font-display text-3xl text-primary">VS</span>
-            <FighterMini f={b} side="right" />
-          </div>
+            <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <FighterMini f={a} side="left" />
+              <span className="font-display text-3xl text-primary">VS</span>
+              <FighterMini f={b} side="right" />
+            </div>
 
-          <div className="mt-5">
-            <Countdown targetISO={event.date} compact />
+            <div className="mt-5">
+              <Countdown targetISO={event.date} compact />
+            </div>
           </div>
         </div>
-      </div>
-      <div className="p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          Full Card
-        </p>
-        <ul className="mt-2 divide-y divide-border">
-          {event.card.map((b, i) => {
-            const aName = fighters.find((f) => f.username === b.a)?.displayName;
-            const bName = fighters.find((f) => f.username === b.b)?.displayName;
-            return (
-              <li key={i} className="flex items-center justify-between py-2 text-sm">
-                <span className="font-semibold">
-                  {aName} <span className="text-muted-foreground">vs</span> {bName}
-                </span>
-                <span className="text-xs uppercase tracking-wider text-primary">{b.weight}</span>
-              </li>
-            );
-          })}
-        </ul>
-        <button className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-primary px-4 py-3 text-sm font-bold uppercase tracking-wider text-primary-foreground hover:bg-primary-dark">
-          <Play className="h-4 w-4" /> Watch Now
-        </button>
-      </div>
-    </article>
+        <div className="p-5">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Full Card
+          </p>
+          <ul className="mt-2 divide-y divide-border">
+            {event.card.map((b, i) => {
+              const aName = fighters.find((f) => f.username === b.a)?.displayName;
+              const bName = fighters.find((f) => f.username === b.b)?.displayName;
+              return (
+                <li key={i} className="flex items-center justify-between py-2 text-sm">
+                  <span className="font-semibold">
+                    {aName} <span className="text-muted-foreground">vs</span> {bName}
+                  </span>
+                  <span className="text-xs uppercase tracking-wider text-primary">{b.weight}</span>
+                </li>
+              );
+            })}
+          </ul>
+          {event.status === "upcoming" && signupCount > 0 && (
+            <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+              <Users className="h-3 w-3" />
+              <span>
+                {signupCount} fighter{signupCount !== 1 ? "s" : ""} signed up
+              </span>
+            </div>
+          )}
+          <div className="mt-3 inline-flex w-full items-center justify-center gap-2 bg-primary px-4 py-3 text-sm font-bold uppercase tracking-wider text-primary-foreground hover:bg-primary-dark">
+            <Play className="h-4 w-4" /> View Event
+          </div>
+        </div>
+      </article>
+    </Link>
   );
 }
 
