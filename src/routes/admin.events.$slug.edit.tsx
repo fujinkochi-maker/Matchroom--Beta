@@ -10,6 +10,7 @@ import {
   ensureSignupsLoaded,
   EVENT_SIGNUPS,
   FIGHTERS,
+  clearSignupsCache,
 } from "@/data/fighters";
 import { DIVISIONS } from "@/data/types";
 import { ArrowLeft } from "lucide-react";
@@ -72,6 +73,7 @@ function EditEvent() {
         data: { token, eventSlug: slug, fighterUsername: importUsername.trim() },
       });
       setImportUsername("");
+      clearSignupsCache();
       toast.success(`${importUsername.trim()} signed up`);
       router.invalidate();
     } catch (err) {
@@ -84,6 +86,7 @@ function EditEvent() {
     if (!token) return;
     try {
       await removeSignup({ data: { token, id } });
+      clearSignupsCache();
       toast.success("Signup removed");
       router.invalidate();
     } catch (err) {

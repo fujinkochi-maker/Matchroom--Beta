@@ -732,68 +732,63 @@ export const adminAddSignup = createServerFn({ method: "POST" })
     const { clearSignupsCache } = await import("@/data/fighters");
     clearSignupsCache();
 
-    // Send admin webhook
-    const webhookUrl = process.env.ADMIN_WEBHOOK_URL;
-    if (webhookUrl) {
-      const { data: f } = await supabase
+    // Fetch event + fighter info for webhook + DM
+    const [evRes, fRes] = await Promise.all([
+      supabase.from("events").select("name, arena, date").eq("slug", data.eventSlug).single(),
+      supabase
         .from("fighters")
-        .select("display_name, division")
+        .select("display_name, division, discord_id")
         .eq("username", data.fighterUsername)
-        .single();
-      const label = f ? `${f.display_name} (${f.division})` : data.fighterUsername;
+        .single(),
+    ]);
+    const ev = evRes.data;
+    const fighter = fRes.data;
+    const fighterLabel = fighter
+      ? `${fighter.display_name} (${fighter.division})`
+      : data.fighterUsername;
+    const dateStr = ev?.date
+      ? new Date(ev.date).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "TBD";
+
+    // Admin webhook — same format as Discord signup webhook
+    const webhookUrl = process.env.ADMIN_WEBHOOK_URL;
+    if (webhookUrl && ev) {
       fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content: `🔔 **Admin import:** ${label} signed up for **${data.eventSlug}**`,
+          content: `🔔 ${fighterLabel} signed up for ${ev.name} (${dateStr})`,
         }),
       }).catch(() => {});
     }
 
-    // Send DM to fighter
+    // DM to fighter
     const token = process.env.DISCORD_BOT_TOKEN;
-    if (token) {
-      const { data: fighter } = await supabase
-        .from("fighters")
-        .select("discord_id, display_name")
-        .eq("username", data.fighterUsername)
-        .single();
-      const discordId = fighter?.discord_id;
-      if (discordId) {
-        try {
-          const chRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+    const discordId = fighter?.discord_id;
+    if (token && discordId && ev) {
+      try {
+        const chRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+          method: "POST",
+          headers: discordHeaders(),
+          body: JSON.stringify({ recipient_id: discordId }),
+        });
+        if (chRes.ok) {
+          const { id: channelId } = await chRes.json();
+          await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
             method: "POST",
             headers: discordHeaders(),
-            body: JSON.stringify({ recipient_id: discordId }),
+            body: JSON.stringify({
+              content: `✅ **You've been signed up!**\n\n**${ev.name}**\n📍 ${ev.arena}\n📅 ${dateStr}\n\nCheck the event page for fight card updates.`,
+            }),
           });
-          if (chRes.ok) {
-            const { id: channelId } = await chRes.json();
-            const { data: ev } = await supabase
-              .from("events")
-              .select("name, arena, date")
-              .eq("slug", data.eventSlug)
-              .single();
-            if (ev) {
-              const dateStr = ev.date
-                ? new Date(ev.date).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                : "TBD";
-              await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
-                method: "POST",
-                headers: discordHeaders(),
-                body: JSON.stringify({
-                  content: `✅ **You've been signed up!**\n\n**${ev.name}**\n📍 ${ev.arena}\n📅 ${dateStr}\n\nCheck the event page for fight card updates.`,
-                }),
-              });
-            }
-          }
-        } catch (dmErr) {
-          console.error("[adminAddSignup] DM failed:", dmErr);
         }
+      } catch (dmErr) {
+        console.error("[adminAddSignup] DM failed:", dmErr);
       }
     }
 
