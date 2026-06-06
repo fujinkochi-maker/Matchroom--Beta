@@ -101,7 +101,7 @@ function EventDetailPage() {
       <section className="container-x -mt-10">
         <div className="relative overflow-hidden border border-border bg-card shadow-card">
           <div className="p-6 md:p-10">
-            <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-red-600">
               {mainTitle}
             </p>
             <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8">
@@ -124,7 +124,7 @@ function EventDetailPage() {
                 )}
               </div>
               <div className="text-center">
-                <span className="font-display text-4xl text-primary md:text-6xl">VS</span>
+                <span className="font-display text-4xl text-red-600 md:text-6xl">VS</span>
               </div>
               <div className="text-center">
                 <div className="mx-auto w-24 md:w-32">
@@ -185,7 +185,7 @@ function EventDetailPage() {
                                 {lastName(fa?.displayName ?? entry.a)}
                               </span>
                             </Link>
-                            <span className="font-display text-sm text-muted-foreground">VS</span>
+                            <span className="font-display text-sm text-red-600">VS</span>
                             <Link
                               to="/boxers/$username"
                               params={{ username: entry.b }}
