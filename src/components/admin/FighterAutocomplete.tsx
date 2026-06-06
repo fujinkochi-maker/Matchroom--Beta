@@ -28,11 +28,12 @@ export function FighterAutocomplete({
       f.displayName.toLowerCase().includes(query),
   ).slice(0, 15);
 
-  const exactMatch = pool.find((f) => f.username === input.trim());
+  const exactMatch = pool.find((f) => f.username === input.trim() || f.displayName.toLowerCase() === input.trim().toLowerCase());
 
   useEffect(() => {
-    setInput(value);
-  }, [value]);
+    const f = pool.find((p) => p.username === value);
+    setInput(f ? f.displayName : value);
+  }, [value, pool]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -64,7 +65,7 @@ export function FighterAutocomplete({
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
               onMouseDown={(e) => {
                 e.preventDefault();
-                setInput(f.username);
+                setInput(f.displayName);
                 onChange(f.username);
                 setOpen(false);
               }}
