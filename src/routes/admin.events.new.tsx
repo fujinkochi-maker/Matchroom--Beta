@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { createEvent } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
-import { ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
+import { ensureFightersLoaded } from "@/data/fighters";
 import { DIVISIONS } from "@/data/types";
 import { ArrowLeft } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
@@ -30,7 +30,6 @@ export const Route = createFileRoute("/admin/events/new")({
 });
 function NewEvent() {
   const router = useRouter();
-  const fighters = FIGHTERS;
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
@@ -138,43 +137,25 @@ function NewEvent() {
               />{" "}
             </div>{" "}
             <div>
-              {" "}
-              <label className={ADMIN_LABEL}>Main Event A</label>{" "}
-              <select
+              <label className={ADMIN_LABEL}>Main Event A</label>
+              <input
                 className={ADMIN_INPUT}
                 value={mainEventA}
                 onChange={(e) => setMainEventA(e.target.value)}
+                placeholder="username"
                 required
-              >
-                {" "}
-                <option value="">Select fighter</option>{" "}
-                {fighters.map((f) => (
-                  <option key={f.username} value={f.username}>
-                    {" "}
-                    {f.username}{" "}
-                  </option>
-                ))}{" "}
-              </select>{" "}
-            </div>{" "}
+              />
+            </div>
             <div>
-              {" "}
-              <label className={ADMIN_LABEL}>Main Event B</label>{" "}
-              <select
+              <label className={ADMIN_LABEL}>Main Event B</label>
+              <input
                 className={ADMIN_INPUT}
                 value={mainEventB}
                 onChange={(e) => setMainEventB(e.target.value)}
+                placeholder="username"
                 required
-              >
-                {" "}
-                <option value="">Select fighter</option>{" "}
-                {fighters.map((f) => (
-                  <option key={f.username} value={f.username}>
-                    {" "}
-                    {f.username}{" "}
-                  </option>
-                ))}{" "}
-              </select>{" "}
-            </div>{" "}
+              />
+            </div>
             <div>
               {" "}
               <label className={ADMIN_LABEL}>Main Event Title</label>{" "}
@@ -230,36 +211,20 @@ function NewEvent() {
             {card.map((row, idx) => (
               <div key={idx} className="mb-2 grid gap-2 sm:grid-cols-5">
                 {" "}
-                <select
+                <input
                   className={ADMIN_INPUT}
                   value={row.fighterA}
                   onChange={(e) => updateCardRow(idx, "fighterA", e.target.value)}
+                  placeholder="Fighter A username"
                   required
-                >
-                  {" "}
-                  <option value="">Fighter A</option>{" "}
-                  {fighters.map((f) => (
-                    <option key={f.username} value={f.username}>
-                      {" "}
-                      {f.username}{" "}
-                    </option>
-                  ))}{" "}
-                </select>{" "}
-                <select
+                />
+                <input
                   className={ADMIN_INPUT}
                   value={row.fighterB}
                   onChange={(e) => updateCardRow(idx, "fighterB", e.target.value)}
+                  placeholder="Fighter B username"
                   required
-                >
-                  {" "}
-                  <option value="">Fighter B</option>{" "}
-                  {fighters.map((f) => (
-                    <option key={f.username} value={f.username}>
-                      {" "}
-                      {f.username}{" "}
-                    </option>
-                  ))}{" "}
-                </select>{" "}
+                />
                 <select
                   className={ADMIN_INPUT}
                   value={row.weight}
