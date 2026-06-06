@@ -253,3 +253,9 @@ CREATE INDEX IF NOT EXISTS idx_event_signups_event ON event_signups(event_slug);
 -- Slot for card positioning
 ALTER TABLE event_cards ADD COLUMN IF NOT EXISTS slot TEXT NOT NULL DEFAULT 'maincard'
   CHECK (slot IN ('prelim', 'maincard', 'comain', 'main'));
+
+-- Drop FK constraints on fighter columns so admins can type any username
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_main_event_a_fkey;
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_main_event_b_fkey;
+ALTER TABLE event_cards DROP CONSTRAINT IF EXISTS event_cards_fighter_a_fkey;
+ALTER TABLE event_cards DROP CONSTRAINT IF EXISTS event_cards_fighter_b_fkey;
