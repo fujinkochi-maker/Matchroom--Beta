@@ -4,10 +4,14 @@ import { createClient } from "@supabase/supabase-js";
 import { setSupabaseEnv } from "@/lib/supabase";
 import {
   FIGHTERS,
+  EVENTS,
   getRanked,
   getChampions,
   getByUsername,
   loadDataFromSupabase,
+  ensureSignupsLoaded,
+  getSignupsForEvent,
+  clearSignupsCache,
 } from "@/data/fighters";
 
 const DISCORD_API = "https://discord.com/api/v10";
@@ -874,6 +878,106 @@ export function createHandler(
     return jsonResponse({ type: 6 });
   }
 
+  async function handleSignupCommand(interaction: any): Promise<Response> {
+    const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+    if (!discordId) return ephemeral("Could not identify you.");
+
+    const fighter = FIGHTERS.find((f: any) => f.discordId === discordId);
+    if (!fighter) return ephemeral("You're not registered yet! Use `/register` first.");
+
+    const eventSlug = getOptionValue(interaction.data.options, "event");
+    if (!eventSlug) return ephemeral("Please provide an event slug.");
+
+    const appId = interaction.application_id;
+    const intToken = interaction.token;
+
+    const bgTask = (async () => {
+      try {
+        await ensureSignupsLoaded();
+
+        const event = EVENTS.find((e: any) => e.slug === eventSlug);
+        if (!event) {
+          const upcoming = EVENTS.filter((e: any) => e.status === "upcoming");
+          const list = upcoming.map((e: any) => `\`${e.slug}\` — ${e.name}`).join("\n");
+          await editDeferredResponse(
+            appId,
+            intToken,
+            `Event **${eventSlug}** not found.${
+              list ? "\n\n**Upcoming events:**\n" + list : "\nNo upcoming events right now."
+            }`,
+          );
+          return;
+        }
+
+        if (event.status !== "upcoming") {
+          await editDeferredResponse(
+            appId,
+            intToken,
+            `**${event.name}** is not an upcoming event.`,
+          );
+          return;
+        }
+
+        const existing = getSignupsForEvent(eventSlug);
+        if (existing.some((s: any) => s.fighterUsername === fighter.username)) {
+          await editDeferredResponse(
+            appId,
+            intToken,
+            `You're already signed up for **${event.name}**!`,
+          );
+          return;
+        }
+
+        const supabase = getSupabaseAdmin();
+        const { error } = await supabase.from("event_signups").insert({
+          event_slug: eventSlug,
+          fighter_username: fighter.username,
+        });
+
+        if (error) {
+          console.error("[Signup] Insert error:", error);
+          await editDeferredResponse(appId, intToken, "❌ Failed to sign up. Try again later.");
+          return;
+        }
+
+        clearSignupsCache();
+
+        // Send admin webhook notification
+        const webhookUrl = env.ADMIN_WEBHOOK_URL;
+        if (webhookUrl) {
+          const date = event.date
+            ? new Date(event.date).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
+            : "TBD";
+          const payload = {
+            content: `🔔 **${fighter.displayName}** (@${fighter.username}) signed up for **${event.name}** (${date})`,
+          };
+          fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }).catch(() => {});
+        }
+
+        await editDeferredResponse(
+          appId,
+          intToken,
+          `✅ You're signed up for **${event.name}**! Check the event page for fight card updates.`,
+        );
+      } catch (err) {
+        console.error("[Signup] Background error:", err);
+        await editDeferredResponse(appId, intToken, "❌ Something went wrong. Try again.");
+      }
+    })();
+
+    if (waitUntil) waitUntil(bgTask);
+
+    return jsonResponse({ type: 5 });
+  }
+
   async function handleDiscordInteraction(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
 
@@ -960,6 +1064,7 @@ export function createHandler(
         if (commandName === "champions") return handleChampionsCommand(interaction);
         if (commandName === "fighter") return handleFighterCommand(interaction);
         if (commandName === "unregister") return handleUnregisterCommand(interaction);
+        if (commandName === "signup") return handleSignupCommand(interaction);
       }
 
       if (
@@ -1068,6 +1173,20 @@ export function createHandler(
         description: "Delete your fighter permanently",
         type: 1,
         contexts: [0, 1, 2],
+      },
+      {
+        name: "signup",
+        description: "Sign up for an upcoming event",
+        type: 1,
+        contexts: [0, 1, 2],
+        options: [
+          {
+            type: 3,
+            name: "event",
+            description: "Event slug (e.g. fight-night-1)",
+            required: true,
+          },
+        ],
       },
     ];
 

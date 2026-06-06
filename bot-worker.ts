@@ -80,6 +80,20 @@ async function registerCommands() {
       type: 1,
       contexts: [0, 1, 2],
     },
+    {
+      name: "signup",
+      description: "Sign up for an upcoming event",
+      type: 1,
+      contexts: [0, 1, 2],
+      options: [
+        {
+          type: 3,
+          name: "event",
+          description: "Event slug (e.g. fight-night-1)",
+          required: true,
+        },
+      ],
+    },
   ];
 
   const maxRetries = 3;
