@@ -728,8 +728,75 @@ export const adminAddSignup = createServerFn({ method: "POST" })
       .from("event_signups")
       .insert({ event_slug: data.eventSlug, fighter_username: data.fighterUsername });
     if (error) throw new Error(error.message);
+
     const { clearSignupsCache } = await import("@/data/fighters");
     clearSignupsCache();
+
+    // Send admin webhook
+    const webhookUrl = process.env.ADMIN_WEBHOOK_URL;
+    if (webhookUrl) {
+      const { data: f } = await supabase
+        .from("fighters")
+        .select("display_name, division")
+        .eq("username", data.fighterUsername)
+        .single();
+      const label = f ? `${f.display_name} (${f.division})` : data.fighterUsername;
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `🔔 **Admin import:** ${label} signed up for **${data.eventSlug}**`,
+        }),
+      }).catch(() => {});
+    }
+
+    // Send DM to fighter
+    const token = process.env.DISCORD_BOT_TOKEN;
+    if (token) {
+      const { data: fighter } = await supabase
+        .from("fighters")
+        .select("discord_id, display_name")
+        .eq("username", data.fighterUsername)
+        .single();
+      const discordId = fighter?.discord_id;
+      if (discordId) {
+        try {
+          const chRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+            method: "POST",
+            headers: discordHeaders(),
+            body: JSON.stringify({ recipient_id: discordId }),
+          });
+          if (chRes.ok) {
+            const { id: channelId } = await chRes.json();
+            const { data: ev } = await supabase
+              .from("events")
+              .select("name, arena, date")
+              .eq("slug", data.eventSlug)
+              .single();
+            if (ev) {
+              const dateStr = ev.date
+                ? new Date(ev.date).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "TBD";
+              await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+                method: "POST",
+                headers: discordHeaders(),
+                body: JSON.stringify({
+                  content: `✅ **You've been signed up!**\n\n**${ev.name}**\n📍 ${ev.arena}\n📅 ${dateStr}\n\nCheck the event page for fight card updates.`,
+                }),
+              });
+            }
+          }
+        } catch (dmErr) {
+          console.error("[adminAddSignup] DM failed:", dmErr);
+        }
+      }
+    }
+
     return { ok: true };
   });
 
