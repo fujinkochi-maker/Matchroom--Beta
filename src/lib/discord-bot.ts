@@ -962,10 +962,29 @@ export function createHandler(
           }).catch(() => {});
         }
 
+        // Send DM confirmation to fighter
+        try {
+          const dmChannelId = await createDM(discordId);
+          const dateStr = event.date
+            ? new Date(event.date).toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })
+            : "TBD";
+          await sendMessage(
+            dmChannelId,
+            `✅ **You're signed up!**\n\n**${event.name}**\n📍 ${event.arena}\n📅 ${dateStr}\n\nCheck the event page for fight card updates.`,
+          );
+        } catch (dmErr) {
+          console.error("[Signup] DM failed:", dmErr);
+        }
+
         await editDeferredResponse(
           appId,
           intToken,
-          `✅ You're signed up for **${event.name}**! Check the event page for fight card updates.`,
+          `✅ You're signed up for **${event.name}**! Check your DMs for details.`,
         );
       } catch (err) {
         console.error("[Signup] Background error:", err);

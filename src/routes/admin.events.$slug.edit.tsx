@@ -13,6 +13,7 @@ import {
 import { DIVISIONS } from "@/data/types";
 import { ArrowLeft } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import { FighterAutocomplete } from "@/components/admin/FighterAutocomplete";
 import {
   ADMIN_INPUT,
   ADMIN_TEXTAREA,
@@ -218,19 +219,15 @@ function EditEvent() {
             {card.map((row, idx) => (
               <div key={idx} className="mb-3 rounded border border-border p-3">
                 <div className="mb-2 grid gap-2 sm:grid-cols-5">
-                  <input
-                    className={ADMIN_INPUT}
+                  <FighterAutocomplete
                     value={row.fighterA}
-                    onChange={(e) => updateCardRow(idx, "fighterA", e.target.value)}
+                    onChange={(v) => updateCardRow(idx, "fighterA", v)}
                     placeholder="Fighter A username"
-                    required
                   />
-                  <input
-                    className={ADMIN_INPUT}
+                  <FighterAutocomplete
                     value={row.fighterB}
-                    onChange={(e) => updateCardRow(idx, "fighterB", e.target.value)}
+                    onChange={(v) => updateCardRow(idx, "fighterB", v)}
                     placeholder="Fighter B username"
-                    required
                   />
                   <select
                     className={ADMIN_INPUT}

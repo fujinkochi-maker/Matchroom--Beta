@@ -1,7 +1,12 @@
 import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack/react-router";
-import { ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Pencil, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
-import { ensureEventsLoaded, EVENTS } from "@/data/fighters";
+import {
+  ensureEventsLoaded,
+  EVENTS,
+  ensureSignupsLoaded,
+  getSignupsForEvent,
+} from "@/data/fighters";
 import { deleteEvent } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
@@ -19,7 +24,7 @@ const PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/admin/events")({
   loader: async () => {
-    await ensureEventsLoaded();
+    await Promise.all([ensureEventsLoaded(), ensureSignupsLoaded()]);
   },
   component: AdminEvents,
 });
@@ -155,6 +160,7 @@ function AdminEvents() {
               <SortTh label="Name" sortKey="name" />
               <SortTh label="Date" sortKey="date" />
               <th className="px-4 py-3 font-semibold">Main Event</th>
+              <th className="px-4 py-3 font-semibold">Signups</th>
               <SortTh label="Status" sortKey="status" />
               <th className="px-4 py-3" />
             </tr>
@@ -167,6 +173,12 @@ function AdminEvents() {
                 <td className="px-4 py-3 text-muted-foreground">{e.date}</td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {e.mainEvent.a} vs {e.mainEvent.b}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users className="h-3 w-3" />
+                    {getSignupsForEvent(e.slug).length}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
                   <span
@@ -196,7 +208,7 @@ function AdminEvents() {
             ))}
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                   No events yet.
                 </td>
               </tr>
