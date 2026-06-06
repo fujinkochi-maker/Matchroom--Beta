@@ -209,18 +209,18 @@ function EditEvent() {
               Signed-up fighters ({eventSignups.length})
             </p>
             <div className="mb-2 flex gap-2">
-              <input
-                className={ADMIN_INPUT}
-                value={importUsername}
-                onChange={(e) => setImportUsername(e.target.value)}
-                placeholder="Fighter username to import"
-                onKeyDown={(e) => e.key === "Enter" && handleImportSignup()}
-              />
+              <div className="flex-1">
+                <FighterAutocomplete
+                  value={importUsername}
+                  onChange={setImportUsername}
+                  placeholder="Search fighter or type username"
+                />
+              </div>
               <button
                 type="button"
                 onClick={handleImportSignup}
                 disabled={!importUsername.trim()}
-                className="h-10 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="h-10 shrink-0 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 Import
               </button>
