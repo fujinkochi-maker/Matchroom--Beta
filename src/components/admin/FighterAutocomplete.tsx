@@ -6,23 +6,29 @@ export function FighterAutocomplete({
   value,
   onChange,
   placeholder,
+  filterUsernames,
 }: {
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
+  filterUsernames?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState(value);
   const ref = useRef<HTMLDivElement>(null);
 
+  const pool = filterUsernames
+    ? FIGHTERS.filter((f) => filterUsernames.includes(f.username))
+    : FIGHTERS;
+
   const query = input.toLowerCase();
-  const suggestions = FIGHTERS.filter(
+  const suggestions = pool.filter(
     (f) =>
       f.username.toLowerCase().includes(query) ||
       f.displayName.toLowerCase().includes(query),
   ).slice(0, 15);
 
-  const exactMatch = FIGHTERS.find((f) => f.username === input.trim());
+  const exactMatch = pool.find((f) => f.username === input.trim());
 
   useEffect(() => {
     setInput(value);

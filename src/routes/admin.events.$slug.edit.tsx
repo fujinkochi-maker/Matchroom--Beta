@@ -63,6 +63,7 @@ function EditEvent() {
   const signedUpFighters = eventSignups
     .map((s) => FIGHTERS.find((f) => f.username === s.fighterUsername))
     .filter(Boolean);
+  const signupUsernames = eventSignups.map((s) => s.fighterUsername);
 
   const addCardRow = (slot = "maincard") => {
     setCard([...card, { fighterA: "", fighterB: "", weight: "Heavyweight", slot, title: "" }]);
@@ -223,11 +224,13 @@ function EditEvent() {
                     value={row.fighterA}
                     onChange={(v) => updateCardRow(idx, "fighterA", v)}
                     placeholder="Fighter A username"
+                    filterUsernames={signupUsernames}
                   />
                   <FighterAutocomplete
                     value={row.fighterB}
                     onChange={(v) => updateCardRow(idx, "fighterB", v)}
                     placeholder="Fighter B username"
+                    filterUsernames={signupUsernames}
                   />
                   <select
                     className={ADMIN_INPUT}

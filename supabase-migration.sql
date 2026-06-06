@@ -259,3 +259,8 @@ ALTER TABLE events DROP CONSTRAINT IF EXISTS events_main_event_a_fkey;
 ALTER TABLE events DROP CONSTRAINT IF EXISTS events_main_event_b_fkey;
 ALTER TABLE event_cards DROP CONSTRAINT IF EXISTS event_cards_fighter_a_fkey;
 ALTER TABLE event_cards DROP CONSTRAINT IF EXISTS event_cards_fighter_b_fkey;
+
+-- RLS for event_signups: allow anon reads (so site can show signup counts)
+ALTER TABLE event_signups ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon select event_signups" ON event_signups;
+CREATE POLICY "anon select event_signups" ON event_signups FOR SELECT TO anon USING (true);
