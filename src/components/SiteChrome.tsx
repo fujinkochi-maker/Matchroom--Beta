@@ -1,8 +1,8 @@
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
-import { Menu, X, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { Menu, ChevronDown } from "lucide-react";
 import { isFighterLoggedIn, clearFighterSession, getFighterSession } from "@/lib/discord-auth";
 import { NotificationBell } from "./NotificationBell";
+import { Sheet, SheetTrigger, SheetContent, SheetClose } from "@/components/ui/sheet";
 
 type NavLink = { to: string; label: string };
 type NavDropdown = { label: string; children: NavLink[] };
@@ -44,7 +44,6 @@ function isActive(path: string, to: string) {
 }
 
 export function SiteHeader() {
-  const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
   const router = useRouter();
   const loggedIn = isFighterLoggedIn();
@@ -144,60 +143,91 @@ export function SiteHeader() {
           )}
         </div>
 
-        <button
-          aria-label="Menu"
-          className="inline-flex h-10 w-10 items-center justify-center border border-border lg:hidden"
-          onClick={() => setOpen((o) => !o)}
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </div>
-      {open && (
-        <div className="border-t border-border bg-background lg:hidden">
-          <div className="container-x grid grid-cols-2 gap-1 py-3">
-            {flatNav().map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                onClick={() => setOpen(false)}
-                className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
-              >
-                {n.label}
-              </Link>
-            ))}
-            {loggedIn ? (
-              <>
-                <Link
-                  to="/boxers/$username"
-                  params={{ username: session?.username ?? "" }}
-                  onClick={() => setOpen(false)}
-                  className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
-                >
-                  Profile
-                </Link>
-                <button
-                  onClick={() => {
-                    setOpen(false);
-                    clearFighterSession();
-                    router.invalidate();
-                  }}
-                  className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
-                >
-                  Logout
-                </button>
-              </>
+        {loggedIn && (
+          <Link
+            to="/boxers/$username"
+            params={{ username: session?.username ?? "" }}
+            className="flex items-center gap-2 lg:hidden"
+          >
+            {session?.image ? (
+              <img src={session.image} alt="" className="h-7 w-7 rounded-full object-cover" />
             ) : (
-              <Link
-                to="/auth/login"
-                onClick={() => setOpen(false)}
-                className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
-              >
-                Login
-              </Link>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs font-bold uppercase">
+                {session?.displayName?.charAt(0) ?? "?"}
+              </div>
             )}
-          </div>
+          </Link>
+        )}
+        <div className="lg:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <button
+                aria-label="Menu"
+                className="inline-flex h-10 w-10 items-center justify-center border border-border"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[280px] p-0 pt-14 text-foreground">
+              <div className="border-b border-border px-4 pb-3">
+                <Link to="/" className="flex items-center gap-2">
+                  <img src="/favicon.png" alt="Matchroom" className="h-8 w-auto" />
+                </Link>
+              </div>
+              <nav className="flex flex-col gap-1 p-4">
+                {flatNav().map((n) => {
+                  const active = isActive(path, n.to);
+                  return (
+                    <SheetClose key={n.to} asChild>
+                      <Link
+                        to={n.to}
+                        className={`border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                          active ? "bg-primary/10 text-primary" : "hover:bg-surface"
+                        }`}
+                      >
+                        {n.label}
+                      </Link>
+                    </SheetClose>
+                  );
+                })}
+                {loggedIn ? (
+                  <>
+                    <SheetClose asChild>
+                      <Link
+                        to="/boxers/$username"
+                        params={{ username: session?.username ?? "" }}
+                        className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
+                      >
+                        Profile
+                      </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <button
+                        onClick={() => {
+                          clearFighterSession();
+                          router.invalidate();
+                        }}
+                        className="w-full border border-border px-3 py-3 text-left text-sm font-semibold uppercase tracking-wider hover:bg-surface"
+                      >
+                        Logout
+                      </button>
+                    </SheetClose>
+                  </>
+                ) : (
+                  <SheetClose asChild>
+                    <Link
+                      to="/auth/login"
+                      className="border border-border px-3 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-surface"
+                    >
+                      Login
+                    </Link>
+                  </SheetClose>
+                )}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
-      )}
+      </div>
     </header>
   );
 }
