@@ -11,7 +11,6 @@ import {
   getSignupsForEvent,
 } from "@/data/fighters";
 import type { Fighter } from "@/data/types";
-import { hashHue } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/events")({
@@ -119,12 +118,7 @@ function EventCard({
     <Link to="/events/$slug" params={{ slug: event.slug }} className="group block">
       <article className="overflow-hidden border border-border bg-card shadow-card transition-colors group-hover:border-primary">
         <div className="relative bg-foreground p-6 text-background">
-          <div
-            className="absolute inset-0 opacity-40"
-            style={{
-              background: `linear-gradient(120deg, hsl(${hashHue(a?.displayName ?? event.mainEvent.a)} 70% 30%), hsl(${hashHue(b?.displayName ?? event.mainEvent.b)} 70% 30%))`,
-            }}
-          />
+          <div className="absolute inset-0 bg-neutral-600/40" />
           <div className="relative">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
               {event.mainEvent.title}

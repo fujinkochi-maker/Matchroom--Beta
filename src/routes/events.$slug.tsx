@@ -12,7 +12,7 @@ import {
 } from "@/data/fighters";
 import { CARD_SLOT_LABELS, type CardSlot } from "@/data/types";
 import type { Division } from "@/data/types";
-import { hashHue, cn, lastName } from "@/lib/utils";
+import { cn, lastName } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/events/$slug")({
@@ -60,14 +60,7 @@ function EventDetailPage() {
   return (
     <>
       <section className="relative overflow-hidden bg-foreground text-background">
-        {a && b && (
-          <div
-            className="absolute inset-0 opacity-30"
-            style={{
-              background: `linear-gradient(135deg, hsl(${hashHue(lastName(a.displayName))} 70% 25%), hsl(${hashHue(lastName(b.displayName))} 70% 25%))`,
-            }}
-          />
-        )}
+        <div className="absolute inset-0 bg-neutral-600/30" />
         <div className="container-x relative py-14">
           {event.status === "upcoming" ? (
             <span className="inline-block rounded-full bg-primary px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
@@ -105,54 +98,56 @@ function EventDetailPage() {
         </div>
       </section>
 
-      {a && b && (
-        <section className="container-x -mt-10">
-          <div className="relative overflow-hidden border border-border bg-card shadow-card">
-            <div className="p-6 md:p-10">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-                {mainTitle}
-              </p>
-              <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8">
-                <div className="text-center">
-                  <div className="mx-auto w-24 md:w-32">
-                    <FighterAvatar name={lastName(a.displayName)} square src={a.image} />
-                  </div>
-                  <p className="mt-2 font-display text-lg uppercase leading-tight md:text-2xl">
-                    {lastName(a.displayName)}
-                  </p>
+      <section className="container-x -mt-10">
+        <div className="relative overflow-hidden border border-border bg-card shadow-card">
+          <div className="p-6 md:p-10">
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+              {mainTitle}
+            </p>
+            <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8">
+              <div className="text-center">
+                <div className="mx-auto w-24 md:w-32">
+                  <FighterAvatar name={lastName(a?.displayName ?? event.mainEvent.a)} square src={a?.image} />
+                </div>
+                <p className="mt-2 font-display text-lg uppercase leading-tight md:text-2xl">
+                  {lastName(a?.displayName ?? event.mainEvent.a)}
+                </p>
+                {a && (
                   <p className="font-mono text-xs text-muted-foreground">
                     {a.wins}-{a.losses}-{a.draws} ({a.kos} KOs)
                   </p>
-                  {a.rank === 0 && (
-                    <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary">
-                      <Trophy className="h-3 w-3" /> Champion
-                    </span>
-                  )}
+                )}
+                {a?.rank === 0 && (
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary">
+                    <Trophy className="h-3 w-3" /> Champion
+                  </span>
+                )}
+              </div>
+              <div className="text-center">
+                <span className="font-display text-4xl text-primary md:text-6xl">VS</span>
+              </div>
+              <div className="text-center">
+                <div className="mx-auto w-24 md:w-32">
+                  <FighterAvatar name={lastName(b?.displayName ?? event.mainEvent.b)} square src={b?.image} />
                 </div>
-                <div className="text-center">
-                  <span className="font-display text-4xl text-primary md:text-6xl">VS</span>
-                </div>
-                <div className="text-center">
-                  <div className="mx-auto w-24 md:w-32">
-                    <FighterAvatar name={lastName(b.displayName)} square src={b.image} />
-                  </div>
-                  <p className="mt-2 font-display text-lg uppercase leading-tight md:text-2xl">
-                    {lastName(b.displayName)}
-                  </p>
+                <p className="mt-2 font-display text-lg uppercase leading-tight md:text-2xl">
+                  {lastName(b?.displayName ?? event.mainEvent.b)}
+                </p>
+                {b && (
                   <p className="font-mono text-xs text-muted-foreground">
                     {b.wins}-{b.losses}-{b.draws} ({b.kos} KOs)
                   </p>
-                  {b.rank === 0 && (
-                    <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary">
-                      <Trophy className="h-3 w-3" /> Champion
-                    </span>
-                  )}
-                </div>
+                )}
+                {b?.rank === 0 && (
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary">
+                    <Trophy className="h-3 w-3" /> Champion
+                  </span>
+                )}
               </div>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {event.card.length > 0 && (
         <section className="container-x py-12">
