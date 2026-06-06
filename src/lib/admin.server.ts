@@ -558,7 +558,17 @@ const cardSchema = z.object({
   fighterB: z.string(),
   weight: z.enum(DIVISIONS),
   slot: z.enum(["prelim", "maincard", "comain", "main"]).default("maincard"),
+  title: z.string().optional(),
 });
+
+function findMainFromCard(card: z.infer<typeof cardSchema>[]) {
+  const main = card.find((c) => c.slot === "main");
+  return {
+    mainEventA: main?.fighterA ?? "",
+    mainEventB: main?.fighterB ?? "",
+    mainEventTitle: main?.title ?? "",
+  };
+}
 
 const eventSchema = z.object({
   token: z.string(),
@@ -566,9 +576,6 @@ const eventSchema = z.object({
   name: z.string().min(1).max(200),
   date: z.string().min(1),
   arena: z.string().min(1).max(200),
-  mainEventA: z.string().min(1),
-  mainEventB: z.string().min(1),
-  mainEventTitle: z.string().min(1).max(200),
   status: z.enum(["upcoming", "past"]),
   tagline: z.string().max(300).default(""),
   card: z.array(cardSchema).default([]),
@@ -580,14 +587,20 @@ export const createEvent = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!validateToken(data.token)) throw new Error("Unauthorized");
     const supabase = getAdminSupabase();
+    const { mainEventA, mainEventB, mainEventTitle } = findMainFromCard(data.card);
+    if (!mainEventA || !mainEventB || !mainEventTitle)
+      throw new Error(
+        "Card must have a row with slot 'Main Event' including both fighters and a title.",
+      );
+
     const { error: evErr } = await supabase.from("events").insert({
       slug: data.slug,
       name: data.name,
       date: data.date,
       arena: data.arena,
-      main_event_a: data.mainEventA,
-      main_event_b: data.mainEventB,
-      main_event_title: data.mainEventTitle,
+      main_event_a: mainEventA,
+      main_event_b: mainEventB,
+      main_event_title: mainEventTitle,
       status: data.status,
       tagline: data.tagline,
       image_url: data.imageUrl ?? null,
@@ -614,14 +627,20 @@ export const updateEvent = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!validateToken(data.token)) throw new Error("Unauthorized");
     const supabase = getAdminSupabase();
+    const { mainEventA, mainEventB, mainEventTitle } = findMainFromCard(data.card);
+    if (!mainEventA || !mainEventB || !mainEventTitle)
+      throw new Error(
+        "Card must have a row with slot 'Main Event' including both fighters and a title.",
+      );
+
     const { error: evErr } = await supabase.from("events").upsert({
       slug: data.slug,
       name: data.name,
       date: data.date,
       arena: data.arena,
-      main_event_a: data.mainEventA,
-      main_event_b: data.mainEventB,
-      main_event_title: data.mainEventTitle,
+      main_event_a: mainEventA,
+      main_event_b: mainEventB,
+      main_event_title: mainEventTitle,
       status: data.status,
       tagline: data.tagline,
       image_url: data.imageUrl ?? null,

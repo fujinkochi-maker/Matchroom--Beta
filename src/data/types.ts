@@ -72,7 +72,7 @@ export interface BoxingEvent {
   date: string; // ISO
   arena: string;
   mainEvent: { a: string; b: string; title: string };
-  card: { a: string; b: string; weight: Division; slot: CardSlot }[];
+  card: { a: string; b: string; weight: Division; slot: CardSlot; title?: string }[];
   status: "upcoming" | "past";
   tagline: string;
   image?: string;

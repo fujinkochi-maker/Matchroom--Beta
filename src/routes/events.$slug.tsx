@@ -12,7 +12,7 @@ import {
 } from "@/data/fighters";
 import { CARD_SLOT_LABELS, type CardSlot } from "@/data/types";
 import type { Division } from "@/data/types";
-import { hashHue, cn } from "@/lib/utils";
+import { hashHue, cn, lastName } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/events/$slug")({
@@ -54,6 +54,9 @@ function EventDetailPage() {
     groupedBySlot[slot].push(entry);
   }
 
+  const mainCard = event.card.find((c) => c.slot === "main");
+  const mainTitle = mainCard?.title || event.mainEvent.title;
+
   return (
     <>
       <section className="relative overflow-hidden bg-foreground text-background">
@@ -61,7 +64,7 @@ function EventDetailPage() {
           <div
             className="absolute inset-0 opacity-30"
             style={{
-              background: `linear-gradient(135deg, hsl(${hashHue(a.displayName)} 70% 25%), hsl(${hashHue(b.displayName)} 70% 25%))`,
+              background: `linear-gradient(135deg, hsl(${hashHue(lastName(a.displayName))} 70% 25%), hsl(${hashHue(lastName(b.displayName))} 70% 25%))`,
             }}
           />
         )}
@@ -107,15 +110,15 @@ function EventDetailPage() {
           <div className="relative overflow-hidden border border-border bg-card shadow-card">
             <div className="p-6 md:p-10">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-                {event.mainEvent.title}
+                {mainTitle}
               </p>
               <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8">
                 <div className="text-center">
                   <div className="mx-auto w-24 md:w-32">
-                    <FighterAvatar name={a.displayName} square src={a.image} />
+                    <FighterAvatar name={lastName(a.displayName)} square src={a.image} />
                   </div>
                   <p className="mt-2 font-display text-lg uppercase leading-tight md:text-2xl">
-                    {a.displayName}
+                    {lastName(a.displayName)}
                   </p>
                   <p className="font-mono text-xs text-muted-foreground">
                     {a.wins}-{a.losses}-{a.draws} ({a.kos} KOs)
@@ -131,10 +134,10 @@ function EventDetailPage() {
                 </div>
                 <div className="text-center">
                   <div className="mx-auto w-24 md:w-32">
-                    <FighterAvatar name={b.displayName} square src={b.image} />
+                    <FighterAvatar name={lastName(b.displayName)} square src={b.image} />
                   </div>
                   <p className="mt-2 font-display text-lg uppercase leading-tight md:text-2xl">
-                    {b.displayName}
+                    {lastName(b.displayName)}
                   </p>
                   <p className="font-mono text-xs text-muted-foreground">
                     {b.wins}-{b.losses}-{b.draws} ({b.kos} KOs)
@@ -179,12 +182,12 @@ function EventDetailPage() {
                               className="group flex items-center gap-2"
                             >
                               <FighterAvatar
-                                name={fa?.displayName ?? entry.a}
+                                name={lastName(fa?.displayName ?? entry.a)}
                                 square
                                 className="h-8 w-8"
                               />
                               <span className="font-semibold group-hover:text-primary">
-                                {fa?.displayName ?? entry.a}
+                                {lastName(fa?.displayName ?? entry.a)}
                               </span>
                             </Link>
                             <span className="font-display text-sm text-muted-foreground">VS</span>
@@ -194,10 +197,10 @@ function EventDetailPage() {
                               className="group flex items-center gap-2"
                             >
                               <span className="font-semibold group-hover:text-primary">
-                                {fb?.displayName ?? entry.b}
+                                {lastName(fb?.displayName ?? entry.b)}
                               </span>
                               <FighterAvatar
-                                name={fb?.displayName ?? entry.b}
+                                name={lastName(fb?.displayName ?? entry.b)}
                                 square
                                 className="h-8 w-8"
                               />
@@ -240,9 +243,9 @@ function EventDetailPage() {
                     params={{ username: f.username }}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-surface"
                   >
-                    <FighterAvatar name={f.displayName} square className="h-9 w-9" />
+                    <FighterAvatar name={lastName(f.displayName)} square className="h-9 w-9" />
                     <div>
-                      <p className="text-sm font-semibold">{f.displayName}</p>
+                      <p className="text-sm font-semibold">{lastName(f.displayName)}</p>
                       <p className="text-xs text-muted-foreground">
                         {f.division} • {f.wins}-{f.losses}-{f.draws}
                       </p>

@@ -21,6 +21,7 @@ interface CardRow {
   fighterB: string;
   weight: string;
   slot: string;
+  title: string;
 }
 export const Route = createFileRoute("/admin/events/new")({
   loader: async () => {
@@ -34,16 +35,13 @@ function NewEvent() {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [arena, setArena] = useState("");
-  const [mainEventA, setMainEventA] = useState("");
-  const [mainEventB, setMainEventB] = useState("");
-  const [mainEventTitle, setMainEventTitle] = useState("");
   const [status, setStatus] = useState<"upcoming" | "past">("upcoming");
   const [tagline, setTagline] = useState("");
   const [card, setCard] = useState<CardRow[]>([]);
   const [imageUrl, setImageUrl] = useState("");
   const [error, setError] = useState("");
-  const addCardRow = () => {
-    setCard([...card, { fighterA: "", fighterB: "", weight: "Heavyweight", slot: "maincard" }]);
+  const addCardRow = (slot = "maincard") => {
+    setCard([...card, { fighterA: "", fighterB: "", weight: "Heavyweight", slot, title: "" }]);
   };
   const removeCardRow = (idx: number) => {
     setCard(card.filter((_, i) => i !== idx));
@@ -59,6 +57,11 @@ function NewEvent() {
       setError("Not authenticated");
       return;
     }
+    const mainRow = card.find((r) => r.slot === "main");
+    if (!mainRow) {
+      setError("Add at least one card row with slot 'Main Event'.");
+      return;
+    }
     try {
       await createEvent({
         data: {
@@ -67,12 +70,15 @@ function NewEvent() {
           name,
           date,
           arena,
-          mainEventA,
-          mainEventB,
-          mainEventTitle,
           status,
           tagline,
-          card,
+          card: card.map((r) => ({
+            fighterA: r.fighterA,
+            fighterB: r.fighterB,
+            weight: r.weight,
+            slot: r.slot,
+            title: r.slot === "main" ? r.title : "",
+          })),
           imageUrl: imageUrl || undefined,
         },
       });
@@ -91,183 +97,159 @@ function NewEvent() {
         <h1 className={ADMIN_HEADING}>New Event</h1>
       </div>
       <div className={adminCard("3xl")}>
-        {" "}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {" "}
           <div className="grid gap-4 sm:grid-cols-2">
-            {" "}
             <div>
-              {" "}
-              <label className={ADMIN_LABEL}>Slug</label>{" "}
+              <label className={ADMIN_LABEL}>Slug</label>
               <input
                 className={ADMIN_INPUT}
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 required
-              />{" "}
-            </div>{" "}
+              />
+            </div>
             <div>
-              {" "}
-              <label className={ADMIN_LABEL}>Name</label>{" "}
+              <label className={ADMIN_LABEL}>Name</label>
               <input
                 className={ADMIN_INPUT}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-              />{" "}
-            </div>{" "}
+              />
+            </div>
             <div>
-              {" "}
-              <label className={ADMIN_LABEL}>Date</label>{" "}
+              <label className={ADMIN_LABEL}>Date</label>
               <input
                 className={ADMIN_INPUT}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-              />{" "}
-            </div>{" "}
+              />
+            </div>
             <div>
-              {" "}
-              <label className={ADMIN_LABEL}>Arena</label>{" "}
+              <label className={ADMIN_LABEL}>Arena</label>
               <input
                 className={ADMIN_INPUT}
                 value={arena}
                 onChange={(e) => setArena(e.target.value)}
                 required
-              />{" "}
-            </div>{" "}
-            <div>
-              <label className={ADMIN_LABEL}>Main Event A</label>
-              <input
-                className={ADMIN_INPUT}
-                value={mainEventA}
-                onChange={(e) => setMainEventA(e.target.value)}
-                placeholder="username"
-                required
               />
             </div>
             <div>
-              <label className={ADMIN_LABEL}>Main Event B</label>
-              <input
-                className={ADMIN_INPUT}
-                value={mainEventB}
-                onChange={(e) => setMainEventB(e.target.value)}
-                placeholder="username"
-                required
-              />
-            </div>
-            <div>
-              {" "}
-              <label className={ADMIN_LABEL}>Main Event Title</label>{" "}
-              <input
-                className={ADMIN_INPUT}
-                value={mainEventTitle}
-                onChange={(e) => setMainEventTitle(e.target.value)}
-                required
-              />{" "}
-            </div>{" "}
-            <div>
-              {" "}
-              <label className={ADMIN_LABEL}>Status</label>{" "}
+              <label className={ADMIN_LABEL}>Status</label>
               <select
                 className={ADMIN_INPUT}
                 value={status}
                 onChange={(e) => setStatus(e.target.value as "upcoming" | "past")}
               >
-                {" "}
-                <option value="upcoming">Upcoming</option> <option value="past">Past</option>{" "}
-              </select>{" "}
-            </div>{" "}
-          </div>{" "}
+                <option value="upcoming">Upcoming</option>
+                <option value="past">Past</option>
+              </select>
+            </div>
+          </div>
           <div>
-            {" "}
-            <label className={ADMIN_LABEL}>Tagline</label>{" "}
+            <label className={ADMIN_LABEL}>Tagline</label>
             <textarea
               className={ADMIN_TEXTAREA}
               value={tagline}
               onChange={(e) => setTagline(e.target.value)}
               rows={3}
-            />{" "}
-          </div>{" "}
+            />
+          </div>
           <div>
-            {" "}
-            <label className={ADMIN_LABEL}>Image</label>{" "}
-            <ImageUpload bucket="event-images" value={imageUrl} onUploaded={setImageUrl} />{" "}
-          </div>{" "}
+            <label className={ADMIN_LABEL}>Image</label>
+            <ImageUpload bucket="event-images" value={imageUrl} onUploaded={setImageUrl} />
+          </div>
           <div>
-            {" "}
             <div className="mb-2 flex items-center justify-between">
-              {" "}
-              <label className="text-sm font-medium">Card</label>{" "}
-              <button
-                type="button"
-                onClick={addCardRow}
-                className="rounded-md bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground hover:bg-primary-dark"
-              >
-                {" "}
-                + Add Row{" "}
-              </button>{" "}
-            </div>{" "}
-            {card.map((row, idx) => (
-              <div key={idx} className="mb-2 grid gap-2 sm:grid-cols-5">
-                {" "}
-                <input
-                  className={ADMIN_INPUT}
-                  value={row.fighterA}
-                  onChange={(e) => updateCardRow(idx, "fighterA", e.target.value)}
-                  placeholder="Fighter A username"
-                  required
-                />
-                <input
-                  className={ADMIN_INPUT}
-                  value={row.fighterB}
-                  onChange={(e) => updateCardRow(idx, "fighterB", e.target.value)}
-                  placeholder="Fighter B username"
-                  required
-                />
-                <select
-                  className={ADMIN_INPUT}
-                  value={row.weight}
-                  onChange={(e) => updateCardRow(idx, "weight", e.target.value)}
-                  required
-                >
-                  {" "}
-                  {DIVISIONS.map((d) => (
-                    <option key={d} value={d}>
-                      {" "}
-                      {d}{" "}
-                    </option>
-                  ))}{" "}
-                </select>{" "}
-                <select
-                  className={ADMIN_INPUT}
-                  value={row.slot}
-                  onChange={(e) => updateCardRow(idx, "slot", e.target.value)}
-                  required
-                >
-                  <option value="prelim">Prelim</option>
-                  <option value="maincard">Main Card</option>
-                  <option value="comain">Co-Main</option>
-                  <option value="main">Main Event</option>
-                </select>{" "}
+              <label className="text-sm font-medium">Card</label>
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => removeCardRow(idx)}
-                  className="h-10 rounded-md bg-destructive/10 px-3 text-sm text-destructive hover:bg-destructive/20"
+                  onClick={() => addCardRow("main")}
+                  className="rounded-md bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground hover:bg-primary-dark"
                 >
-                  {" "}
-                  Remove{" "}
-                </button>{" "}
+                  + Main Event
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCardRow()}
+                  className="rounded-md bg-primary/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground hover:bg-primary"
+                >
+                  + Add Row
+                </button>
               </div>
-            ))}{" "}
-          </div>{" "}
-          {error && <p className={ADMIN_ERROR}>{error}</p>}{" "}
+            </div>
+            {card.map((row, idx) => (
+              <div key={idx} className="mb-3 rounded border border-border p-3">
+                <div className="mb-2 grid gap-2 sm:grid-cols-5">
+                  <input
+                    className={ADMIN_INPUT}
+                    value={row.fighterA}
+                    onChange={(e) => updateCardRow(idx, "fighterA", e.target.value)}
+                    placeholder="Fighter A username"
+                    required
+                  />
+                  <input
+                    className={ADMIN_INPUT}
+                    value={row.fighterB}
+                    onChange={(e) => updateCardRow(idx, "fighterB", e.target.value)}
+                    placeholder="Fighter B username"
+                    required
+                  />
+                  <select
+                    className={ADMIN_INPUT}
+                    value={row.weight}
+                    onChange={(e) => updateCardRow(idx, "weight", e.target.value)}
+                    required
+                  >
+                    {DIVISIONS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className={ADMIN_INPUT}
+                    value={row.slot}
+                    onChange={(e) => updateCardRow(idx, "slot", e.target.value)}
+                    required
+                  >
+                    <option value="prelim">Prelim</option>
+                    <option value="maincard">Main Card</option>
+                    <option value="comain">Co-Main</option>
+                    <option value="main">Main Event</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => removeCardRow(idx)}
+                    className="h-10 rounded-md bg-destructive/10 px-3 text-sm text-destructive hover:bg-destructive/20"
+                  >
+                    Remove
+                  </button>
+                </div>
+                {row.slot === "main" && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Main Event Title
+                    </label>
+                    <input
+                      className={ADMIN_INPUT}
+                      value={row.title}
+                      onChange={(e) => updateCardRow(idx, "title", e.target.value)}
+                      placeholder="e.g. WBC Heavyweight Championship"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {error && <p className={ADMIN_ERROR}>{error}</p>}
           <button type="submit" className={ADMIN_BTN_PRIMARY}>
-            {" "}
-            Create Event{" "}
-          </button>{" "}
-        </form>{" "}
-      </div>{" "}
+            Create Event
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
