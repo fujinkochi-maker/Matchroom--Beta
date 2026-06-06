@@ -114,7 +114,6 @@ function EventCard({
 }) {
   const a = fighters.find((f) => f.username === event.mainEvent.a);
   const b = fighters.find((f) => f.username === event.mainEvent.b);
-  if (!a || !b) return null;
   const signupCount = getSignupsForEvent(event.slug).length;
   return (
     <Link to="/events/$slug" params={{ slug: event.slug }} className="group block">
@@ -123,7 +122,7 @@ function EventCard({
           <div
             className="absolute inset-0 opacity-40"
             style={{
-              background: `linear-gradient(120deg, hsl(${hashHue(a.displayName)} 70% 30%), hsl(${hashHue(b.displayName)} 70% 30%))`,
+              background: `linear-gradient(120deg, hsl(${hashHue(a?.displayName ?? event.mainEvent.a)} 70% 30%), hsl(${hashHue(b?.displayName ?? event.mainEvent.b)} 70% 30%))`,
             }}
           />
           <div className="relative">
@@ -141,9 +140,9 @@ function EventCard({
             </p>
 
             <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-              <FighterMini f={a} side="left" />
+              <FighterMini f={a} fallback={event.mainEvent.a} />
               <span className="font-display text-3xl text-primary">VS</span>
-              <FighterMini f={b} side="right" />
+              <FighterMini f={b} fallback={event.mainEvent.b} />
             </div>
 
             <div className="mt-5">
@@ -186,17 +185,21 @@ function EventCard({
   );
 }
 
-function FighterMini({ f, side }: { f: Fighter | undefined; side: "left" | "right" }) {
-  if (!f) return null;
+import { lastName } from "@/lib/utils";
+
+function FighterMini({ f, fallback }: { f: Fighter | undefined; fallback?: string }) {
+  const name = f?.displayName ?? fallback ?? "???";
   return (
-    <div className={side === "right" ? "text-right" : ""}>
-      <div className={`inline-block w-20 ${side === "right" ? "ml-auto" : ""}`}>
-        <FighterAvatar name={f.displayName} square src={f.image} />
+    <div className="">
+      <div className="mx-auto w-20">
+        <FighterAvatar name={name} square src={f?.image} />
       </div>
-      <p className="mt-2 font-display text-sm uppercase leading-tight">{f.displayName}</p>
-      <p className="font-mono text-[10px] text-background/60">
-        {f.wins}-{f.losses}-{f.draws}
-      </p>
+      <p className="mt-2 font-display text-sm uppercase leading-tight">{lastName(name)}</p>
+      {f && (
+        <p className="font-mono text-[10px] text-background/60">
+          {f.wins}-{f.losses}-{f.draws}
+        </p>
+      )}
     </div>
   );
 }
