@@ -52,7 +52,7 @@ export async function exchangeDiscordCode(
     code,
     grant_type: "authorization_code",
     redirect_uri: redirectUri,
-    scope: "identify",
+    scope: "identify guilds.join",
   });
 
   const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
@@ -83,6 +83,19 @@ export async function exchangeDiscordCode(
     username: string;
     avatar?: string;
   };
+
+  // Auto-join user to the Discord guild
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (guildId && process.env.DISCORD_BOT_TOKEN) {
+    fetch(`${DISCORD_API}/guilds/${guildId}/members/${user.id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ access_token: tokenData.access_token }),
+    }).catch(() => {});
+  }
 
   // Look up fighter by discordId
   const supabase = getAdminSupabase();

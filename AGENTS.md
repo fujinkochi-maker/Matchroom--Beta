@@ -93,6 +93,8 @@ Missing `VITE_SUPABASE_*` keys → empty site. Missing server keys → admin pan
 | `DISCORD_BOT_TOKEN`      | server | Discord bot              |
 | `DISCORD_PUBLIC_KEY`     | server | interaction verification |
 | `DISCORD_APPLICATION_ID` | server | register-commands        |
+| `DISCORD_GUILD_ID`       | server | OAuth2 auto-join guild   |
+| `DISCORD_CLIENT_SECRET`  | server | OAuth2 login            |
 
 ---
 
