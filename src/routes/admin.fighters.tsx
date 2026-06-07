@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack/react-router";
 import { ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
+import { ensureFightersLoaded, FIGHTERS, clearFightersCache } from "@/data/fighters";
 import { deleteFighter } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
@@ -102,6 +102,7 @@ function AdminFighters() {
     const token = getAdminToken();
     if (!token) return;
     await deleteFighter({ data: { token, username } });
+    clearFightersCache();
     await router.invalidate();
     toast.success("Fighter deleted");
   };

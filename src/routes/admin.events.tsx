@@ -6,6 +6,7 @@ import {
   EVENTS,
   ensureSignupsLoaded,
   getSignupsForEvent,
+  clearEventsCache,
 } from "@/data/fighters";
 import { deleteEvent } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
@@ -101,6 +102,7 @@ function AdminEvents() {
     const token = getAdminToken();
     if (!token) return;
     await deleteEvent({ data: { token, slug } });
+    clearEventsCache();
     await router.invalidate();
     toast.success("Event deleted");
   };

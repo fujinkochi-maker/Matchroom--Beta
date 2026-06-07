@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack
 import { ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useMemo } from "react";
-import { ensurePostsLoaded, POSTS } from "@/data/fighters";
+import { ensurePostsLoaded, POSTS, clearPostCache } from "@/data/fighters";
 import { deletePost } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
@@ -89,6 +89,7 @@ function AdminPosts() {
     const token = getAdminToken();
     if (!token) return;
     await deletePost({ data: { token, postId } });
+    clearPostCache();
     await router.invalidate();
     toast.success("Post deleted");
   };

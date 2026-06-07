@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack/react-router";
 import { ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { ensureVideosLoaded, VIDEOS } from "@/data/fighters";
+import { ensureVideosLoaded, VIDEOS, clearVideosCache } from "@/data/fighters";
 import { deleteVideo } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
@@ -106,6 +106,7 @@ function AdminVideos() {
     const token = getAdminToken();
     if (!token) return;
     await deleteVideo({ data: { token, id } });
+    clearVideosCache();
     await router.invalidate();
     toast.success("Video deleted");
   };

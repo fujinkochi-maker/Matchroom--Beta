@@ -11,6 +11,7 @@ import {
   EVENT_SIGNUPS,
   FIGHTERS,
   clearSignupsCache,
+  clearEventsCache,
 } from "@/data/fighters";
 import { DIVISIONS } from "@/data/types";
 import { ArrowLeft } from "lucide-react";
@@ -136,6 +137,7 @@ function EditEvent() {
           imageUrl: imageUrl || undefined,
         },
       });
+      clearEventsCache();
       router.navigate({ to: "/admin/events" });
     } catch (err) {
       setError(err?.message ?? "Failed to update event");

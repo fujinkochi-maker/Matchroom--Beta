@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { createEvent } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
-import { ensureFightersLoaded } from "@/data/fighters";
+import { ensureFightersLoaded, clearEventsCache } from "@/data/fighters";
 import { DIVISIONS } from "@/data/types";
 import { ArrowLeft } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
@@ -84,6 +84,7 @@ function NewEvent() {
         },
       });
       toast.success("Event created");
+      clearEventsCache();
       router.navigate({ to: "/admin/events" });
     } catch (err) {
       setError(err?.message ?? "Failed to create event");

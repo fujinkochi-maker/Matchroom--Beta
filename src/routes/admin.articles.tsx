@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter, Outlet, useLocation } from "@tanstack/react-router";
 import { ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { ensureArticlesLoaded, ARTICLES } from "@/data/fighters";
+import { ensureArticlesLoaded, ARTICLES, clearArticlesCache } from "@/data/fighters";
 import { deleteArticle } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
@@ -105,6 +105,7 @@ function AdminArticles() {
     const token = getAdminToken();
     if (!token) return;
     await deleteArticle({ data: { token, slug } });
+    clearArticlesCache();
     await router.invalidate();
     toast.success("Article deleted");
   };

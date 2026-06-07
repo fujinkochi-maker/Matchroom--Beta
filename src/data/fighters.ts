@@ -279,6 +279,22 @@ export function clearFightersCache() {
   delete _lastLoaded["_fighters"];
 }
 
+export function clearEventsCache() {
+  delete _lastLoaded["events"];
+}
+
+export function clearArticlesCache() {
+  delete _lastLoaded["articles"];
+}
+
+export function clearVideosCache() {
+  delete _lastLoaded["videos"];
+}
+
+export function clearProductsCache() {
+  delete _lastLoaded["products"];
+}
+
 export async function refreshFighter(username: string): Promise<Fighter | undefined> {
   const supabase = getSupabase();
 
