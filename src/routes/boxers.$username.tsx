@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
-import { Trophy, ArrowLeft, Play, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Trophy, ArrowLeft, Play, RefreshCw, Heart } from "lucide-react";
 import { FighterAvatar } from "@/components/FighterAvatar";
 import {
   getByUsername,
@@ -13,11 +13,16 @@ import {
   ensureArticlesLoaded,
   ensureVideosLoaded,
   ensurePostsLoaded,
+  ensureFighterFollowsLoaded,
+  FIGHTER_FOLLOWS,
+  getFollowerCount,
+  isFollowing,
   refreshFighter,
   getChampionTitle,
 } from "@/data/fighters";
 import { hashHue } from "@/lib/utils";
-import { getPublicRankings } from "@/lib/admin.server";
+import { getPublicRankings, followFighter, unfollowFighter } from "@/lib/admin.server";
+import { getFighterSession, isFighterLoggedIn } from "@/lib/discord-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/boxers/$username")({
@@ -30,6 +35,7 @@ export const Route = createFileRoute("/boxers/$username")({
       ensureArticlesLoaded(),
       ensureVideosLoaded(),
       ensurePostsLoaded(),
+      ensureFighterFollowsLoaded(),
     ]);
     await refreshFighter(params.username);
     const fighter = getByUsername(params.username);
@@ -104,6 +110,33 @@ function FighterProfilePage() {
   } = Route.useLoaderData();
   const kos = Math.round((f.kos / Math.max(f.wins, 1)) * 100);
   const [refreshing, setRefreshing] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [followCount, setFollowCount] = useState(0);
+
+  useEffect(() => {
+    setFollowCount(getFollowerCount(f.username));
+    const session = getFighterSession();
+    if (session?.discordId) {
+      setFollowing(isFollowing(f.username, session.discordId));
+    }
+  }, [f.username]);
+
+  const handleFollow = async () => {
+    const session = getFighterSession();
+    if (!session) return;
+    try {
+      if (following) {
+        await unfollowFighter({ data: { token: session.token, fighterUsername: f.username } });
+        setFollowCount((c) => Math.max(0, c - 1));
+      } else {
+        await followFighter({ data: { token: session.token, fighterUsername: f.username } });
+        setFollowCount((c) => c + 1);
+      }
+      setFollowing(!following);
+    } catch (err) {
+      console.error("[Follow]", err);
+    }
+  };
 
   const refresh = async () => {
     setRefreshing(true);
@@ -177,6 +210,22 @@ function FighterProfilePage() {
                       <Trophy className="h-3 w-3 text-primary" /> Belt
                     </span>
                   ))}
+              {isFighterLoggedIn() && (
+                <button
+                  onClick={handleFollow}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+                    following
+                      ? "bg-matchroom-red text-white"
+                      : "border border-background/30 text-background/80 hover:border-background/60 hover:text-background"
+                  }`}
+                >
+                  <Heart className={`h-3.5 w-3.5 ${following ? "fill-current" : ""}`} />
+                  {following ? "Following" : "Follow"} ({followCount})
+                </button>
+              )}
+              {!isFighterLoggedIn() && followCount > 0 && (
+                <span className="text-xs text-background/60">{followCount} followers</span>
+              )}
             </div>
           </div>
         </div>

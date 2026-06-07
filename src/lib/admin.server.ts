@@ -820,6 +820,39 @@ export const getEventSignups = createServerFn({ method: "POST" })
     return { signups: signups ?? [] };
   });
 
+/* ============ Fighter Follows ============ */
+
+export const followFighter = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), fighterUsername: z.string() }))
+  .handler(async ({ data }) => {
+    const discordId = validateFighterToken(data.token);
+    if (!discordId) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    const { error } = await supabase
+      .from("fighter_follows")
+      .insert({ fighter_username: data.fighterUsername, user_discord_id: discordId });
+    if (error && !error.message?.includes("duplicate key")) throw new Error(error.message);
+    const { clearFighterFollowsCache } = await import("@/data/fighters");
+    clearFighterFollowsCache();
+    return { ok: true };
+  });
+
+export const unfollowFighter = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), fighterUsername: z.string() }))
+  .handler(async ({ data }) => {
+    const discordId = validateFighterToken(data.token);
+    if (!discordId) throw new Error("Unauthorized");
+    const supabase = getAdminSupabase();
+    await supabase
+      .from("fighter_follows")
+      .delete()
+      .eq("fighter_username", data.fighterUsername)
+      .eq("user_discord_id", discordId);
+    const { clearFighterFollowsCache } = await import("@/data/fighters");
+    clearFighterFollowsCache();
+    return { ok: true };
+  });
+
 /* ============ Articles ============ */
 
 const articleSchema = z.object({

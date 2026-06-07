@@ -264,3 +264,16 @@ ALTER TABLE event_cards DROP CONSTRAINT IF EXISTS event_cards_fighter_b_fkey;
 ALTER TABLE event_signups ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon select event_signups" ON event_signups;
 CREATE POLICY "anon select event_signups" ON event_signups FOR SELECT TO anon USING (true);
+
+-- Fighter follows (fan following)
+CREATE TABLE IF NOT EXISTS fighter_follows (
+  fighter_username TEXT NOT NULL REFERENCES fighters(username) ON DELETE CASCADE,
+  user_discord_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (fighter_username, user_discord_id)
+);
+ALTER TABLE fighter_follows ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon select fighter_follows" ON fighter_follows;
+CREATE POLICY "anon select fighter_follows" ON fighter_follows FOR SELECT TO anon USING (true);
+CREATE INDEX IF NOT EXISTS idx_fighter_follows_fighter ON fighter_follows(fighter_username);
+CREATE INDEX IF NOT EXISTS idx_fighter_follows_user ON fighter_follows(user_discord_id);

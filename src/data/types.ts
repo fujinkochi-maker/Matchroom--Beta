@@ -85,6 +85,12 @@ export interface EventSignup {
   signedUpAt: string;
 }
 
+export interface FighterFollow {
+  fighterUsername: string;
+  userDiscordId: string;
+  createdAt: string;
+}
+
 export interface Article {
   slug: string;
   title: string;

@@ -10,6 +10,7 @@ import type {
   Post,
   Notification,
   EventSignup,
+  FighterFollow,
   CardSlot,
 } from "./types";
 import { DIVISIONS } from "./types";
@@ -25,6 +26,7 @@ const _products: Product[] = [];
 const _posts: Post[] = [];
 const _notifications: Notification[] = [];
 const _eventSignups: EventSignup[] = [];
+const _fighterFollows: FighterFollow[] = [];
 
 /* ============ Public exports ============ */
 
@@ -90,6 +92,7 @@ export const CATS = [
 
 export const EVENTS = _events;
 export const EVENT_SIGNUPS: ReadonlyArray<EventSignup> = _eventSignups;
+export const FIGHTER_FOLLOWS: ReadonlyArray<FighterFollow> = _fighterFollows;
 export const upcomingEvents = () => EVENTS.filter((e) => e.status === "upcoming");
 export const nextEvent = () => upcomingEvents()[0];
 export const getSignupsForEvent = (slug: string) =>
@@ -98,6 +101,12 @@ export const getSignedUpFighters = (slug: string) => {
   const usernames = new Set(getSignupsForEvent(slug).map((s) => s.fighterUsername));
   return _fighters.filter((f) => usernames.has(f.username));
 };
+export const getFollowerCount = (username: string) =>
+  _fighterFollows.filter((f) => f.fighterUsername === username).length;
+export const isFollowing = (username: string, userDiscordId: string) =>
+  _fighterFollows.some((f) => f.fighterUsername === username && f.userDiscordId === userDiscordId);
+export const getFollowedFighters = (userDiscordId: string) =>
+  _fighterFollows.filter((f) => f.userDiscordId === userDiscordId).map((f) => f.fighterUsername);
 
 export const ARTICLES = _articles;
 export const getArticleBySlug = (s: string) => ARTICLES.find((a) => a.slug === s);
@@ -236,6 +245,33 @@ function rowToSignupFromRow(row: any): EventSignup {
     eventSlug: row.event_slug,
     fighterUsername: row.fighter_username,
     signedUpAt: row.signed_up_at,
+  };
+}
+
+export function clearFighterFollowsCache() {
+  delete _lastLoaded["_fighterFollows"];
+  _fighterFollows.length = 0;
+}
+
+export async function ensureFighterFollowsLoaded() {
+  const k = "_fighterFollows";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable(
+    "fighter_follows",
+    _fighterFollows,
+    rowToFighterFollowFromRow,
+    undefined,
+    "fighter_follows",
+  );
+  await _loadPromises[k];
+  _loadPromises[k] = null;
+}
+
+function rowToFighterFollowFromRow(row: any): FighterFollow {
+  return {
+    fighterUsername: row.fighter_username,
+    userDiscordId: row.user_discord_id,
+    createdAt: row.created_at,
   };
 }
 
@@ -694,6 +730,7 @@ export async function loadDataFromSupabase() {
         "notifications",
       ),
       _loadTable("event_signups", _eventSignups, rowToSignupFromRow, undefined, "event_signups"),
+      _loadTable("fighter_follows", _fighterFollows, rowToFighterFollowFromRow, undefined, "fighter_follows"),
     ]);
   } catch {
     // Data will load on next access if Supabase is unavailable
