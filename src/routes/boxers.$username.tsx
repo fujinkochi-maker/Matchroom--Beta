@@ -17,6 +17,7 @@ import {
   FIGHTER_FOLLOWS,
   getFollowerCount,
   isFollowing,
+  clearFighterFollowsCache,
   refreshFighter,
   getChampionTitle,
 } from "@/data/fighters";
@@ -132,6 +133,7 @@ function FighterProfilePage() {
         await followFighter({ data: { token: session.token, fighterUsername: f.username } });
         setFollowCount((c) => c + 1);
       }
+      clearFighterFollowsCache();
       setFollowing(!following);
     } catch (err) {
       console.error("[Follow]", err);
