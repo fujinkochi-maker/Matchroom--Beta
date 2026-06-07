@@ -54,6 +54,7 @@ export const Route = createFileRoute("/boxers/$username")({
       (x) => x.division === fighter.division && x.username !== fighter.username,
     ).slice(0, 4);
     const fighterPosts = getPostsForFighter(fighter.username);
+    const followerCount = getFollowerCount(fighter.username);
     return {
       fighter,
       fighterRanks,
@@ -63,6 +64,7 @@ export const Route = createFileRoute("/boxers/$username")({
       opponents,
       fighterPosts,
       fighters: FIGHTERS,
+      followerCount,
     };
   },
   head: ({ loaderData }) => ({
@@ -108,14 +110,14 @@ function FighterProfilePage() {
     opponents,
     fighterPosts,
     fighters,
+    followerCount: initialFollowCount,
   } = Route.useLoaderData();
   const kos = Math.round((f.kos / Math.max(f.wins, 1)) * 100);
   const [refreshing, setRefreshing] = useState(false);
   const [following, setFollowing] = useState(false);
-  const [followCount, setFollowCount] = useState(0);
+  const [followCount, setFollowCount] = useState(initialFollowCount);
 
   useEffect(() => {
-    setFollowCount(getFollowerCount(f.username));
     const session = getFighterSession();
     if (session?.discordId) {
       setFollowing(isFollowing(f.username, session.discordId));
