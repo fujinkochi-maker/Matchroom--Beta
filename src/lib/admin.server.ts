@@ -1180,21 +1180,6 @@ export const createPost = createServerFn({ method: "POST" })
     const feedWebhookUrl = process.env.FEED_WEBHOOK_URL;
     if (feedWebhookUrl) {
       const siteUrl = process.env.VITE_SITE_URL ?? "http://localhost:5173";
-      let authorName = "Admin";
-      let authorIcon: string | undefined;
-      let authorDivision: string | undefined;
-      if (authorType === "fighter" && authorUsername) {
-        const { data: auth } = await supabase
-          .from("fighters")
-          .select("display_name, division, image")
-          .eq("username", authorUsername)
-          .single();
-        if (auth) {
-          authorName = auth.display_name;
-          authorIcon = auth.image ?? undefined;
-          authorDivision = auth.division;
-        }
-      }
       let tagNames: string[] = [];
       if (data.tags.length > 0) {
         const { data: tagFighters } = await supabase
@@ -1208,25 +1193,18 @@ export const createPost = createServerFn({ method: "POST" })
           });
         }
       }
-      const embedFields: any[] = [];
-      if (authorDivision) {
-        embedFields.push({ name: "🥊 Division", value: authorDivision, inline: true });
-      }
-      if (tagNames.length > 0) {
-        embedFields.push({ name: "🏷️ Tagged", value: tagNames.join(", "), inline: false });
-      }
       const embed: any = {
-        title: "📬 New Post",
+        title: "New Update",
         url: `${siteUrl}/feed`,
         color: 0xcc0000,
         description:
           data.content.length > 4096 ? data.content.slice(0, 4093) + "..." : data.content,
         timestamp: new Date().toISOString(),
-        footer: { text: "Matchroom Boxing Beta" },
-        fields: embedFields,
-        author: { name: authorName, icon_url: authorIcon },
+        footer: {
+          text: tagNames.length > 0 ? `Tagged: ${tagNames.join(", ")}` : "Feed",
+        },
+        author: { name: "Matchroom Boxing" },
       };
-      if (authorIcon) embed.thumbnail = { url: authorIcon };
       if (data.imageUrl) embed.image = { url: data.imageUrl };
       fetch(feedWebhookUrl, {
         method: "POST",
