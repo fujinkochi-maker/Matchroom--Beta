@@ -45,8 +45,8 @@ function StorePage() {
         <Toaster position="bottom-right" />
         <section className="bg-foreground text-background">
           <div className="container-x py-14">
-            <p className="eyebrow text-primary">
-              <span className="h-px w-7 bg-primary" />
+            <p className="eyebrow">
+              <span className="h-px w-7 bg-background" />
               Store
             </p>
             <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">Store</h1>
@@ -63,8 +63,8 @@ function StorePage() {
       <section className="bg-foreground text-background">
         <div className="container-x grid items-center gap-8 py-14 md:grid-cols-[1.2fr_1fr]">
           <div>
-            <p className="eyebrow text-primary">
-              <span className="h-px w-7 bg-primary" />
+            <p className="eyebrow">
+              <span className="h-px w-7 bg-background" />
               Featured Drop
             </p>
             <h1 className="mt-2 font-display text-5xl uppercase md:text-7xl">{featured.name}</h1>

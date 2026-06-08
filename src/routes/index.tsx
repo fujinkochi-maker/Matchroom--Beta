@@ -123,8 +123,8 @@ function Hero({ fighterCount, eventCount }: { fighterCount: number; eventCount: 
       <div className="absolute inset-y-0 left-0 w-1 bg-primary md:w-2" />
       <div className="container-x relative grid min-h-[78vh] items-center gap-10 py-20 lg:grid-cols-[1.2fr_1fr]">
         <div>
-          <p className="eyebrow text-primary animate-fade-in">
-            <span className="h-px w-8 bg-primary" /> Matchroom Presents
+          <p className="eyebrow animate-fade-in">
+            <span className="h-px w-8 bg-background" /> Matchroom Presents
           </p>
           <h1 className="mt-3 font-display text-[14vw] uppercase leading-[0.85] tracking-tight md:text-[7.5rem] animate-slide-up animate-delay-100">
             Matchroom
@@ -268,8 +268,8 @@ function EventCarousel({
       )}
       <div className="container-x grid gap-10 py-16 md:py-20 lg:grid-cols-2 lg:items-center">
         <div>
-          <p className="eyebrow text-primary">
-            <span className="h-px w-7 bg-primary" />
+          <p className="eyebrow">
+            <span className="h-px w-7 bg-background" />
             {events.length > 1 ? `Event ${i + 1} of ${events.length}` : "Next Event"}
           </p>
           <h2 className="mt-2 font-display text-4xl uppercase md:text-6xl">{event.name}</h2>
@@ -299,7 +299,7 @@ function EventCarousel({
               className="border border-background/20 bg-background/5 p-4 backdrop-blur"
             >
               <FighterAvatar name={f.displayName} src={f.image} />
-              <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+              <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-background/80">
                 {f.division}
               </p>
               <p className="font-display text-xl uppercase">{f.displayName}</p>
@@ -481,8 +481,8 @@ function StoreTeaser() {
     <section className="bg-foreground text-background">
       <div className="container-x grid items-center gap-10 py-16 md:py-20 lg:grid-cols-2">
         <div>
-          <p className="eyebrow text-primary">
-            <span className="h-px w-7 bg-primary" />
+          <p className="eyebrow">
+            <span className="h-px w-7 bg-background" />
             Official Merchandise
           </p>
           <h2 className="mt-2 font-display text-4xl uppercase md:text-6xl">Matchroom Store</h2>

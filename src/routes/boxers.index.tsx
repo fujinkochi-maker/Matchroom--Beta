@@ -94,8 +94,8 @@ function BoxersPage() {
     <>
       <section className="bg-foreground text-background">
         <div className="container-x py-14">
-          <p className="eyebrow text-primary">
-            <span className="h-px w-7 bg-primary" />
+          <p className="eyebrow">
+            <span className="h-px w-7 bg-background" />
             Roster
           </p>
           <h1 className="mt-2 font-display text-6xl uppercase tracking-tight md:text-7xl">

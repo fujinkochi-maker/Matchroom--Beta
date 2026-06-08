@@ -54,8 +54,8 @@ function ChampionsPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40" />
         <div className="container-x relative py-20">
-          <p className="eyebrow text-primary">
-            <span className="h-px w-7 bg-primary" />
+          <p className="eyebrow">
+            <span className="h-px w-7 bg-background" />
             The Crown Jewels
           </p>
           <h1 className="mt-2 font-display text-6xl uppercase tracking-tight md:text-7xl">

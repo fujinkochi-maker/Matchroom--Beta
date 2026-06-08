@@ -47,8 +47,8 @@ function EventsPage() {
     <>
       <section className="bg-foreground text-background">
         <div className="container-x py-14">
-          <p className="eyebrow text-primary">
-            <span className="h-px w-7 bg-primary" />
+          <p className="eyebrow">
+            <span className="h-px w-7 bg-background" />
             Fight Nights
           </p>
           <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">Events</h1>
@@ -120,7 +120,7 @@ function EventCard({
         <div className="relative bg-foreground p-6 text-background">
           <div className="absolute inset-0 bg-neutral-600/40" />
           <div className="relative">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em]">
               {event.mainEvent.title}
             </p>
             <h3 className="mt-1 font-display text-3xl uppercase leading-none">{event.name}</h3>
@@ -135,7 +135,7 @@ function EventCard({
 
             <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
               <FighterMini f={a} fallback={event.mainEvent.a} />
-              <span className="font-display text-3xl text-primary">VS</span>
+              <span className="font-display text-3xl text-background opacity-80">VS</span>
               <FighterMini f={b} fallback={event.mainEvent.b} />
             </div>
 

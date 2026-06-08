@@ -180,7 +180,7 @@ function FighterProfilePage() {
                 Refresh
               </button>
             </div>
-            <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+            <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-background/80">
               {f.division}
             </p>
             <h1 className="mt-1 font-display text-6xl uppercase leading-none md:text-7xl">

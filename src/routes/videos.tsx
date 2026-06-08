@@ -34,8 +34,8 @@ function VideosPage() {
       <>
         <section className="bg-foreground text-background">
           <div className="container-x py-14">
-            <p className="eyebrow text-primary">
-              <span className="h-px w-7 bg-primary" />
+            <p className="eyebrow">
+              <span className="h-px w-7 bg-background" />
               Videos
             </p>
             <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">No videos yet</h1>
@@ -50,8 +50,8 @@ function VideosPage() {
       <section className="relative isolate bg-foreground/10 text-background">
         <div className="container-x grid items-center gap-8 py-14 md:grid-cols-[1.4fr_1fr]">
           <div>
-            <p className="eyebrow text-primary">
-              <span className="h-px w-7 bg-primary" />
+            <p className="eyebrow">
+              <span className="h-px w-7 bg-background" />
               Watch Now
             </p>
             <h1 className="mt-2 font-display text-5xl uppercase md:text-7xl">{featured.title}</h1>

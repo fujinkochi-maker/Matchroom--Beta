@@ -67,7 +67,7 @@ function EventDetailPage() {
               Upcoming
             </span>
           ) : (
-            <span className="inline-block rounded-full bg-background/20 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-background">
+            <span className="inline-block rounded-full bg-background/60 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-background">
               Past Event
             </span>
           )}
