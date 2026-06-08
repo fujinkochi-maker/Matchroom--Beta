@@ -1164,7 +1164,7 @@ export const createPost = createServerFn({ method: "POST" })
                   method: "POST",
                   headers: discordHeaders(),
                   body: JSON.stringify({
-                    content: `🔔 You were tagged in a post: "${preview}"\nCheck it out: ${process.env.VITE_SITE_URL ?? "http://localhost:5173"}/feed`,
+                    content: `🔔 You were tagged in a post: "${preview}"\nCheck it out: ${    process.env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app"}/feed`,
                   }),
                 });
               }
@@ -1179,7 +1179,7 @@ export const createPost = createServerFn({ method: "POST" })
     // Send Discord embed to feed webhook
     const feedWebhookUrl = process.env.FEED_WEBHOOK_URL;
     if (feedWebhookUrl) {
-      const siteUrl = process.env.VITE_SITE_URL ?? "http://localhost:5173";
+      const siteUrl = process.env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app";
       let tagNames: string[] = [];
       if (data.tags.length > 0) {
         const { data: tagFighters } = await supabase

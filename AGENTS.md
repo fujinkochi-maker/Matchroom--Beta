@@ -86,6 +86,7 @@ Missing `VITE_SUPABASE_*` keys → empty site. Missing server keys → admin pan
 | Var                      | Scope  | Required for             |
 | ------------------------ | ------ | ------------------------ |
 | `VITE_SUPABASE_URL`      | client | site rendering           |
+| `VITE_SITE_URL`         | both   | Discord embed/DM links   |
 | `VITE_SUPABASE_ANON_KEY` | client | site rendering           |
 | `SUPABASE_SERVICE_KEY`   | server | admin CRUD               |
 | `ADMIN_PASSWORD`         | server | admin login              |
@@ -95,6 +96,7 @@ Missing `VITE_SUPABASE_*` keys → empty site. Missing server keys → admin pan
 | `DISCORD_APPLICATION_ID` | server | register-commands        |
 | `DISCORD_GUILD_ID`       | server | OAuth2 auto-join guild   |
 | `DISCORD_CLIENT_SECRET`  | server | OAuth2 login            |
+| `FEED_WEBHOOK_URL`       | server | Discord feed post embed |
 
 ---
 
