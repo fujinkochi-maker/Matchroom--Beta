@@ -204,7 +204,6 @@ function FighterProfilePage() {
                       key={name}
                       className="inline-flex items-center gap-1 border border-background/30 px-2 py-1 text-xs font-bold uppercase tracking-wider"
                     >
-                      <Trophy className="h-3 w-3 text-primary" />
                       <BeltIcon name={name} className="h-5 w-auto" /> {name}
                     </span>
                   ))
