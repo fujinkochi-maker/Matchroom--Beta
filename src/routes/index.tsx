@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
-import { ArrowRight, Trophy, Calendar, Newspaper, Play } from "lucide-react";
+import { ArrowRight, Trophy, Calendar, Newspaper, Play, ChevronLeft, ChevronRight } from "lucide-react";
 import heroArena from "@/assets/hero-arena.jpg";
 import faceoff from "@/assets/faceoff.jpg";
 import { ChampionCard } from "@/components/ChampionCard";
@@ -7,7 +8,7 @@ import { Countdown } from "@/components/Countdown";
 import { FighterAvatar } from "@/components/FighterAvatar";
 import {
   getChampions,
-  nextEvent,
+  upcomingEvents,
   FIGHTERS,
   EVENTS,
   ARTICLES,
@@ -34,13 +35,14 @@ export const Route = createFileRoute("/")({
       ensureArticlesLoaded(),
       ensureVideosLoaded(),
     ]);
-    const eventObj = nextEvent();
-    const mainEventFighters = eventObj
-      ? {
-          a: getByUsername(eventObj.mainEvent.a),
-          b: getByUsername(eventObj.mainEvent.b),
-        }
-      : null;
+    const events = upcomingEvents();
+    const eventsWithFighters = events
+      .map((e) => ({
+        event: e,
+        a: getByUsername(e.mainEvent.a),
+        b: getByUsername(e.mainEvent.b),
+      }))
+      .filter((x): x is { event: (typeof events)[number]; a: NonNullable<ReturnType<typeof getByUsername>>; b: NonNullable<ReturnType<typeof getByUsername>> } => !!x.a && !!x.b);
     const topRanked = DIVISIONS.slice(0, 3).map((div) => ({
       division: div,
       fighters: getRanked(div).slice(0, 5),
@@ -49,8 +51,7 @@ export const Route = createFileRoute("/")({
       fighterCount: FIGHTERS.length,
       eventCount: EVENTS.length,
       champs: getChampions(),
-      event: eventObj,
-      mainEventFighters,
+      eventsWithFighters,
       topRanked,
       articles: ARTICLES.slice(0, 3),
       videos: VIDEOS.slice(0, 4),
@@ -81,8 +82,7 @@ function HomePage() {
     fighterCount,
     eventCount,
     champs,
-    event,
-    mainEventFighters,
+    eventsWithFighters,
     topRanked,
     articles,
     videos,
@@ -91,9 +91,7 @@ function HomePage() {
     <>
       <Hero fighterCount={fighterCount} eventCount={eventCount} />
       <ChampionsStrip champs={champs} />
-      {event && mainEventFighters?.a && mainEventFighters?.b && (
-        <NextEvent event={event} a={mainEventFighters.a} b={mainEventFighters.b} />
-      )}
+      {eventsWithFighters.length > 0 && <EventCarousel events={eventsWithFighters} />}
       <RankingsTeaser topRanked={topRanked} />
       <LatestNews articles={articles} />
       <FeaturedVideos videos={videos} />
@@ -226,22 +224,44 @@ function ChampionsStrip({ champs }: { champs: ReturnType<typeof getChampions> })
   );
 }
 
-function NextEvent({
-  event,
-  a,
-  b,
+function EventCarousel({
+  events,
 }: {
-  event: NonNullable<ReturnType<typeof nextEvent>>;
-  a: Fighter;
-  b: Fighter;
+  events: {
+    event: NonNullable<ReturnType<typeof upcomingEvents>>[number];
+    a: NonNullable<ReturnType<typeof getByUsername>>;
+    b: NonNullable<ReturnType<typeof getByUsername>>;
+  }[];
 }) {
+  const [i, setI] = useState(0);
+  const current = events[i];
+  if (!current) return null;
+  const { event, a, b } = current;
   return (
-    <section className="bg-foreground text-background">
+    <section className="bg-foreground text-background relative">
+      {events.length > 1 && (
+        <>
+          <button
+            onClick={() => setI((p) => Math.max(0, p - 1))}
+            disabled={i === 0}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 grid h-10 w-10 place-items-center rounded-full border border-background/30 bg-background/10 text-background backdrop-blur hover:bg-background/20 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => setI((p) => Math.min(events.length - 1, p + 1))}
+            disabled={i === events.length - 1}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 grid h-10 w-10 place-items-center rounded-full border border-background/30 bg-background/10 text-background backdrop-blur hover:bg-background/20 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </>
+      )}
       <div className="container-x grid gap-10 py-16 md:py-20 lg:grid-cols-2 lg:items-center">
         <div>
           <p className="eyebrow text-primary">
             <span className="h-px w-7 bg-primary" />
-            Next Event
+            {events.length > 1 ? `Event ${i + 1} of ${events.length}` : "Next Event"}
           </p>
           <h2 className="mt-2 font-display text-4xl uppercase md:text-6xl">{event.name}</h2>
           <p className="mt-3 max-w-lg text-background/70">{event.tagline}</p>
