@@ -55,7 +55,7 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
     username: defaultValues?.username ?? "",
     displayName: defaultValues?.displayName ?? "",
     nickname: defaultValues?.nickname ?? "",
-    division: defaultValues?.division ?? DIVISIONS[0],
+    division: defaultValues?.division || DIVISIONS[0],
     rank: defaultValues?.rank ?? 0,
     wins: defaultValues?.wins ?? 0,
     losses: defaultValues?.losses ?? 0,

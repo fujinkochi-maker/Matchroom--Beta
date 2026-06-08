@@ -1206,11 +1206,14 @@ export const createPost = createServerFn({ method: "POST" })
         author: { name: "Matchroom Boxing" },
       };
       if (data.imageUrl) embed.image = { url: data.imageUrl };
-      fetch(feedWebhookUrl, {
+      const webhookRes = await fetch(feedWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ embeds: [embed] }),
-      }).catch(() => {});
+      });
+      if (!webhookRes.ok) {
+        console.error("Feed webhook failed:", webhookRes.status, await webhookRes.text());
+      }
     }
 
     return { ok: true };
