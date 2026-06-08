@@ -107,7 +107,11 @@ function EventDetailPage() {
             <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8">
               <div className="text-center">
                 <div className="mx-auto w-24 md:w-32">
-                  <FighterAvatar name={lastName(a?.displayName ?? event.mainEvent.a)} square src={a?.image} />
+                  <FighterAvatar
+                    name={lastName(a?.displayName ?? event.mainEvent.a)}
+                    square
+                    src={a?.image}
+                  />
                 </div>
                 <p className="mt-2 font-display text-lg uppercase leading-tight md:text-2xl">
                   {lastName(a?.displayName ?? event.mainEvent.a)}
@@ -128,7 +132,11 @@ function EventDetailPage() {
               </div>
               <div className="text-center">
                 <div className="mx-auto w-24 md:w-32">
-                  <FighterAvatar name={lastName(b?.displayName ?? event.mainEvent.b)} square src={b?.image} />
+                  <FighterAvatar
+                    name={lastName(b?.displayName ?? event.mainEvent.b)}
+                    square
+                    src={b?.image}
+                  />
                 </div>
                 <p className="mt-2 font-display text-lg uppercase leading-tight md:text-2xl">
                   {lastName(b?.displayName ?? event.mainEvent.b)}

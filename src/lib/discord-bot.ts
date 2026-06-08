@@ -1008,11 +1008,110 @@ export function createHandler(
       "`/champions` — List all division champions",
       "`/fighter` — Look up another fighter's profile",
       "`/unregister` — Delete your fighter permanently",
+      "`/emojistealbulk` — Bulk-steal custom emojis from other servers",
       "`/help` — Show this message",
       "",
       "**Tip:** Type `/` in any channel to see available commands!",
     ];
     return ephemeral(lines.join("\n"));
+  }
+
+  async function handleEmojiStealBulk(interaction: any): Promise<Response> {
+    const guildId = interaction.guild_id;
+    if (!guildId) return ephemeral("This command can only be used in a server.");
+
+    const MANAGE_EXPRESSIONS = 1n << 26n;
+    const appPerms = BigInt(interaction.app_permissions || "0");
+    if (!(appPerms & MANAGE_EXPRESSIONS)) {
+      return ephemeral(
+        "I need the **Manage Expressions** permission in this server to add emojis.",
+      );
+    }
+
+    const emojiString = getOptionValue(interaction.data.options, "emojis");
+    if (!emojiString) return ephemeral("Please provide emoji references.");
+
+    const emojiRegex = /<(a)?:(\w+):(\d+)>/g;
+    const matches: { name: string; id: string; animated: boolean }[] = [];
+    let match;
+    while ((match = emojiRegex.exec(emojiString)) !== null) {
+      matches.push({ animated: match[1] === "a", name: match[2], id: match[3] });
+    }
+
+    if (matches.length === 0)
+      return ephemeral(
+        "No valid emoji references found. Use format: `<:name:id>` or `<a:name:id>`",
+      );
+
+    if (matches.length > 20)
+      return ephemeral("Maximum 20 emojis at a time. Run the command again for more.");
+
+    const appId = interaction.application_id;
+    const intToken = interaction.token;
+
+    const bgTask = (async () => {
+      const successes: string[] = [];
+      const failures: { name: string; reason: string }[] = [];
+
+      for (const emoji of matches) {
+        try {
+          const ext = emoji.animated ? "gif" : "png";
+          const imgRes = await retryFetch(`https://cdn.discordapp.com/emojis/${emoji.id}.${ext}`, {
+            method: "GET",
+          });
+
+          if (!imgRes.ok) {
+            failures.push({ name: emoji.name, reason: `CDN returned ${imgRes.status}` });
+            await new Promise((r) => setTimeout(r, 500));
+            continue;
+          }
+
+          const buffer = await imgRes.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          let binary = "";
+          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          const base64 = btoa(binary);
+          const dataUri = `data:image/${ext};base64,${base64}`;
+
+          const createRes = await discordFetch(`${DISCORD_API}/guilds/${guildId}/emojis`, {
+            method: "POST",
+            headers: discordHeaders(),
+            body: JSON.stringify({ name: emoji.name, image: dataUri }),
+          });
+
+          if (createRes.ok) {
+            successes.push(emoji.name);
+          } else {
+            const errData = await createRes.json().catch(() => ({ message: createRes.statusText }));
+            failures.push({
+              name: emoji.name,
+              reason: errData.message || `HTTP ${createRes.status}`,
+            });
+          }
+        } catch (err) {
+          failures.push({
+            name: emoji.name,
+            reason: err instanceof Error ? err.message : "Unknown error",
+          });
+        }
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      const lines: string[] = [];
+      if (successes.length > 0) {
+        lines.push(`✅ **Stolen ${successes.length}/${matches.length} emojis**`);
+        const names = successes.map((n) => `:${n}:`).join(" ");
+        lines.push(names);
+      }
+      if (failures.length > 0) {
+        lines.push(...failures.map((f) => `❌ **${f.name}** — ${f.reason}`));
+      }
+
+      await editDeferredResponse(appId, intToken, lines.join("\n"));
+    })();
+
+    if (waitUntil) waitUntil(bgTask);
+    return jsonResponse({ type: 5 });
   }
 
   async function handleDiscordInteraction(request: Request): Promise<Response | null> {
@@ -1103,6 +1202,7 @@ export function createHandler(
         if (commandName === "unregister") return handleUnregisterCommand(interaction);
         if (commandName === "signup") return handleSignupCommand(interaction);
         if (commandName === "help") return handleHelpCommand();
+        if (commandName === "emojistealbulk") return handleEmojiStealBulk(interaction);
       }
 
       if (
@@ -1231,6 +1331,20 @@ export function createHandler(
         description: "Show available commands and how to use them",
         type: 1,
         contexts: [0, 1, 2],
+      },
+      {
+        name: "emojistealbulk",
+        description: "Bulk-steal custom emojis from other servers by pasting emoji references",
+        type: 1,
+        contexts: [0],
+        options: [
+          {
+            type: 3,
+            name: "emojis",
+            description: "Paste emoji references, e.g. <:name:123> <a:name:456>",
+            required: true,
+          },
+        ],
       },
     ];
 

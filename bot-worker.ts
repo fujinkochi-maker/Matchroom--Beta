@@ -94,6 +94,20 @@ async function registerCommands() {
         },
       ],
     },
+    {
+      name: "emojistealbulk",
+      description: "Bulk-steal custom emojis from other servers by pasting emoji references",
+      type: 1,
+      contexts: [0],
+      options: [
+        {
+          type: 3,
+          name: "emojis",
+          description: "Paste emoji references, e.g. <:name:123> <a:name:456>",
+          required: true,
+        },
+      ],
+    },
   ];
 
   const maxRetries = 3;

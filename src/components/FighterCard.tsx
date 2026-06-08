@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import { FighterAvatar } from "./FighterAvatar";
+import { BeltIcon } from "./BeltIcon";
 import type { Fighter } from "@/data/types";
 import { getChampionTitle } from "@/data/fighters";
 
@@ -22,14 +23,9 @@ export const FighterCard = memo(function FighterCard({
             {fighter.rank === 0 ? getChampionTitle(fighter.beltsHeld) : `#${rank}`}
           </div>
           {fighter.beltsHeld ? (
-            <div className="absolute right-0 top-0 flex flex-wrap gap-0.5">
+            <div className="absolute right-1 top-1 flex flex-wrap gap-1">
               {fighter.beltsHeld.split(",").map((b) => (
-                <span
-                  key={b}
-                  className="bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground"
-                >
-                  {b}
-                </span>
+                <BeltIcon key={b} name={b} className="h-5 w-auto drop-shadow" />
               ))}
             </div>
           ) : (

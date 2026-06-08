@@ -22,13 +22,17 @@ export function FighterAutocomplete({
     : FIGHTERS;
 
   const query = input.toLowerCase();
-  const suggestions = pool.filter(
-    (f) =>
-      f.username.toLowerCase().includes(query) ||
-      f.displayName.toLowerCase().includes(query),
-  ).slice(0, 15);
+  const suggestions = pool
+    .filter(
+      (f) =>
+        f.username.toLowerCase().includes(query) || f.displayName.toLowerCase().includes(query),
+    )
+    .slice(0, 15);
 
-  const exactMatch = pool.find((f) => f.username === input.trim() || f.displayName.toLowerCase() === input.trim().toLowerCase());
+  const exactMatch = pool.find(
+    (f) =>
+      f.username === input.trim() || f.displayName.toLowerCase() === input.trim().toLowerCase(),
+  );
 
   useEffect(() => {
     const f = pool.find((p) => p.username === value);

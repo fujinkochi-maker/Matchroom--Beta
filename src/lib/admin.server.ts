@@ -1164,7 +1164,7 @@ export const createPost = createServerFn({ method: "POST" })
                   method: "POST",
                   headers: discordHeaders(),
                   body: JSON.stringify({
-                    content: `🔔 You were tagged in a post: "${preview}"\nCheck it out: ${    process.env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app"}/feed`,
+                    content: `🔔 You were tagged in a post: "${preview}"\nCheck it out: ${process.env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app"}/feed`,
                   }),
                 });
               }

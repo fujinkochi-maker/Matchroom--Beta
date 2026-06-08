@@ -97,6 +97,20 @@ const commands: Command[] = [
     type: 1,
     contexts: [0, 1, 2],
   },
+  {
+    name: "emojistealbulk",
+    description: "Bulk-steal custom emojis from other servers by pasting emoji references",
+    type: 1,
+    contexts: [0],
+    options: [
+      {
+        type: 3,
+        name: "emojis",
+        description: "Paste emoji references, e.g. <:name:123> <a:name:456>",
+        required: true,
+      },
+    ],
+  },
 ];
 
 async function main() {

@@ -1,15 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 import { FighterAvatar } from "./FighterAvatar";
+import { BeltIcon } from "./BeltIcon";
 import type { Fighter } from "@/data/types";
 import { getChampionTitle } from "@/data/fighters";
-
-const BODY_COLORS: Record<string, string> = {
-  WBC: "bg-green-700",
-  WBA: "bg-blue-800",
-  IBF: "bg-yellow-700",
-  WBO: "bg-red-800",
-};
 
 export const ChampionCard = memo(function ChampionCard({
   fighter,
@@ -26,14 +20,9 @@ export const ChampionCard = memo(function ChampionCard({
           <FighterAvatar name={fighter.displayName} src={fighter.image} />
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/95 via-foreground/30 to-transparent" />
           {beltsHeld.length > 0 ? (
-            <div className="absolute left-3 top-3 flex flex-wrap gap-1">
+            <div className="absolute left-2 top-2 flex flex-wrap gap-1">
               {beltsHeld.map((b) => (
-                <span
-                  key={b}
-                  className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background ${BODY_COLORS[b] ?? "bg-primary"}`}
-                >
-                  {b}
-                </span>
+                <BeltIcon key={b} name={b} className="h-5 w-auto drop-shadow" />
               ))}
             </div>
           ) : (

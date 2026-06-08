@@ -746,7 +746,13 @@ export async function loadDataFromSupabase() {
         "notifications",
       ),
       _loadTable("event_signups", _eventSignups, rowToSignupFromRow, undefined, "event_signups"),
-      _loadTable("fighter_follows", _fighterFollows, rowToFighterFollowFromRow, undefined, "fighter_follows"),
+      _loadTable(
+        "fighter_follows",
+        _fighterFollows,
+        rowToFighterFollowFromRow,
+        undefined,
+        "fighter_follows",
+      ),
     ]);
   } catch {
     // Data will load on next access if Supabase is unavailable

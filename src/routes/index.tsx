@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
-import { ArrowRight, Trophy, Calendar, Newspaper, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowRight,
+  Trophy,
+  Calendar,
+  Newspaper,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import heroArena from "@/assets/hero-arena.jpg";
 import faceoff from "@/assets/faceoff.jpg";
 import { ChampionCard } from "@/components/ChampionCard";
@@ -42,7 +50,15 @@ export const Route = createFileRoute("/")({
         a: getByUsername(e.mainEvent.a),
         b: getByUsername(e.mainEvent.b),
       }))
-      .filter((x): x is { event: (typeof events)[number]; a: NonNullable<ReturnType<typeof getByUsername>>; b: NonNullable<ReturnType<typeof getByUsername>> } => !!x.a && !!x.b);
+      .filter(
+        (
+          x,
+        ): x is {
+          event: (typeof events)[number];
+          a: NonNullable<ReturnType<typeof getByUsername>>;
+          b: NonNullable<ReturnType<typeof getByUsername>>;
+        } => !!x.a && !!x.b,
+      );
     const topRanked = DIVISIONS.slice(0, 3).map((div) => ({
       division: div,
       fighters: getRanked(div).slice(0, 5),
@@ -78,15 +94,8 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const {
-    fighterCount,
-    eventCount,
-    champs,
-    eventsWithFighters,
-    topRanked,
-    articles,
-    videos,
-  } = Route.useLoaderData();
+  const { fighterCount, eventCount, champs, eventsWithFighters, topRanked, articles, videos } =
+    Route.useLoaderData();
   return (
     <>
       <Hero fighterCount={fighterCount} eventCount={eventCount} />
