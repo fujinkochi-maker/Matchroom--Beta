@@ -221,7 +221,7 @@ async function _loadTable<T>(
 }
 
 export function clearSignupsCache() {
-  delete _lastLoaded["_eventSignups"];
+  delete _lastLoaded["event_signups"];
   _eventSignups.length = 0;
 }
 
@@ -249,7 +249,7 @@ function rowToSignupFromRow(row: any): EventSignup {
 }
 
 export function clearFighterFollowsCache() {
-  delete _lastLoaded["_fighterFollows"];
+  delete _lastLoaded["fighter_follows"];
   _fighterFollows.length = 0;
 }
 
@@ -276,7 +276,8 @@ function rowToFighterFollowFromRow(row: any): FighterFollow {
 }
 
 export function clearFightersCache() {
-  delete _lastLoaded["_fighters"];
+  delete _lastLoaded["fighters"];
+  _fighters.length = 0;
 }
 
 export function clearEventsCache() {
