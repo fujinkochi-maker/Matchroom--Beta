@@ -140,7 +140,21 @@ function FeedPage() {
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : !hasMorePosts() && posts.length > 0 ? (
                   <span className="text-xs text-muted-foreground">You've seen it all</span>
-                ) : null}
+                ) : (
+                  hasMorePosts() && (
+                    <button
+                      onClick={() => {
+                        setLoadingMore(true);
+                        loadMorePosts()
+                          .then(() => router.invalidate())
+                          .finally(() => setLoadingMore(false));
+                      }}
+                      className="text-xs font-semibold uppercase tracking-wider text-primary hover:text-primary/80"
+                    >
+                      Load More
+                    </button>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -378,9 +392,11 @@ function PostCard({
 }) {
   const [liked, setLiked] = useState(post.likedByCurrentUser);
   const [likeCount, setLikeCount] = useState(post.likes);
+  const [liking, setLiking] = useState(false);
 
   const handleLike = async () => {
-    if (!session?.token) return;
+    if (!session?.token || liking) return;
+    setLiking(true);
     try {
       if (liked) {
         await unlikePost({ data: { token: session.token, postId: post.id } });
@@ -393,6 +409,8 @@ function PostCard({
       }
     } catch {
       // best-effort
+    } finally {
+      setLiking(false);
     }
   };
 
@@ -500,7 +518,7 @@ function PostCard({
           <div className="mt-3 flex items-center gap-4">
             <button
               onClick={handleLike}
-              disabled={!session?.token}
+              disabled={!session?.token || liking}
               className={`inline-flex items-center gap-1 text-xs font-medium ${liked ? "text-primary" : "text-muted-foreground"} hover:text-primary disabled:opacity-50`}
             >
               <Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />

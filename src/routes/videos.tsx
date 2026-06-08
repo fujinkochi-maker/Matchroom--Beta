@@ -58,7 +58,9 @@ function VideosPage() {
             <p className="mt-3 text-background/70">
               {featured.category} • {featured.duration} • {featured.views} views
             </p>
-            <button className="mt-6 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark">
+            <button
+              onClick={() => document.getElementById("videos-section")?.scrollIntoView({ behavior: "smooth" })}
+              className="mt-6 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark">
               <Play className="h-4 w-4 fill-current" /> Play Feature
             </button>
           </div>
@@ -72,7 +74,7 @@ function VideosPage() {
         </div>
       </section>
 
-      <section className="container-x py-12">
+      <section id="videos-section" className="container-x py-12">
         {VIDEO_CATS.map((c) => (
           <VideoRow key={c} category={c} videos={videos} />
         ))}
