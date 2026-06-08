@@ -88,8 +88,8 @@ export function NotificationBell() {
                   className={`block border-b border-border px-4 py-3 text-sm hover:bg-accent ${n.read ? "" : "bg-primary/5"}`}
                   onClick={() => setOpen(false)}
                 >
-                  <span className="font-medium">{n.actorDisplayName}</span>{" "}
-                  {n.type === "tag" ? "tagged you in a post" : "liked your post"}
+                  <span className="font-medium text-foreground">{n.actorDisplayName}</span>{" "}
+                  <span className="text-foreground">{n.type === "tag" ? "tagged you in a post" : "liked your post"}</span>
                   <p className="mt-0.5 text-xs text-muted-foreground">{formatTime(n.createdAt)}</p>
                 </Link>
               ))

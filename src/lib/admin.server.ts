@@ -1178,6 +1178,9 @@ export const createPost = createServerFn({ method: "POST" })
 
     // Send Discord embed to feed webhook
     const feedWebhookUrl = process.env.FEED_WEBHOOK_URL;
+    if (!feedWebhookUrl) {
+      console.warn("[Feed] FEED_WEBHOOK_URL not set — skipping Discord embed");
+    }
     if (feedWebhookUrl) {
       const siteUrl = process.env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app";
       let tagNames: string[] = [];
