@@ -283,9 +283,9 @@ function EventDetailSkeleton() {
         <div className="border border-border bg-card p-10">
           <Skeleton className="mx-auto h-4 w-32" />
           <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-8">
-            <Skeleton className="mx-auto h-32 w-32 rounded-full" />
+            <Skeleton className="mx-auto h-32 w-32 rounded-none" />
             <Skeleton className="h-12 w-16" />
-            <Skeleton className="mx-auto h-32 w-32 rounded-full" />
+            <Skeleton className="mx-auto h-32 w-32 rounded-none" />
           </div>
         </div>
       </section>

@@ -39,6 +39,7 @@ function VideosPage() {
               Videos
             </p>
             <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">No videos yet</h1>
+            <p className="mt-3 text-background/70">Fight highlights and knockouts coming soon.</p>
           </div>
         </section>
       </>
@@ -106,7 +107,7 @@ function VideoRow({
 
 function VideoCard({ v }: { v: (typeof VIDEOS)[number] }) {
   return (
-    <div className="group w-72 shrink-0 cursor-pointer">
+    <div className="group w-72 shrink-0">
       <div className="relative aspect-video overflow-hidden border border-border bg-foreground/10">
         <div className="absolute inset-0 opacity-90 transition-opacity group-hover:opacity-100">
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-pulse bg-primary/20" />

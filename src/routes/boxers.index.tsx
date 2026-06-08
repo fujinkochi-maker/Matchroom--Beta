@@ -116,7 +116,7 @@ function BoxersPage() {
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {champs.slice(0, 6).map((c) => (
-              <ChampionCard key={c.username} fighter={c} />
+              <ChampionCard key={c.username} fighter={c} beltsHeld={c.beltsHeld ? c.beltsHeld.split(",") : []} />
             ))}
           </div>
         </section>

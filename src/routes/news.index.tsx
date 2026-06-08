@@ -59,7 +59,7 @@ function NewsPage() {
 
       <section className="container-x py-12">
         {!feat && rest.length === 0 ? (
-          <p className="py-12 text-center text-muted-foreground">No news yet.</p>
+          <p className="py-12 text-center text-muted-foreground">No news yet. Check back for the latest fight announcements and results.</p>
         ) : (
           <>
             {feat && (

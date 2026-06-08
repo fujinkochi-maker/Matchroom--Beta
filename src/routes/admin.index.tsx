@@ -36,28 +36,24 @@ function AdminDashboard() {
   ];
   return (
     <div>
-      {" "}
-      <h1 className={ADMIN_HEADING}>Dashboard</h1>{" "}
-      <p className={ADMIN_SUBTITLE}> Manage your Matchroom Boxing Beta content. </p>{" "}
+      <h1 className={ADMIN_HEADING}>Dashboard</h1>
+      <p className={ADMIN_SUBTITLE}>Manage your Matchroom Boxing Beta content.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {" "}
         {cards.map((c) => (
           <Link
             key={c.label}
             to={c.to}
             className="group rounded-lg border border-border bg-background p-5 transition-shadow hover:shadow-card"
           >
-            {" "}
             <div className="flex items-center justify-between">
-              {" "}
-              <c.icon className="h-5 w-5 text-muted-foreground" />{" "}
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />{" "}
-            </div>{" "}
-            <p className="mt-4 font-display text-3xl">{c.count}</p>{" "}
-            <p className="mt-1 text-sm font-medium text-muted-foreground">{c.label}</p>{" "}
+              <c.icon className="h-5 w-5 text-muted-foreground" />
+              <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+            <p className="mt-4 font-display text-3xl">{c.count}</p>
+            <p className="mt-1 text-sm font-medium text-muted-foreground">{c.label}</p>
           </Link>
-        ))}{" "}
-      </div>{" "}
+        ))}
+      </div>
     </div>
   );
 }

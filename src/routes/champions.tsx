@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Trophy } from "lucide-react";
 import { ChampionCard } from "@/components/ChampionCard";
 import { getChampions, ensureFightersLoaded } from "@/data/fighters";
 import { getPublicRankings } from "@/lib/admin.server";
@@ -76,7 +77,9 @@ function ChampionsPage() {
         </section>
       ) : (
         <section className="container-x py-16 text-center">
-          <p className="text-muted-foreground">No champions yet.</p>
+          <Trophy className="mx-auto h-12 w-12 text-muted-foreground/50" />
+          <p className="mt-4 text-lg font-semibold">No champions yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">The first champion will be crowned soon.</p>
         </section>
       )}
     </>

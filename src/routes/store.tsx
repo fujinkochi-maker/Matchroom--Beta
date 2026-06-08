@@ -49,7 +49,8 @@ function StorePage() {
               <span className="h-px w-7 bg-primary" />
               Store
             </p>
-            <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">No products yet</h1>
+            <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">Store</h1>
+            <p className="mt-3 max-w-xl text-background/70">No products yet. New merch drops soon.</p>
           </div>
         </section>
       </>
@@ -133,11 +134,15 @@ function StorePage() {
                     <Sparkles className="h-3 w-3" /> Limited
                   </span>
                 )}
-                {p.limited && (p.stock ?? 0) < 15 && (
+                {p.stock === 0 ? (
+                  <span className="absolute right-2 top-2 bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-destructive-foreground">
+                    Sold Out
+                  </span>
+                ) : (p.stock ?? 99) < 15 ? (
                   <span className="absolute right-2 top-2 bg-foreground/80 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-background">
                     Only {p.stock} left
                   </span>
-                )}
+                ) : null}
               </div>
               <div className="flex flex-1 flex-col p-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -146,10 +151,15 @@ function StorePage() {
                 <p className="mt-1 font-semibold leading-tight">{p.name}</p>
                 <p className="mt-2 font-display text-xl">${p.price}</p>
                 <button
+                  disabled={p.stock === 0}
                   onClick={() => toast.success(`${p.name} added to cart`)}
-                  className="mt-3 inline-flex items-center justify-center gap-2 border border-foreground bg-background px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors hover:bg-primary hover:text-primary-foreground"
+                  className={`mt-3 inline-flex items-center justify-center gap-2 border px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+                    p.stock === 0
+                      ? "border-muted bg-muted text-muted-foreground cursor-not-allowed"
+                      : "border-foreground bg-background hover:bg-primary hover:text-primary-foreground"
+                  }`}
                 >
-                  <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
+                  <ShoppingBag className="h-3.5 w-3.5" /> {p.stock === 0 ? "Sold Out" : "Add to Cart"}
                 </button>
               </div>
             </div>
