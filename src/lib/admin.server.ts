@@ -176,24 +176,6 @@ async function syncOpponentRecords(
       if (error) console.error(`Failed to mirror fights for ${opp}:`, error);
     }
 
-    const { data: oppHistory } = await supabase
-      .from("fight_history")
-      .select("result, method")
-      .eq("fighter_username", opp);
-    const auto = autoCalcStats(oppHistory || []);
-    if (auto) {
-      await supabase
-        .from("fighters")
-        .update({
-          wins: auto.wins,
-          losses: auto.losses,
-          draws: auto.draws,
-          kos: auto.kos,
-          streak: auto.streak,
-        })
-        .eq("username", opp);
-    }
-
     if (oppFighter.division) {
       const { recalculateDivision } = await import("@/data/rankings");
       recalculateDivision(oppFighter.division).catch((err: any) =>
