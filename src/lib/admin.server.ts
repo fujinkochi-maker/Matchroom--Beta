@@ -293,14 +293,6 @@ export const updateFighter = createServerFn({ method: "POST" })
     if (!validateToken(data.token)) throw new Error("Unauthorized");
     const supabase = getAdminSupabase();
 
-    // Auto-calc stats from fight history if provided
-    const auto = autoCalcStats(data.history);
-    const wins = auto ? auto.wins : data.wins;
-    const losses = auto ? auto.losses : data.losses;
-    const draws = auto ? auto.draws : data.draws;
-    const kos = auto ? auto.kos : data.kos;
-    const streak = auto ? auto.streak : data.streak;
-
     // Check if fighter previously had belts (for Former World Champion logic)
     const { data: oldFighter } = await supabase
       .from("fighters")
@@ -315,14 +307,14 @@ export const updateFighter = createServerFn({ method: "POST" })
       nickname: data.nickname,
       division: data.division,
       rank: data.rank,
-      wins,
-      losses,
-      draws,
-      kos,
+      wins: data.wins,
+      losses: data.losses,
+      draws: data.draws,
+      kos: data.kos,
       stance: data.stance,
       belts: data.belts,
       debut: data.debut,
-      streak,
+      streak: data.streak,
       bio: data.bio,
       image_url: data.imageUrl ?? null,
       belts_held: data.beltsHeld,
