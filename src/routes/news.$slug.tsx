@@ -9,6 +9,7 @@ import {
   ensureArticlesLoaded,
   ensureFightersLoaded,
 } from "@/data/fighters";
+import { FighterAvatar } from "@/components/FighterAvatar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/news/$slug")({
