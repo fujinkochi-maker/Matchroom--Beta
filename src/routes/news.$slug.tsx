@@ -56,10 +56,16 @@ function ArticlePage() {
           <p className="mt-4 inline-block bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
             {a.category}
           </p>
-          <h1 className="mt-3 max-w-4xl font-display text-4xl uppercase leading-tight md:text-6xl">
+          <h1
+            className="mt-3 max-w-4xl font-display text-4xl uppercase leading-tight md:text-6xl"
+            style={a.image ? { textShadow: "0 2px 8px rgba(0,0,0,0.6)" } : undefined}
+          >
             {a.title}
           </h1>
-          <p className="mt-3 text-sm text-background/70">
+          <p
+            className="mt-3 text-sm text-background/70"
+            style={a.image ? { textShadow: "0 1px 4px rgba(0,0,0,0.5)" } : undefined}
+          >
             {new Date(a.date).toLocaleDateString()} • {a.author}
           </p>
         </div>
