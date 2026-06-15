@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import type { Fighter } from "@/data/types";
 import {
   ARTICLES,
+  FIGHTERS,
   getArticleBySlug,
   getByUsername,
   ensureArticlesLoaded,
