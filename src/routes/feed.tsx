@@ -339,7 +339,7 @@ function PostComposer({
                   setShowImageUpload(!showImageUpload);
                   setShowVideoInput(false);
                 }}
-                className={`rounded-md px-2 py-1 text-xs font-medium ${showImageUpload ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
+                className={`rounded-md px-2 py-2.5 text-xs font-medium ${showImageUpload ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
               >
                 <ImageIcon className="mr-1 inline h-3.5 w-3.5" />
                 Photo
@@ -350,7 +350,7 @@ function PostComposer({
                   setShowVideoInput(!showVideoInput);
                   setShowImageUpload(false);
                 }}
-                className={`rounded-md px-2 py-1 text-xs font-medium ${showVideoInput ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
+                className={`rounded-md px-2 py-2.5 text-xs font-medium ${showVideoInput ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
               >
                 Video
               </button>
@@ -360,14 +360,14 @@ function PostComposer({
               <button
                 type="button"
                 onClick={handleCancel}
-                className="rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                className="rounded-md px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePost}
                 disabled={!content.trim() || posting}
-                className="rounded-md bg-primary px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                className="rounded-md bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 {posting ? "Posting..." : "Post"}
               </button>

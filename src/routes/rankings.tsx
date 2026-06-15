@@ -244,15 +244,15 @@ function OverallTable({
     );
   }
   return (
-    <div className="overflow-hidden border border-border">
+    <div className="overflow-x-auto border border-border">
       <table className="w-full text-sm">
         <thead className="bg-surface text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
             <th className="w-16 px-4 py-3 text-left">Rank</th>
             <th className="px-4 py-3 text-left">Fighter</th>
             <th className="px-4 py-3 text-left">Record</th>
-            <th className="px-4 py-3 text-left">Streak</th>
-            <th className="px-4 py-3 text-left">KO %</th>
+            <th className="hidden px-4 py-3 text-left md:table-cell">Streak</th>
+            <th className="hidden px-4 py-3 text-left md:table-cell">KO %</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -290,12 +290,12 @@ function OverallTable({
                 <td className="px-4 py-3 font-mono">
                   {f.wins}-{f.losses}-{f.draws}
                 </td>
-                <td className="px-4 py-3">
+                <td className="hidden px-4 py-3 md:table-cell">
                   <span className="bg-foreground px-2 py-0.5 text-xs font-bold text-background">
                     {f.streak}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-mono text-primary">{kos}%</td>
+                <td className="hidden px-4 py-3 font-mono text-primary md:table-cell">{kos}%</td>
               </tr>
             );
           })}

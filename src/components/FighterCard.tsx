@@ -42,15 +42,17 @@ export const FighterCard = memo(function FighterCard({
             <p className="text-xs text-background/70">@{fighter.username}</p>
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs">
+        <div className="flex flex-col gap-0.5 border-t border-border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between">
           <span className="font-semibold uppercase tracking-wider text-muted-foreground">
             {fighter.division}
           </span>
-          {fighter.region && <span className="text-muted-foreground">{fighter.region}</span>}
-          <span className="font-mono text-foreground">
-            {fighter.wins}-{fighter.losses}-{fighter.draws}
+          <span className="flex items-center gap-2">
+            {fighter.region && <span className="text-muted-foreground">{fighter.region}</span>}
+            <span className="font-mono text-foreground">
+              {fighter.wins}-{fighter.losses}-{fighter.draws}
+            </span>
+            <span className="font-mono text-primary">{kos}% KO</span>
           </span>
-          <span className="font-mono text-primary">{kos}% KO</span>
         </div>
       </Link>
     </div>

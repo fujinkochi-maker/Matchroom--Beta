@@ -168,7 +168,7 @@ export function SiteHeader() {
                 <Menu className="h-5 w-5" />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[280px] p-0 pt-14 text-foreground">
+            <SheetContent side="right" className="w-full max-w-[280px] p-0 pt-14 text-foreground">
               <div className="border-b border-border px-4 pb-3">
                 <Link to="/" className="flex items-center gap-2">
                   <img src="/favicon.png" alt="Matchroom" className="h-8 w-auto" />

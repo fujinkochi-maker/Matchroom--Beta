@@ -72,7 +72,7 @@ export function NotificationBell() {
 
       {open && (
         <div
-          className="absolute right-0 z-50 mt-2 w-80 origin-top-right scale-y-100 opacity-100 transition-all duration-150 rounded-lg border border-border bg-background shadow-lg"
+          className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-32px)] origin-top-right scale-y-100 opacity-100 transition-all duration-150 rounded-lg border border-border bg-background shadow-lg"
         >
           <div className="border-b border-border px-4 py-2">
             <p className="text-sm font-semibold">Notifications</p>

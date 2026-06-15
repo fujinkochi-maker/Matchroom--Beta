@@ -153,7 +153,7 @@ function StorePage() {
                 <button
                   disabled={p.stock === 0}
                   onClick={() => toast.success(`${p.name} added to cart`)}
-                  className={`mt-3 inline-flex items-center justify-center gap-2 border px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+                  className={`mt-3 inline-flex items-center justify-center gap-2 border px-3 py-3.5 text-xs font-bold uppercase tracking-wider transition-colors ${
                     p.stock === 0
                       ? "border-muted bg-muted text-muted-foreground cursor-not-allowed"
                       : "border-foreground bg-background hover:bg-primary hover:text-primary-foreground"

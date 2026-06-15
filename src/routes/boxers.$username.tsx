@@ -183,7 +183,7 @@ function FighterProfilePage() {
             <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-background/80">
               {f.division}
             </p>
-            <h1 className="mt-1 font-display text-6xl uppercase leading-none md:text-7xl">
+            <h1 className="mt-1 font-display text-4xl uppercase leading-none md:text-7xl">
               {f.displayName}
             </h1>
             <p className="mt-2 text-lg italic text-background/70">
@@ -344,8 +344,8 @@ function FighterProfilePage() {
                   <tr>
                     <th className="px-4 py-3 text-left">Opponent</th>
                     <th className="px-4 py-3 text-left">Result</th>
-                    <th className="px-4 py-3 text-left">Method</th>
-                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="hidden px-4 py-3 text-left md:table-cell">Method</th>
+                    <th className="hidden px-4 py-3 text-left md:table-cell">Date</th>
                     <th className="px-4 py-3 text-left">Event</th>
                   </tr>
                 </thead>
@@ -366,8 +366,8 @@ function FighterProfilePage() {
                           {h.result}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{h.method}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{h.date}</td>
+                      <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{h.method}</td>
+                      <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{h.date}</td>
                       <td className="px-4 py-3 text-muted-foreground">{h.event}</td>
                     </tr>
                   ))}

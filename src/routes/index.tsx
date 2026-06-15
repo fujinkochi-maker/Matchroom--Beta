@@ -148,14 +148,14 @@ function Hero({ fighterCount, eventCount }: { fighterCount: number; eventCount: 
           <div className="mt-8 flex flex-wrap gap-3 animate-slide-up animate-delay-300">
             <Link
               to="/champions"
-              className="group inline-flex items-center gap-2 bg-primary px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-dark"
+              className="group inline-flex items-center gap-2 bg-primary px-6 py-4 text-sm font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-dark"
             >
               View Champions{" "}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               to="/events"
-              className="inline-flex items-center gap-2 border border-background/30 bg-background/5 px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-background backdrop-blur hover:bg-background/10"
+              className="inline-flex items-center gap-2 border border-background/30 bg-background/5 px-6 py-4 text-sm font-bold uppercase tracking-wider text-background backdrop-blur hover:bg-background/10"
             >
               Upcoming Events <Calendar className="h-4 w-4" />
             </Link>
@@ -497,7 +497,7 @@ function StoreTeaser() {
             Shop the Drop <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[10, 0, 164].map((h, i) => (
             <div
               key={i}
