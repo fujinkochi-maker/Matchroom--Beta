@@ -975,7 +975,7 @@ export function createHandler(
           username,
           display_name: displayName,
           nickname: "",
-          division: "",
+          division: "Heavyweight",
           rank: 999,
           wins: 0,
           losses: 0,
@@ -1064,7 +1064,7 @@ export function createHandler(
           return;
         }
 
-        if (fighter.division) {
+        if (fighter.rank !== 999) {
           await editDeferredResponse(
             appId,
             intToken,
