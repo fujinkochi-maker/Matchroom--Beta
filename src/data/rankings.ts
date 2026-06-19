@@ -141,7 +141,6 @@ export async function recalculateAll() {
     "Lightweight",
     "Welterweight",
     "Middleweight",
-    "Light Heavyweight",
     "Cruiserweight",
     "Heavyweight",
   ];

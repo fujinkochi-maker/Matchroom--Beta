@@ -5,14 +5,26 @@ import { setSupabaseEnv } from "@/lib/supabase";
 import {
   FIGHTERS,
   EVENTS,
+  ARTICLES,
+  PREDICTIONS,
   getRanked,
   getChampions,
   getByUsername,
+  getArticleBySlug,
   loadDataFromSupabase,
   ensureSignupsLoaded,
+  ensureArticlesLoaded,
+  ensureEventsLoaded,
+  upcomingEvents,
+  nextEvent,
   getSignupsForEvent,
+  getPredictionsForEvent,
+  getPredictionByUser,
+  ensurePredictionsLoaded,
   clearSignupsCache,
+  clearPredictionsCache,
 } from "@/data/fighters";
+import { CARD_SLOT_LABELS } from "@/data/types";
 
 const DISCORD_API = "https://discord.com/api/v10";
 
@@ -23,7 +35,6 @@ const DIVISIONS = [
   "Lightweight",
   "Welterweight",
   "Middleweight",
-  "Light Heavyweight",
   "Cruiserweight",
   "Heavyweight",
 ] as const;
@@ -31,6 +42,7 @@ const DIVISIONS = [
 export function createHandler(
   env: Record<string, string>,
   waitUntil?: (promise: Promise<unknown>) => void,
+  workerOrigin?: string,
 ) {
   // Ensure Supabase env is set for cache loading (Workers don't have process.env)
   setSupabaseEnv(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
@@ -76,6 +88,20 @@ export function createHandler(
     return `${f.wins}-${f.losses}-${f.draws} (${Math.round((f.kos / Math.max(f.wins, 1)) * 100)}% KO)`;
   }
 
+  const BELT_EMOJIS: Record<string, string> = {
+    WBC: "<:wbc:1516824072510636193>",
+    WBA: "<:wba:1516824069876482120>",
+    IBF: "<:ibf:1516824066856587454>",
+    WBO: "<:wbo:1516824074502930653>",
+  };
+
+  function formatBelts(beltsHeld: string): string | null {
+    if (!beltsHeld) return null;
+    const belts = beltsHeld.split(",").filter(Boolean);
+    if (belts.length === 0) return null;
+    return belts.map((b) => `${BELT_EMOJIS[b] ?? "🏆"} ${b}`).join("  ");
+  }
+
   function formatNickname(f: {
     displayName: string;
     wins: number;
@@ -119,6 +145,18 @@ export function createHandler(
   }
 
   const BRAND_COLOR = 0xd71920;
+  const SIGNUP_CATEGORY_ID = "1516703976509411348";
+  const STAFF_ROLE_ID = "1511841252633743460";
+  const _ticketChannels: Record<string, string> = {};
+
+  function sanitizeChannelName(s: string): string {
+    return s
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 100);
+  }
 
   function baseFighterEmbed(fighter: {
     image_url?: string;
@@ -131,12 +169,12 @@ export function createHandler(
       author: {
         name: "Matchroom Boxing",
         icon_url:
-          "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+          "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
       },
       footer: {
-        text: "Matchroom Boxing Beta • Fan-made",
+        text: "Matchroom Boxing Beta",
         icon_url:
-          "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+          "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
       },
       timestamp: new Date().toISOString(),
     };
@@ -203,10 +241,12 @@ export function createHandler(
       body: JSON.stringify({ recipient_id: userId }),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: res.statusText }));
+      const err = (await res.json().catch(() => ({ message: res.statusText }))) as {
+        message: string;
+      };
       throw new Error(`Discord createDM: ${res.status} ${err.message}`);
     }
-    const { id } = await res.json();
+    const { id } = (await res.json()) as { id: string };
     return id;
   }
 
@@ -254,7 +294,7 @@ export function createHandler(
       label: d,
       custom_id: `div_${d.toLowerCase().replace(/\s+/g, "_")}`,
     })),
-    ["Light Heavyweight", "Cruiserweight", "Heavyweight"].map((d) => ({
+    ["Cruiserweight", "Heavyweight"].map((d) => ({
       type: 2,
       style: 2,
       label: d,
@@ -286,7 +326,6 @@ export function createHandler(
     Lightweight: "1510667121649123418",
     Welterweight: "1510667120562929854",
     Middleweight: "1510667119560364196",
-    "Light Heavyweight": "1510665783037137017",
     Cruiserweight: "1510665779912114428",
     Heavyweight: "1510665777106387025",
   };
@@ -394,11 +433,32 @@ export function createHandler(
 
   /* ── Command handlers ── */
 
-  function handleStatsCommand(interaction: any): Response {
+  async function handleStatsCommand(interaction: any): Promise<Response> {
     const discordId = interaction.member?.user?.id ?? interaction.user?.id;
     if (!discordId) return ephemeral("Could not identify you.");
 
-    const fighter = FIGHTERS.find((f: any) => f.discordId === discordId);
+    if (FIGHTERS.length === 0) {
+      await loadDataFromSupabase().catch(() => {});
+    }
+
+    let fighter = FIGHTERS.find((f: any) => f.discordId === discordId);
+
+    if (!fighter) {
+      try {
+        const supabase = getSupabaseAdmin();
+        const { data } = await supabase
+          .from("fighters")
+          .select("*")
+          .eq("discord_id", discordId)
+          .single();
+        if (data) {
+          await loadDataFromSupabase();
+          fighter = FIGHTERS.find((f: any) => f.discordId === discordId);
+        }
+      } catch {
+        // DB fallback failed, continue to show error
+      }
+    }
     if (!fighter)
       return ephemeral("You're not registered yet! Use `/register` to create your fighter.");
 
@@ -410,14 +470,19 @@ export function createHandler(
       }
     }
 
+    const cacheBuster = `${fighter.wins}-${fighter.losses}-${fighter.draws}-${fighter.kos}-${Date.now()}`;
+    const imageUrl = workerOrigin
+      ? `${workerOrigin}/stat-card/${fighter.username}.png?r=${cacheBuster}`
+      : null;
+
     return jsonResponse({
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
         embeds: [
           {
+            ...(imageUrl ? { image: { url: imageUrl } } : {}),
             ...baseFighterEmbed(fighter),
             fields: [
-              { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
               { name: "Division", value: fighter.division || "TBD", inline: true },
               {
                 name: "Rank",
@@ -427,10 +492,211 @@ export function createHandler(
               { name: "Record", value: formatRecord(fighter), inline: true },
               { name: "Stance", value: fighter.stance, inline: true },
               { name: "Streak", value: fighter.streak || "N/A", inline: true },
-              ...(fighter.belts_held
-                ? [{ name: "Belts Held", value: fighter.belts_held, inline: false }]
+              ...(formatBelts(fighter.beltsHeld)
+                ? [{ name: "Belts Held", value: formatBelts(fighter.beltsHeld)!, inline: false }]
+                : []),
+              ...(imageUrl
+                ? [
+                    {
+                      name: "Card",
+                      value: `[View Full Stat Card](${imageUrl.replace(/\.png$/, "")})`,
+                      inline: false,
+                    },
+                  ]
                 : []),
             ],
+          },
+        ],
+      },
+    });
+  }
+
+  function computeAchievements(fighter: any) {
+    const achievements: { emoji: string; name: string; unlocked: boolean }[] = [];
+    const total = fighter.wins + fighter.losses + fighter.draws;
+    const koPct = fighter.wins > 0 ? Math.round((fighter.kos / fighter.wins) * 100) : 0;
+
+    achievements.push({
+      emoji: "<:crown:1516827211427090544>",
+      name: "Champion",
+      unlocked: fighter.rank === 0,
+    });
+    achievements.push({ emoji: "🌍", name: "World Champion", unlocked: fighter.belts >= 1 });
+    achievements.push({
+      emoji: "<:undisputed:1516823917585498192>",
+      name: "Undisputed",
+      unlocked: fighter.belts === 4,
+    });
+
+    achievements.push({
+      emoji: "<:fire:1516827203818488048>",
+      name: "On Fire",
+      unlocked: fighter.streak?.endsWith("W") && parseInt(fighter.streak, 10) >= 5,
+    });
+    achievements.push({
+      emoji: "<:skull:1516827205580095688>",
+      name: "Knockout Artist",
+      unlocked: koPct >= 70 && fighter.wins >= 5,
+    });
+    achievements.push({
+      emoji: "<:shield:1516827207480115312>",
+      name: "Iron Chin",
+      unlocked: fighter.losses === 0 && fighter.wins >= 5,
+    });
+    achievements.push({
+      emoji: "<:target:1516827209610952754>",
+      name: "Perfect Record",
+      unlocked: fighter.losses === 0 && fighter.draws === 0 && total > 0,
+    });
+    achievements.push({ emoji: "🥇", name: "Double Digit Wins", unlocked: fighter.wins >= 10 });
+    achievements.push({
+      emoji: "<:chart:1516827201226539038>",
+      name: "Rising Star",
+      unlocked: fighter.wins >= 3 && fighter.rank > 0 && fighter.rank < 10,
+    });
+    achievements.push({ emoji: "💪", name: "Veteran", unlocked: total >= 20 });
+
+    return achievements;
+  }
+
+  function resolveFighterId(
+    interaction: any,
+  ): { discordId?: string; displayName?: string } | undefined {
+    const userMention = getOptionValue(interaction.data.options, "user");
+    const textName = getOptionValue(interaction.data.options, "username");
+
+    if (userMention) return { discordId: userMention };
+    if (textName) {
+      const mentionMatch = textName.match(/^<@!?(\d+)>$/);
+      if (mentionMatch) return { discordId: mentionMatch[1] };
+      return { displayName: textName };
+    }
+    const callerId = interaction.member?.user?.id ?? interaction.user?.id;
+    if (callerId) return { discordId: callerId };
+    return undefined;
+  }
+
+  function lookupFighter(opts: { discordId?: string; displayName?: string }): any | undefined {
+    if (opts.discordId) return FIGHTERS.find((f: any) => f.discordId === opts.discordId);
+    if (opts.displayName)
+      return FIGHTERS.find(
+        (f: any) => f.displayName?.toLowerCase() === opts.displayName!.toLowerCase(),
+      );
+    return undefined;
+  }
+
+  async function ensureFightersLoaded(): Promise<void> {
+    if (FIGHTERS.length === 0) {
+      await loadDataFromSupabase().catch(() => {});
+    }
+  }
+
+  async function handleAchievementCommand(interaction: any): Promise<Response> {
+    await ensureFightersLoaded();
+    const opts = resolveFighterId(interaction);
+    if (!opts) return ephemeral("Could not identify you.");
+    const fighter = lookupFighter(opts);
+    if (!fighter)
+      return ephemeral("That user hasn't registered as a fighter yet. Use /register first.");
+
+    const achievements = computeAchievements(fighter);
+    const unlocked = achievements.filter((a) => a.unlocked);
+
+    const totalFights = fighter.wins + fighter.losses + fighter.draws;
+
+    const desc = unlocked.length
+      ? `${fighter.displayName} has fought ${totalFights} time${totalFights !== 1 ? "s" : ""} across their career.`
+      : `${fighter.displayName} hasn't earned any achievements yet. Fight more to unlock them!`;
+
+    const fields = unlocked.length
+      ? unlocked.map((a) => ({
+          name: `${a.emoji} ${a.name}`,
+          value: "✅",
+          inline: true,
+        }))
+      : [
+          {
+            name: "No Achievements",
+            value: "Fight to earn achievements like Champion, On Fire, Iron Chin, and more!",
+            inline: false,
+          },
+        ];
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        embeds: [
+          {
+            color: BRAND_COLOR,
+            title: `${fighter.displayName} — Achievements`,
+            description: desc,
+            fields,
+            footer: { text: "Matchroom Boxing Beta" },
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+  }
+
+  async function handlePredictCommand(interaction: any): Promise<Response> {
+    const discordId = interaction.member?.user?.id ?? interaction.user?.id;
+    if (!discordId) return ephemeral("Could not identify you.");
+
+    const eventSlug = getOptionValue(interaction.data.options, "slug");
+    const predictedWinner = getOptionValue(interaction.data.options, "fighter");
+    if (!eventSlug || !predictedWinner)
+      return ephemeral("Please provide both event slug and fighter username.");
+
+    const fighter = FIGHTERS.find((f: any) => f.username === predictedWinner);
+    if (!fighter) return ephemeral(`Fighter **${predictedWinner}** not found.`);
+
+    await ensureEventsLoaded();
+    await ensurePredictionsLoaded();
+
+    const event = EVENTS.find((e: any) => e.slug === eventSlug);
+    if (!event) return ephemeral(`Event **${eventSlug}** not found.`);
+
+    const existing = getPredictionByUser(eventSlug, discordId);
+    if (existing)
+      return ephemeral(
+        `You already predicted **${existing.predictedWinner}** would win. Use \`/predictions\` to see all predictions.`,
+      );
+
+    try {
+      const supabase = getSupabaseAdmin();
+      const { error } = await supabase.from("predictions").insert({
+        event_slug: eventSlug,
+        fighter_username: predictedWinner,
+        predicted_winner: predictedWinner,
+        user_discord_id: discordId,
+      });
+
+      if (error) {
+        if (error.message?.includes("unique constraint")) {
+          return ephemeral("You've already predicted for this event!");
+        }
+        console.error("[Predict] Insert error:", error);
+        return ephemeral("Failed to save prediction. Try again.");
+      }
+
+      clearPredictionsCache();
+      await ensurePredictionsLoaded();
+    } catch (err) {
+      console.error("[Predict] Error:", err);
+      return ephemeral("Failed to save prediction. Try again.");
+    }
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        embeds: [
+          {
+            color: BRAND_COLOR,
+            title: "✅ Prediction Recorded",
+            description: `You predicted **${fighter.displayName}** will win at **${event.name}**!`,
+            footer: { text: "Matchroom Boxing Beta" },
+            timestamp: new Date().toISOString(),
           },
         ],
         flags: 64,
@@ -438,11 +704,64 @@ export function createHandler(
     });
   }
 
-  function handleRankingsCommand(interaction: any): Response {
+  async function handlePredictionsCommand(interaction: any): Promise<Response> {
+    const eventSlug = getOptionValue(interaction.data.options, "slug");
+    if (!eventSlug) return ephemeral("Please provide an event slug.");
+
+    await ensureEventsLoaded();
+    await ensurePredictionsLoaded();
+
+    const event = EVENTS.find((e: any) => e.slug === eventSlug);
+    if (!event) return ephemeral(`Event **${eventSlug}** not found.`);
+
+    const predictions = getPredictionsForEvent(eventSlug);
+    if (!predictions.length) return ephemeral(`No predictions yet for **${event.name}**.`);
+
+    const counts: Record<string, { count: number; fighter: any }> = {};
+    for (const p of predictions) {
+      if (!counts[p.predictedWinner]) {
+        const f = FIGHTERS.find((x: any) => x.username === p.predictedWinner);
+        counts[p.predictedWinner] = { count: 0, fighter: f };
+      }
+      counts[p.predictedWinner].count++;
+    }
+
+    const sorted = Object.entries(counts).sort(([, a], [, b]) => b.count - a.count);
+    const total = predictions.length;
+
+    const fieldLines = sorted.map(([username, data], i) => {
+      const pct = Math.round((data.count / total) * 100);
+      const name = data.fighter?.displayName || username;
+      const bar =
+        "█".repeat(Math.round(pct / 10)) + "░".repeat(Math.max(10 - Math.round(pct / 10), 0));
+      return `**${i + 1}.** ${name} — ${data.count}/${total} (${pct}%)\n\`${bar}\``;
+    });
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        embeds: [
+          {
+            color: BRAND_COLOR,
+            title: `📊 Predictions — ${event.name}`,
+            description: `**${total}** total prediction${total !== 1 ? "s" : ""}`,
+            fields: [{ name: "Breakdown", value: fieldLines.join("\n\n"), inline: false }],
+            footer: { text: "Matchroom Boxing Beta" },
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        flags: 64,
+      },
+    });
+  }
+
+  async function handleRankingsCommand(interaction: any): Promise<Response> {
     const division = getOptionValue(interaction.data.options, "division");
     const region = getOptionValue(interaction.data.options, "region");
 
     if (!division) return ephemeral("Please choose a division.");
+
+    await ensureFightersLoaded();
 
     const fighters = getRanked(division as any, undefined, region).slice(0, 10);
     if (!fighters.length) return ephemeral(`No fighters found in **${division}**.`);
@@ -456,7 +775,7 @@ export function createHandler(
             author: {
               name: "Matchroom Boxing",
               icon_url:
-                "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+                "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
             },
             title: `Boxing ${division} Rankings${region && region !== "all" ? ` — ${region}` : ""}`,
             description: `"Let's look at the **${division}** division. Some hungry fighters here..."`,
@@ -466,9 +785,9 @@ export function createHandler(
               inline: false,
             })),
             footer: {
-              text: "Matchroom Boxing Beta Fan-made",
+              text: "Matchroom Boxing Beta",
               icon_url:
-                "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+                "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
             },
             timestamp: new Date().toISOString(),
           },
@@ -478,7 +797,8 @@ export function createHandler(
     });
   }
 
-  function handleChampionsCommand(interaction: any): Response {
+  async function handleChampionsCommand(interaction: any): Promise<Response> {
+    await ensureFightersLoaded();
     const champs = getChampions();
     if (!champs.length) return ephemeral("No champions found.");
 
@@ -491,7 +811,7 @@ export function createHandler(
             author: {
               name: "Matchroom Boxing",
               icon_url:
-                "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+                "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
             },
             title: "Current Champions",
             description:
@@ -502,9 +822,9 @@ export function createHandler(
               inline: true,
             })),
             footer: {
-              text: "Matchroom Boxing Beta Fan-made",
+              text: "Matchroom Boxing Beta",
               icon_url:
-                "https://cdn.discordapp.com/emojis/1294761893288677406.webp?size=40&quality=lossless",
+                "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
             },
             timestamp: new Date().toISOString(),
           },
@@ -514,12 +834,18 @@ export function createHandler(
     });
   }
 
-  function handleFighterCommand(interaction: any): Response {
-    const username = getOptionValue(interaction.data.options, "username");
-    if (!username) return ephemeral("Please provide a username.");
+  async function handleFighterCommand(interaction: any): Promise<Response> {
+    await ensureFightersLoaded();
+    const opts = resolveFighterId(interaction);
+    if (!opts) return ephemeral("Could not identify you.");
+    const fighter = lookupFighter(opts);
+    if (!fighter)
+      return ephemeral("That user hasn't registered as a fighter yet. Use /register first.");
 
-    const fighter = getByUsername(username);
-    if (!fighter) return ephemeral(`Fighter **${username}** not found.`);
+    const cacheBuster = `${fighter.wins}-${fighter.losses}-${fighter.draws}-${fighter.kos}-${Date.now()}`;
+    const imageUrl = workerOrigin
+      ? `${workerOrigin}/stat-card/${fighter.username}.png?r=${cacheBuster}`
+      : null;
 
     return jsonResponse({
       type: InteractionResponseType.ChannelMessageWithSource,
@@ -527,6 +853,7 @@ export function createHandler(
         embeds: [
           {
             ...baseFighterEmbed(fighter),
+            ...(imageUrl ? { image: { url: imageUrl } } : {}),
             fields: [
               { name: "Promoter's Note", value: promoterLine(fighter), inline: false },
               { name: "Division", value: fighter.division, inline: true },
@@ -538,13 +865,21 @@ export function createHandler(
               { name: "Record", value: formatRecord(fighter), inline: true },
               { name: "Stance", value: fighter.stance, inline: true },
               { name: "Streak", value: fighter.streak || "N/A", inline: true },
-              ...(fighter.belts_held
-                ? [{ name: "Belts Held", value: fighter.belts_held, inline: false }]
+              ...(formatBelts(fighter.beltsHeld)
+                ? [{ name: "Belts Held", value: formatBelts(fighter.beltsHeld)!, inline: false }]
+                : []),
+              ...(imageUrl
+                ? [
+                    {
+                      name: "Card",
+                      value: `[View Full Stat Card](${imageUrl.replace(/\.png$/, "")})`,
+                      inline: false,
+                    },
+                  ]
                 : []),
             ],
           },
         ],
-        flags: 64,
       },
     });
   }
@@ -879,141 +1214,462 @@ export function createHandler(
   }
 
   async function handleSignupCommand(interaction: any): Promise<Response> {
+    const eventSlug = getOptionValue(interaction.data.options, "slug");
+    if (!eventSlug) return ephemeral("Please provide an event slug.");
+
+    await ensureEventsLoaded();
+
+    const event = EVENTS.find((e: any) => e.slug === eventSlug);
+    if (!event) {
+      const list = EVENTS.filter((e: any) => e.status === "upcoming")
+        .map((e: any) => `\`${e.slug}\` — ${e.name}`)
+        .join("\n");
+      return ephemeral(
+        `Event **${eventSlug}** not found.${list ? "\n\n**Upcoming events:**\n" + list : ""}`,
+      );
+    }
+
+    const siteUrl = env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app";
+    const dateStr = new Date(event.date).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const embed: any = {
+      title: `🥊 Sign Up — ${event.name}`,
+      url: `${siteUrl}/events/${event.slug}`,
+      color: BRAND_COLOR,
+      description: `Click the button below to sign up for **${event.name}**. A private ticket channel will open where staff can discuss your contract.`,
+      fields: [
+        { name: "📅 Date", value: dateStr, inline: true },
+        { name: "📍 Arena", value: event.arena, inline: true },
+        { name: "🔔 Status", value: "Upcoming", inline: true },
+      ],
+      author: {
+        name: "Matchroom Boxing",
+        icon_url:
+          "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+      },
+      footer: {
+        text: "Matchroom Boxing Beta",
+        icon_url:
+          "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+      },
+      timestamp: new Date().toISOString(),
+    };
+    if (event.image) embed.image = { url: event.image };
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        embeds: [embed],
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 2,
+                style: 3,
+                label: "✍️ Sign Up & Open Ticket",
+                custom_id: `signup_${event.slug}`,
+              },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  async function handleSignupButton(interaction: any): Promise<Response> {
     const discordId = interaction.member?.user?.id ?? interaction.user?.id;
     if (!discordId) return ephemeral("Could not identify you.");
 
     const fighter = FIGHTERS.find((f: any) => f.discordId === discordId);
     if (!fighter) return ephemeral("You're not registered yet! Use `/register` first.");
 
-    const eventSlug = getOptionValue(interaction.data.options, "event");
-    if (!eventSlug) return ephemeral("Please provide an event slug.");
+    const eventSlug = interaction.data.custom_id.replace("signup_", "");
+    const guildId = interaction.guild_id;
+    if (!guildId) return ephemeral("This can only be used in a server.");
 
-    const appId = interaction.application_id;
-    const intToken = interaction.token;
+    if (_ticketChannels[eventSlug]) {
+      return ephemeral(`A ticket for this event is already open: <#${_ticketChannels[eventSlug]}>`);
+    }
 
-    const bgTask = (async () => {
-      try {
-        await ensureSignupsLoaded();
+    await ensureEventsLoaded();
+    await ensureSignupsLoaded();
 
-        const event = EVENTS.find((e: any) => e.slug === eventSlug);
-        if (!event) {
-          const upcoming = EVENTS.filter((e: any) => e.status === "upcoming");
-          const list = upcoming.map((e: any) => `\`${e.slug}\` — ${e.name}`).join("\n");
-          await editDeferredResponse(
-            appId,
-            intToken,
-            `Event **${eventSlug}** not found.${
-              list ? "\n\n**Upcoming events:**\n" + list : "\nNo upcoming events right now."
-            }`,
-          );
-          return;
-        }
+    const event = EVENTS.find((e: any) => e.slug === eventSlug);
+    if (!event) return ephemeral("Event not found.");
 
-        if (event.status !== "upcoming") {
-          await editDeferredResponse(
-            appId,
-            intToken,
-            `**${event.name}** is not an upcoming event.`,
-          );
-          return;
-        }
+    const existing = getSignupsForEvent(eventSlug);
+    if (existing.some((s: any) => s.fighterUsername === fighter.username)) {
+      return ephemeral(`You're already signed up for **${event.name}**!`);
+    }
 
-        const existing = getSignupsForEvent(eventSlug);
-        if (existing.some((s: any) => s.fighterUsername === fighter.username)) {
-          await editDeferredResponse(
-            appId,
-            intToken,
-            `You're already signed up for **${event.name}**!`,
-          );
-          return;
-        }
+    const channelName = `ticket-${sanitizeChannelName(eventSlug)}`;
 
-        const supabase = getSupabaseAdmin();
-        const { error } = await supabase.from("event_signups").insert({
-          event_slug: eventSlug,
-          fighter_username: fighter.username,
-        });
+    try {
+      const createRes = await discordFetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+        method: "POST",
+        headers: discordHeaders(),
+        body: JSON.stringify({
+          name: channelName,
+          type: 0,
+          parent_id: SIGNUP_CATEGORY_ID,
+          permission_overwrites: [
+            { id: guildId, type: 0, deny: "1024", allow: "0" },
+            { id: discordId, type: 1, allow: "1024", deny: "0" },
+            { id: STAFF_ROLE_ID, type: 1, allow: "1024", deny: "0" },
+          ],
+        }),
+      });
 
-        if (error) {
-          console.error("[Signup] Insert error:", error);
-          await editDeferredResponse(appId, intToken, "❌ Failed to sign up. Try again later.");
-          return;
-        }
-
-        clearSignupsCache();
-
-        // Send admin webhook notification
-        const webhookUrl = env.ADMIN_WEBHOOK_URL;
-        if (webhookUrl) {
-          const date = event.date
-            ? new Date(event.date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-            : "TBD";
-          const payload = {
-            content: `🔔 **${fighter.displayName}** (@${fighter.username}) signed up for **${event.name}** (${date})`,
-          };
-          fetch(webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }).catch(() => {});
-        }
-
-        // Send DM confirmation to fighter
-        try {
-          const dmChannelId = await createDM(discordId);
-          const dateStr = event.date
-            ? new Date(event.date).toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })
-            : "TBD";
-          await sendMessage(
-            dmChannelId,
-            `✅ **You're signed up!**\n\n**${event.name}**\n📍 ${event.arena}\n📅 ${dateStr}\n\nCheck the event page for fight card updates.`,
-          );
-        } catch (dmErr) {
-          console.error("[Signup] DM failed:", dmErr);
-        }
-
-        await editDeferredResponse(
-          appId,
-          intToken,
-          `✅ You're signed up for **${event.name}**! Check your DMs for details.`,
-        );
-      } catch (err) {
-        console.error("[Signup] Background error:", err);
-        await editDeferredResponse(appId, intToken, "❌ Something went wrong. Try again.");
+      if (!createRes.ok) {
+        const err = await createRes.json().catch(() => ({ message: createRes.statusText }));
+        console.error("[Signup] Channel creation failed:", err);
+        return ephemeral("❌ Failed to create ticket channel. Please try again.");
       }
-    })();
 
-    if (waitUntil) waitUntil(bgTask);
+      const channel = (await createRes.json()) as any;
+      _ticketChannels[eventSlug] = channel.id;
 
-    return jsonResponse({ type: 5 });
+      const supabase = getSupabaseAdmin();
+      const { error: dbErr } = await supabase.from("event_signups").insert({
+        event_slug: eventSlug,
+        fighter_username: fighter.username,
+      });
+
+      if (dbErr) {
+        console.error("[Signup] Insert error:", dbErr);
+        return ephemeral("❌ Failed to sign up. Try again later.");
+      }
+
+      clearSignupsCache();
+
+      // Send admin webhook
+      const webhookUrl = env.ADMIN_WEBHOOK_URL;
+      if (webhookUrl) {
+        const date = event.date
+          ? new Date(event.date).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "TBD";
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: `🔔 **${fighter.displayName}** (@${fighter.username}) signed up for **${event.name}** (${date}) — ticket: <#${channel.id}>`,
+          }),
+        }).catch(() => {});
+      }
+
+      // Send intro message in ticket
+      const dateStr = event.date
+        ? new Date(event.date).toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "TBD";
+      const introEmbed: any = {
+        title: `📋 Contract — ${event.name}`,
+        color: BRAND_COLOR,
+        description: `Welcome, **${fighter.displayName}**! A staff member will be with you shortly to discuss your contract for this event.`,
+        fields: [
+          { name: "Fighter", value: `${fighter.displayName} (@${fighter.username})`, inline: true },
+          { name: "Event", value: event.name, inline: true },
+          { name: "Date", value: dateStr, inline: true },
+          { name: "Arena", value: event.arena, inline: true },
+          {
+            name: "Record",
+            value: `${fighter.wins}-${fighter.losses}-${fighter.draws} (${fighter.kos} KOs)`,
+            inline: true,
+          },
+          ...(fighter.division
+            ? [{ name: "Division", value: fighter.division, inline: true }]
+            : []),
+        ],
+        author: {
+          name: "Matchroom Boxing",
+          icon_url:
+            "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      await discordFetch(`${DISCORD_API}/channels/${channel.id}/messages`, {
+        method: "POST",
+        headers: discordHeaders(),
+        body: JSON.stringify({
+          embeds: [introEmbed],
+          components: [
+            {
+              type: 1,
+              components: [
+                {
+                  type: 2,
+                  style: 4,
+                  label: "🔒 Close Ticket",
+                  custom_id: `close_${eventSlug}_${fighter.username}`,
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          content: `✅ Ticket opened: <#${channel.id}>`,
+          flags: 64,
+        },
+      });
+    } catch (err) {
+      console.error("[Signup] Error:", err);
+      return ephemeral("❌ Something went wrong. Try again.");
+    }
+  }
+
+  async function handleCloseTicket(interaction: any): Promise<Response> {
+    const channelId = interaction.channel_id;
+    if (!channelId) return ephemeral("This can only be used in a server.");
+
+    try {
+      await discordFetch(`${DISCORD_API}/channels/${channelId}`, {
+        method: "DELETE",
+        headers: discordHeaders(),
+      });
+
+      return jsonResponse({
+        type: InteractionResponseType.UpdateMessage,
+        data: {
+          content: "🔒 Ticket closed and deleted",
+          components: [],
+        },
+      });
+    } catch (err) {
+      console.error("[CloseTicket] Error:", err);
+      return ephemeral("❌ Failed to delete ticket.");
+    }
   }
 
   async function handleHelpCommand(): Promise<Response> {
     const lines = [
-      "**🥊 Matchroom Boxing Beta — Commands**",
+      "**Matchroom Boxing Beta — Commands**",
       "",
+      "**Fighter**",
       "`/register` — Create your fighter profile",
-      "`/signup` — Sign up for an upcoming event",
-      "`/stats` — View your fighter record",
-      "`/rankings` — See top fighters in a division",
-      "`/champions` — List all division champions",
-      "`/fighter` — Look up another fighter's profile",
+      "`/fighter [user]` — Look up a fighter's profile",
+      "`/stats [user]` — Full fighter stats + stat card image",
+      "`/achievement` — View your achievements",
       "`/unregister` — Delete your fighter permanently",
+      "",
+      "**Rankings**",
+      "`/rankings [division]` — See top fighters in a division",
+      "`/champions` — List all division champions",
+      "",
+      "**Events**",
+      "`/signup` — Sign up for an upcoming event",
+      "`/predict [slug] [fighter]` — Predict the winner of an event",
+      "`/predictions [slug]` — See prediction breakdown for an event",
+      "`/ticket` — Open a support ticket for an event",
+      "`/close-ticket` — Close your active ticket",
+      "",
+      "**Info**",
+      "`/news` — Latest boxing news",
+      "`/ask [question]` — Ask the AI assistant anything",
       "`/emojistealbulk` — Bulk-steal custom emojis from other servers",
       "`/help` — Show this message",
       "",
-      "**Tip:** Type `/` in any channel to see available commands!",
+      "Tip: Type `/` in any channel to browse all commands!",
     ];
     return ephemeral(lines.join("\n"));
+  }
+
+  async function handleNewsCommand(interaction: any): Promise<Response> {
+    await ensureArticlesLoaded();
+    const siteUrl = env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app";
+    const slug = getOptionValue(interaction.data.options, "slug");
+
+    let articles: any[];
+    if (slug) {
+      const article = getArticleBySlug(slug);
+      if (!article) {
+        return jsonResponse({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: { content: `Article **${slug}** not found.`, flags: 64 },
+        });
+      }
+      articles = [article];
+    } else {
+      const sorted = [...ARTICLES].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
+      articles = sorted.slice(0, 1);
+    }
+
+    if (!articles.length) {
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: { content: "No news articles found.", flags: 64 },
+      });
+    }
+
+    const embeds = articles.map((article) => {
+      const embed: any = {
+        title: article.title,
+        url: `${siteUrl}/news/${article.slug}`,
+        color: BRAND_COLOR,
+        description:
+          article.excerpt.length > 4096 ? article.excerpt.slice(0, 4093) + "..." : article.excerpt,
+        fields: [
+          { name: "Category", value: article.category, inline: true },
+          { name: "Author", value: article.author, inline: true },
+          {
+            name: "Date",
+            value: new Date(article.date).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }),
+            inline: true,
+          },
+        ],
+        author: {
+          name: "📰 Matchroom Boxing News",
+          icon_url:
+            "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+        },
+        footer: {
+          text: "Matchroom Boxing Beta",
+          icon_url:
+            "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+        },
+        timestamp: new Date(article.date).toISOString(),
+      };
+      if (article.image) embed.image = { url: article.image };
+      return embed;
+    });
+
+    const buttons = articles.map((article: any) => ({
+      type: 2,
+      style: 5,
+      label: "📖 Read Article",
+      url: `${siteUrl}/news/${article.slug}`,
+    }));
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        embeds,
+        components: [
+          {
+            type: 1,
+            components: buttons,
+          },
+        ],
+      },
+    });
+  }
+
+  async function handleEventCommand(interaction: any): Promise<Response> {
+    await ensureEventsLoaded();
+    const siteUrl = env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app";
+    const slug = getOptionValue(interaction.data.options, "slug");
+
+    const event = slug ? EVENTS.find((e: any) => e.slug === slug) : nextEvent();
+
+    if (!event) {
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          content: slug ? `Event **${slug}** not found.` : "No upcoming events.",
+          flags: 64,
+        },
+      });
+    }
+
+    const dateStr = new Date(event.date).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const slotOrder = ["main", "comain", "maincard", "prelim"];
+    const grouped = slotOrder
+      .map((slot) => {
+        const fights = event.card.filter((c: any) => c.slot === slot);
+        if (!fights.length) return null;
+        const lines = fights.map((f: any) => {
+          const a = getByUsername(f.a);
+          const b = getByUsername(f.b);
+          const aName = a?.displayName ?? f.a;
+          const bName = b?.displayName ?? f.b;
+          const weight = f.weight ? ` (${f.weight})` : "";
+          const title = f.title ? `\n<:trophy:1516823334640156762> ${f.title}` : "";
+          return `${aName} vs ${bName}${weight}${title}`;
+        });
+        return {
+          name: CARD_SLOT_LABELS[slot as keyof typeof CARD_SLOT_LABELS],
+          value: lines.join("\n"),
+          inline: false,
+        };
+      })
+      .filter(Boolean);
+
+    const embed: any = {
+      title: event.name,
+      url: `${siteUrl}/events/${event.slug}`,
+      color: BRAND_COLOR,
+      description: event.tagline || null,
+      fields: [
+        { name: "📅 Date", value: dateStr, inline: true },
+        { name: "📍 Arena", value: event.arena, inline: true },
+        ...(event.status === "upcoming"
+          ? [{ name: "🔔 Status", value: "Upcoming", inline: true }]
+          : []),
+        ...grouped,
+      ],
+      author: {
+        name: "🥊 Matchroom Boxing Events",
+        icon_url:
+          "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+      },
+      footer: {
+        text: "Matchroom Boxing Beta",
+        icon_url:
+          "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+      },
+      timestamp: new Date(event.date).toISOString(),
+    };
+    if (event.image) embed.image = { url: event.image };
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        embeds: [embed],
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 2,
+                style: 3,
+                label: "✍️ Sign Up & Open Ticket",
+                custom_id: `signup_${event.slug}`,
+              },
+            ],
+          },
+        ],
+      },
+    });
   }
 
   async function handleEmojiStealBulk(interaction: any): Promise<Response> {
@@ -1082,7 +1738,9 @@ export function createHandler(
           if (createRes.ok) {
             successes.push(emoji.name);
           } else {
-            const errData = await createRes.json().catch(() => ({ message: createRes.statusText }));
+            const errData = (await createRes
+              .json()
+              .catch(() => ({ message: createRes.statusText }))) as { message: string };
             failures.push({
               name: emoji.name,
               reason: errData.message || `HTTP ${createRes.status}`,
@@ -1198,11 +1856,16 @@ export function createHandler(
         if (commandName === "stats") return handleStatsCommand(interaction);
         if (commandName === "rankings") return handleRankingsCommand(interaction);
         if (commandName === "champions") return handleChampionsCommand(interaction);
-        if (commandName === "fighter") return handleFighterCommand(interaction);
+        if (commandName === "fighter") return await handleFighterCommand(interaction);
         if (commandName === "unregister") return handleUnregisterCommand(interaction);
         if (commandName === "signup") return handleSignupCommand(interaction);
+        if (commandName === "news") return handleNewsCommand(interaction);
+        if (commandName === "event") return handleEventCommand(interaction);
         if (commandName === "help") return handleHelpCommand();
         if (commandName === "emojistealbulk") return handleEmojiStealBulk(interaction);
+        if (commandName === "achievement") return await handleAchievementCommand(interaction);
+        if (commandName === "predict") return handlePredictCommand(interaction);
+        if (commandName === "predictions") return handlePredictionsCommand(interaction);
       }
 
       if (
@@ -1219,6 +1882,12 @@ export function createHandler(
         }
         if (customId?.startsWith("reg_")) {
           return handleRegionButton(interaction);
+        }
+        if (customId?.startsWith("signup_")) {
+          return handleSignupButton(interaction);
+        }
+        if (customId?.startsWith("close_")) {
+          return handleCloseTicket(interaction);
         }
       }
 
@@ -1267,7 +1936,6 @@ export function createHandler(
               { name: "Lightweight", value: "Lightweight" },
               { name: "Welterweight", value: "Welterweight" },
               { name: "Middleweight", value: "Middleweight" },
-              { name: "Light Heavyweight", value: "Light Heavyweight" },
               { name: "Cruiserweight", value: "Cruiserweight" },
               { name: "Heavyweight", value: "Heavyweight" },
             ],
@@ -1299,10 +1967,16 @@ export function createHandler(
         contexts: [0, 1, 2],
         options: [
           {
+            type: 6,
+            name: "user",
+            description: "Discord user to look up (optional)",
+            required: false,
+          },
+          {
             type: 3,
             name: "username",
-            description: "The fighter's username (e.g. iron_mike)",
-            required: true,
+            description: "Fighter name to look up (optional)",
+            required: false,
           },
         ],
       },
@@ -1314,13 +1988,14 @@ export function createHandler(
       },
       {
         name: "signup",
-        description: "Sign up for an upcoming event",
+        description: "Post a signup embed with ticket button for an event",
         type: 1,
-        contexts: [0, 1, 2],
+        default_member_permissions: "8",
+        contexts: [0],
         options: [
           {
             type: 3,
-            name: "event",
+            name: "slug",
             description: "Event slug (e.g. fight-night-1)",
             required: true,
           },
@@ -1331,6 +2006,90 @@ export function createHandler(
         description: "Show available commands and how to use them",
         type: 1,
         contexts: [0, 1, 2],
+      },
+      {
+        name: "news",
+        description: "Post the latest news articles with images to this channel",
+        type: 1,
+        default_member_permissions: "8",
+        contexts: [0],
+        options: [
+          {
+            type: 3,
+            name: "slug",
+            description: "Article slug (optional — defaults to latest article)",
+            required: false,
+          },
+        ],
+      },
+      {
+        name: "event",
+        description: "Post event details with fight card and poster to this channel",
+        type: 1,
+        default_member_permissions: "8",
+        contexts: [0],
+        options: [
+          {
+            type: 3,
+            name: "slug",
+            description: "Event slug (optional — defaults to next upcoming event)",
+            required: false,
+          },
+        ],
+      },
+      {
+        name: "achievement",
+        description: "View a fighter's earned achievements and milestones",
+        type: 1,
+        contexts: [0, 1, 2],
+        options: [
+          {
+            type: 6,
+            name: "user",
+            description: "Discord user to look up (optional)",
+            required: false,
+          },
+          {
+            type: 3,
+            name: "username",
+            description: "Fighter name to look up (optional)",
+            required: false,
+          },
+        ],
+      },
+      {
+        name: "predict",
+        description: "Predict who will win in an upcoming event",
+        type: 1,
+        contexts: [0, 1, 2],
+        options: [
+          {
+            type: 3,
+            name: "slug",
+            description: "Event slug (e.g. fight-night-1)",
+            required: true,
+          },
+          {
+            type: 3,
+            name: "fighter",
+            description: "Fighter username you predict will win",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "predictions",
+        description: "View prediction breakdown for an event",
+        type: 1,
+        contexts: [0, 1, 2],
+        options: [
+          {
+            type: 3,
+            name: "slug",
+            description: "Event slug (e.g. fight-night-1)",
+            required: true,
+          },
+        ],
       },
       {
         name: "emojistealbulk",

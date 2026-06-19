@@ -11,6 +11,7 @@ import type {
   Notification,
   EventSignup,
   FighterFollow,
+  Prediction,
   CardSlot,
 } from "./types";
 import { DIVISIONS } from "./types";
@@ -26,6 +27,7 @@ const _products: Product[] = [];
 const _posts: Post[] = [];
 const _notifications: Notification[] = [];
 const _eventSignups: EventSignup[] = [];
+const _predictions: Prediction[] = [];
 const _fighterFollows: FighterFollow[] = [];
 
 /* ============ Public exports ============ */
@@ -92,9 +94,16 @@ export const CATS = [
 
 export const EVENTS = _events;
 export const EVENT_SIGNUPS: ReadonlyArray<EventSignup> = _eventSignups;
+export const PREDICTIONS: ReadonlyArray<Prediction> = _predictions;
 export const FIGHTER_FOLLOWS: ReadonlyArray<FighterFollow> = _fighterFollows;
 export const upcomingEvents = () => EVENTS.filter((e) => e.status === "upcoming");
 export const nextEvent = () => upcomingEvents()[0];
+
+export const getPredictionsForEvent = (slug: string) =>
+  _predictions.filter((p) => p.eventSlug === slug);
+export const getPredictionByUser = (slug: string, discordId: string) =>
+  _predictions.find((p) => p.eventSlug === slug && p.userDiscordId === discordId);
+
 export const getSignupsForEvent = (slug: string) =>
   _eventSignups.filter((s) => s.eventSlug === slug);
 export const getSignedUpFighters = (slug: string) => {
@@ -245,6 +254,36 @@ function rowToSignupFromRow(row: any): EventSignup {
     eventSlug: row.event_slug,
     fighterUsername: row.fighter_username,
     signedUpAt: row.signed_up_at,
+  };
+}
+
+export function clearPredictionsCache() {
+  delete _lastLoaded["predictions"];
+  _predictions.length = 0;
+}
+
+export async function ensurePredictionsLoaded() {
+  const k = "_predictions";
+  if (_loadPromises[k]) return _loadPromises[k];
+  _loadPromises[k] = _loadTable(
+    "predictions",
+    _predictions,
+    rowToPredictionFromRow,
+    undefined,
+    "predictions",
+  );
+  await _loadPromises[k];
+  _loadPromises[k] = null;
+}
+
+function rowToPredictionFromRow(row: any): Prediction {
+  return {
+    id: row.id,
+    eventSlug: row.event_slug,
+    fighterUsername: row.fighter_username,
+    predictedWinner: row.predicted_winner,
+    userDiscordId: row.user_discord_id,
+    createdAt: row.created_at,
   };
 }
 

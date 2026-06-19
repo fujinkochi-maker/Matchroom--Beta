@@ -50,7 +50,9 @@ function StorePage() {
               Store
             </p>
             <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">Store</h1>
-            <p className="mt-3 max-w-xl text-background/70">No products yet. New merch drops soon.</p>
+            <p className="mt-3 max-w-xl text-background/70">
+              No products yet. New merch drops soon.
+            </p>
           </div>
         </section>
       </>
@@ -159,7 +161,8 @@ function StorePage() {
                       : "border-foreground bg-background hover:bg-primary hover:text-primary-foreground"
                   }`}
                 >
-                  <ShoppingBag className="h-3.5 w-3.5" /> {p.stock === 0 ? "Sold Out" : "Add to Cart"}
+                  <ShoppingBag className="h-3.5 w-3.5" />{" "}
+                  {p.stock === 0 ? "Sold Out" : "Add to Cart"}
                 </button>
               </div>
             </div>

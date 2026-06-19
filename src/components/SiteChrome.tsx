@@ -69,7 +69,9 @@ export function SiteHeader() {
                   }`}
                 >
                   {n.label}
-                  {active && <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-background" />}
+                  {active && (
+                    <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-background" />
+                  )}
                 </Link>
               );
             }
@@ -276,7 +278,6 @@ export function SiteFooter() {
           <p>
             © {new Date().getFullYear()} Matchroom Boxing Beta. All championship rights reserved.
           </p>
-          <p>Fan-made Roblox experience. Not affiliated with Matchroom Sport Ltd.</p>
         </div>
       </div>
     </footer>

@@ -10,8 +10,19 @@ const BELT_IMAGES: Record<string, string> = {
   WBO: wbo,
 };
 
-export function BeltIcon({ name, className = "h-5 w-auto inline" }: { name: string; className?: string }) {
+export function BeltIcon({
+  name,
+  className = "h-5 w-auto inline",
+}: {
+  name: string;
+  className?: string;
+}) {
   const src = BELT_IMAGES[name];
-  if (!src) return <span className="bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">{name}</span>;
+  if (!src)
+    return (
+      <span className="bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
+        {name}
+      </span>
+    );
   return <img src={src} alt={name} title={name} className={className} />;
 }

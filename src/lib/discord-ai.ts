@@ -7,7 +7,6 @@ const DIVISIONS = [
   "Lightweight",
   "Welterweight",
   "Middleweight",
-  "Light Heavyweight",
   "Cruiserweight",
   "Heavyweight",
 ];

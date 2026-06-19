@@ -128,7 +128,6 @@ const DIVISIONS = [
   "Lightweight",
   "Welterweight",
   "Middleweight",
-  "Light Heavyweight",
   "Cruiserweight",
   "Heavyweight",
 ] as const;
@@ -337,7 +336,7 @@ export const updateFighter = createServerFn({ method: "POST" })
       .select("username, rank, wins, losses")
       .eq("division", data.division);
     if (divFighters) {
-      divFighters.sort((a, b) => {
+      divFighters.sort((a: any, b: any) => {
         if (a.rank === 0) return -1;
         if (b.rank === 0) return 1;
         if (b.wins !== a.wins) return b.wins - a.wins;
@@ -752,7 +751,7 @@ export const adminAddSignup = createServerFn({ method: "POST" })
           body: JSON.stringify({ recipient_id: discordId }),
         });
         if (chRes.ok) {
-          const { id: channelId } = await chRes.json();
+          const { id: channelId } = (await chRes.json()) as any;
           await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
             method: "POST",
             headers: discordHeaders(),
@@ -854,6 +853,9 @@ export const createArticle = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!validateToken(data.token)) throw new Error("Unauthorized");
     const supabase = getAdminSupabase();
+    const now = new Date();
+    const adminDate = new Date(data.date);
+    adminDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
     const { error: aErr } = await supabase.from("articles").insert({
       slug: data.slug,
       title: data.title,
@@ -861,7 +863,7 @@ export const createArticle = createServerFn({ method: "POST" })
       body: data.body,
       category: data.category,
       author: data.author,
-      date: data.date,
+      date: adminDate.toISOString(),
       featured: data.featured,
       image_url: data.imageUrl ?? null,
     });
@@ -881,6 +883,9 @@ export const updateArticle = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!validateToken(data.token)) throw new Error("Unauthorized");
     const supabase = getAdminSupabase();
+    const now = new Date();
+    const adminDate = new Date(data.date);
+    adminDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
     const { error: aErr } = await supabase.from("articles").upsert({
       slug: data.slug,
       title: data.title,
@@ -888,7 +893,7 @@ export const updateArticle = createServerFn({ method: "POST" })
       body: data.body,
       category: data.category,
       author: data.author,
-      date: data.date,
+      date: adminDate.toISOString(),
       featured: data.featured,
       image_url: data.imageUrl ?? null,
     });
@@ -1113,7 +1118,7 @@ export const createPost = createServerFn({ method: "POST" })
         .in("username", data.tags);
 
       if (taggedFighters) {
-        const notifs = taggedFighters.map((f) => ({
+        const notifs = taggedFighters.map((f: any) => ({
           fighter_username: f.username,
           type: "tag" as const,
           post_id: postId,
@@ -1165,7 +1170,7 @@ export const createPost = createServerFn({ method: "POST" })
           .in("username", data.tags);
         if (tagFighters) {
           tagNames = data.tags.map((u) => {
-            const f = tagFighters.find((tf) => tf.username === u);
+            const f = tagFighters.find((tf: any) => tf.username === u);
             return f ? f.display_name : u;
           });
         }

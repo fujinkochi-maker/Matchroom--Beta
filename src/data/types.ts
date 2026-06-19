@@ -5,7 +5,6 @@ export type Division =
   | "Lightweight"
   | "Welterweight"
   | "Middleweight"
-  | "Light Heavyweight"
   | "Cruiserweight"
   | "Heavyweight";
 
@@ -16,7 +15,6 @@ export const DIVISIONS: Division[] = [
   "Lightweight",
   "Welterweight",
   "Middleweight",
-  "Light Heavyweight",
   "Cruiserweight",
   "Heavyweight",
 ];
@@ -83,6 +81,15 @@ export interface EventSignup {
   eventSlug: string;
   fighterUsername: string;
   signedUpAt: string;
+}
+
+export interface Prediction {
+  id: number;
+  eventSlug: string;
+  fighterUsername: string;
+  predictedWinner: string;
+  userDiscordId: string;
+  createdAt: string;
 }
 
 export interface FighterFollow {

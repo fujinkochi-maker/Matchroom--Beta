@@ -3,7 +3,7 @@ import { getServerConfig } from "./config.server";
 
 let adminClient: ReturnType<typeof createClient> | null = null;
 
-export function getAdminSupabase() {
+export function getAdminSupabase(): any {
   if (!adminClient) {
     const cfg = getServerConfig();
     const serviceKey = process.env.SUPABASE_SERVICE_KEY;

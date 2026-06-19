@@ -366,8 +366,12 @@ function FighterProfilePage() {
                           {h.result}
                         </span>
                       </td>
-                      <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{h.method}</td>
-                      <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{h.date}</td>
+                      <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                        {h.method}
+                      </td>
+                      <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                        {h.date}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{h.event}</td>
                     </tr>
                   ))}

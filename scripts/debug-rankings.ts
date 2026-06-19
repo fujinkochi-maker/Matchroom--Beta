@@ -10,7 +10,6 @@ async function main() {
     "Lightweight",
     "Welterweight",
     "Middleweight",
-    "Light Heavyweight",
     "Cruiserweight",
     "Heavyweight",
   ];

@@ -21,23 +21,23 @@ TanStack Start v1 (React 19 + SSR) · File-based routes (`src/routes/`) · Tailw
 
 ## Architecture
 
-| Path | Role |
-|------|------|
-| `src/server.ts` | Nitro entrypoint |
-| `src/router.tsx` | Router + QueryClient |
-| `src/routeTree.gen.ts` | **Auto-generated — do not edit** |
-| `src/data/fighters.ts` | Module-level caches (`FIGHTERS`, `EVENTS`, etc.) + loaders + selectors |
-| `src/data/types.ts` | Shared types; `Division` is a string union literal |
-| `src/lib/admin.server.ts` | Server-only admin CRUD (Zod-gated) |
-| `src/lib/supabase.ts` | Client singleton (anon key) |
-| `src/lib/supabase-admin.ts` | Server-only admin client (service key) |
-| `src/worker.ts` | Cloudflare Worker bot entry (prod) |
-| `src/durable-object.ts` | `DiscordGatewayDO_v2` — persistent WS for bot |
+| Path                        | Role                                                                   |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `src/server.ts`             | Nitro entrypoint                                                       |
+| `src/router.tsx`            | Router + QueryClient                                                   |
+| `src/routeTree.gen.ts`      | **Auto-generated — do not edit**                                       |
+| `src/data/fighters.ts`      | Module-level caches (`FIGHTERS`, `EVENTS`, etc.) + loaders + selectors |
+| `src/data/types.ts`         | Shared types; `Division` is a string union literal                     |
+| `src/lib/admin.server.ts`   | Server-only admin CRUD (Zod-gated)                                     |
+| `src/lib/supabase.ts`       | Client singleton (anon key)                                            |
+| `src/lib/supabase-admin.ts` | Server-only admin client (service key)                                 |
+| `src/worker.ts`             | Cloudflare Worker bot entry (prod)                                     |
+| `src/durable-object.ts`     | `DiscordGatewayDO_v2` — persistent WS for bot                          |
 
 ### Cache Rules
 
 - `loadDataFromSupabase()` fills module-level arrays in-place. **Components read `FIGHTERS`, `EVENTS` directly** — no React Query.
-- Call `clear*Cache()` **client-side** *before* `router.invalidate()` after mutations.
+- Call `clear*Cache()` **client-side** _before_ `router.invalidate()` after mutations.
 - `clearFightersCache` deletes `_lastLoaded["fighters"]` — **`_fighters` (wrong key) was the old bug**.
 - `refreshFighter(username)` fetches one fighter directly (bypasses cache TTL) for profile pages.
 
@@ -51,15 +51,15 @@ Admin mutations in `admin.server.ts` (service key, `node:crypto`). Client reads 
 
 `.env` is committed (anon key + dev service key). `.env.local` overrides (gitignored).
 
-| Var | Scope | Required for |
-|-----|-------|-------------|
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | client | site rendering |
-| `VITE_SITE_URL` | both | Discord embed/DM links |
-| `SUPABASE_SERVICE_KEY` | server | admin CRUD |
-| `ADMIN_PASSWORD` | server | admin login |
-| `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID` | server | Discord bot |
-| `DISCORD_GUILD_ID`, `DISCORD_CLIENT_SECRET` | server | OAuth2 auto-join guild |
-| `FEED_WEBHOOK_URL` | server | feed post embed |
+| Var                                                                 | Scope  | Required for           |
+| ------------------------------------------------------------------- | ------ | ---------------------- |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`                       | client | site rendering         |
+| `VITE_SITE_URL`                                                     | both   | Discord embed/DM links |
+| `SUPABASE_SERVICE_KEY`                                              | server | admin CRUD             |
+| `ADMIN_PASSWORD`                                                    | server | admin login            |
+| `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID` | server | Discord bot            |
+| `DISCORD_GUILD_ID`, `DISCORD_CLIENT_SECRET`                         | server | OAuth2 auto-join guild |
+| `FEED_WEBHOOK_URL`                                                  | server | feed post embed        |
 
 ---
 
@@ -78,9 +78,10 @@ Admin mutations in `admin.server.ts` (service key, `node:crypto`). Client reads 
 ## Division Spelling
 
 Case-sensitive, must match Supabase CHECK:
+
 ```
 Flyweight, Bantamweight, Featherweight, Lightweight,
-Welterweight, Middleweight, Light Heavyweight, Cruiserweight, Heavyweight
+Welterweight, Middleweight, Cruiserweight, Heavyweight
 ```
 
 ---
@@ -104,10 +105,10 @@ Welterweight, Middleweight, Light Heavyweight, Cruiserweight, Heavyweight
 
 ### Deployment
 
-| Mode | Entry | Command |
-|------|-------|---------|
+| Mode                     | Entry           | Command           |
+| ------------------------ | --------------- | ----------------- |
 | Cloudflare Worker (prod) | `src/worker.ts` | `wrangler deploy` |
-| Standalone (dev/Docker) | `bot-worker.ts` | `bun run bot` |
+| Standalone (dev/Docker)  | `bot-worker.ts` | `bun run bot`     |
 
 **Never use Nitro-generated `dist/server/wrangler.json` for bot deploys.**
 

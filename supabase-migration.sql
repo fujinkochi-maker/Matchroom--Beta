@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS fighters (
   nickname TEXT NOT NULL,
   division TEXT NOT NULL CHECK (division IN (
     'Flyweight','Bantamweight','Featherweight','Lightweight',
-    'Welterweight','Middleweight','Light Heavyweight','Cruiserweight','Heavyweight'
+    'Welterweight','Middleweight','Cruiserweight','Heavyweight'
   )),
   rank INTEGER NOT NULL,
   wins INTEGER NOT NULL,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS event_cards (
   fighter_b TEXT NOT NULL REFERENCES fighters(username),
   weight TEXT NOT NULL CHECK (weight IN (
     'Flyweight','Bantamweight','Featherweight','Lightweight',
-    'Welterweight','Middleweight','Light Heavyweight','Cruiserweight','Heavyweight'
+    'Welterweight','Middleweight','Cruiserweight','Heavyweight'
   ))
 );
 
@@ -277,3 +277,19 @@ DROP POLICY IF EXISTS "anon select fighter_follows" ON fighter_follows;
 CREATE POLICY "anon select fighter_follows" ON fighter_follows FOR SELECT TO anon USING (true);
 CREATE INDEX IF NOT EXISTS idx_fighter_follows_fighter ON fighter_follows(fighter_username);
 CREATE INDEX IF NOT EXISTS idx_fighter_follows_user ON fighter_follows(user_discord_id);
+
+-- Event predictions (fan voting on fight outcomes)
+CREATE TABLE IF NOT EXISTS predictions (
+  id SERIAL PRIMARY KEY,
+  event_slug TEXT NOT NULL,
+  fighter_username TEXT NOT NULL,
+  predicted_winner TEXT NOT NULL,
+  user_discord_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(event_slug, user_discord_id)
+);
+ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon select predictions" ON predictions;
+CREATE POLICY "anon select predictions" ON predictions FOR SELECT TO anon USING (true);
+CREATE INDEX IF NOT EXISTS idx_predictions_event ON predictions(event_slug);
+CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_discord_id);

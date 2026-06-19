@@ -5,7 +5,6 @@ const DIVISIONS = [
   "Lightweight",
   "Welterweight",
   "Middleweight",
-  "Light Heavyweight",
   "Cruiserweight",
   "Heavyweight",
 ];
@@ -20,6 +19,7 @@ type Command = {
   type: 1;
   integration_types?: [0, 1];
   contexts?: [0, 1, 2];
+  default_member_permissions?: string;
   options?: any[];
 };
 
@@ -64,10 +64,16 @@ const commands: Command[] = [
     contexts: [0, 1, 2],
     options: [
       {
-        type: 3, // STRING
+        type: 6, // USER
+        name: "user",
+        description: "Discord user to look up (optional)",
+        required: false,
+      },
+      {
+        type: 3,
         name: "username",
-        description: "The fighter's username (e.g. iron_mike)",
-        required: true,
+        description: "Fighter name to look up (optional)",
+        required: false,
       },
     ],
   },
@@ -79,13 +85,14 @@ const commands: Command[] = [
   },
   {
     name: "signup",
-    description: "Sign up for an upcoming event",
+    description: "Post a signup embed with ticket button for an event",
     type: 1,
-    contexts: [0, 1, 2],
+    default_member_permissions: "8",
+    contexts: [0],
     options: [
       {
         type: 3,
-        name: "event",
+        name: "slug",
         description: "Event slug (e.g. fight-night-1)",
         required: true,
       },
@@ -107,6 +114,82 @@ const commands: Command[] = [
         type: 3,
         name: "emojis",
         description: "Paste emoji references, e.g. <:name:123> <a:name:456>",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "news",
+    description: "Post the latest news articles with images to this channel",
+    type: 1,
+    default_member_permissions: "8",
+    contexts: [0],
+  },
+  {
+    name: "event",
+    description: "Post event details with fight card and poster to this channel",
+    type: 1,
+    default_member_permissions: "8",
+    contexts: [0],
+    options: [
+      {
+        type: 3,
+        name: "slug",
+        description: "Event slug (optional — defaults to next upcoming event)",
+        required: false,
+      },
+    ],
+  },
+  {
+    name: "achievement",
+    description: "View a fighter's earned achievements and milestones",
+    type: 1,
+    contexts: [0, 1, 2],
+    options: [
+      {
+        type: 6,
+        name: "user",
+        description: "Discord user to look up (optional)",
+        required: false,
+      },
+      {
+        type: 3,
+        name: "username",
+        description: "Fighter name to look up (optional)",
+        required: false,
+      },
+    ],
+  },
+  {
+    name: "predict",
+    description: "Predict who will win in an upcoming event",
+    type: 1,
+    contexts: [0, 1, 2],
+    options: [
+      {
+        type: 3,
+        name: "slug",
+        description: "Event slug (e.g. fight-night-1)",
+        required: true,
+      },
+      {
+        type: 3,
+        name: "fighter",
+        description: "Fighter username you predict will win",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "predictions",
+    description: "View prediction breakdown for an event",
+    type: 1,
+    contexts: [0, 1, 2],
+    options: [
+      {
+        type: 3,
+        name: "slug",
+        description: "Event slug (e.g. fight-night-1)",
         required: true,
       },
     ],

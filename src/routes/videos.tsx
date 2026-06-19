@@ -59,8 +59,11 @@ function VideosPage() {
               {featured.category} • {featured.duration} • {featured.views} views
             </p>
             <button
-              onClick={() => document.getElementById("videos-section")?.scrollIntoView({ behavior: "smooth" })}
-              className="mt-6 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark">
+              onClick={() =>
+                document.getElementById("videos-section")?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="mt-6 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark"
+            >
               <Play className="h-4 w-4 fill-current" /> Play Feature
             </button>
           </div>
