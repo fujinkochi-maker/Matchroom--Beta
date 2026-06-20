@@ -123,6 +123,7 @@ export const getNewsForFighter = (u: string) => ARTICLES.filter((a) => a.fighter
 export const featuredArticle = () => ARTICLES.find((a) => a.featured) ?? null;
 
 export const VIDEOS = _videos;
+export const getVideoById = (id: string) => VIDEOS.find((v) => v.id === id);
 export const getVideosForFighter = (u: string) => VIDEOS.filter((v) => v.fighters.includes(u));
 export const getPostsForFighter = (u: string) =>
   POSTS.filter((p) => p.tags.includes(u) || p.authorUsername === u);
@@ -549,6 +550,8 @@ function rowToVideoFromRow(row: any): Video {
     duration: row.duration,
     fighters: [],
     views: row.views,
+    video_url: row.video_url ?? undefined,
+    thumbnail: row.thumbnail ?? undefined,
   };
 }
 

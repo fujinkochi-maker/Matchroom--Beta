@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Play } from "lucide-react";
+import { useState } from "react";
 import { VIDEOS, VIDEO_CATS, ensureVideosLoaded } from "@/data/fighters";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VideoPlayer } from "@/components/VideoPlayer";
 
 export const Route = createFileRoute("/videos")({
   pendingMs: 200,
@@ -29,6 +31,10 @@ export const Route = createFileRoute("/videos")({
 function VideosPage() {
   const { videos } = Route.useLoaderData();
   const featured = videos[0];
+  const [playing, setPlaying] = useState<{ src: string; title: string } | null>(null);
+
+  const closePlayer = () => setPlaying(null);
+
   if (!featured) {
     return (
       <>
@@ -47,6 +53,12 @@ function VideosPage() {
   }
   return (
     <>
+      <VideoPlayer
+        src={playing?.src ?? ""}
+        title={playing?.title ?? ""}
+        open={!!playing}
+        onClose={closePlayer}
+      />
       <section className="relative isolate bg-foreground/10 text-background">
         <div className="container-x grid items-center gap-8 py-14 md:grid-cols-[1.4fr_1fr]">
           <div>
@@ -56,30 +68,63 @@ function VideosPage() {
             </p>
             <h1 className="mt-2 font-display text-5xl uppercase md:text-7xl">{featured.title}</h1>
             <p className="mt-3 text-background/70">
-              {featured.category} • {featured.duration} • {featured.views} views
+              {featured.category} &bull; {featured.duration} &bull; {featured.views} views
             </p>
-            <button
-              onClick={() =>
-                document.getElementById("videos-section")?.scrollIntoView({ behavior: "smooth" })
-              }
-              className="mt-6 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark"
-            >
-              <Play className="h-4 w-4 fill-current" /> Play Feature
-            </button>
-          </div>
-          <div className="relative aspect-video w-full overflow-hidden border border-background/20">
-            <div className="absolute inset-0 grid place-items-center">
-              <div className="grid h-20 w-20 place-items-center rounded-full bg-primary">
-                <Play className="h-8 w-8 fill-current text-primary-foreground" />
-              </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {featured.video_url ? (
+                <button
+                  onClick={() => setPlaying({ src: featured.video_url!, title: featured.title })}
+                  className="inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark"
+                >
+                  <Play className="h-4 w-4 fill-current" /> Play Now
+                </button>
+              ) : (
+                <button
+                  onClick={() =>
+                    document
+                      .getElementById("videos-section")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-primary-dark"
+                >
+                  <Play className="h-4 w-4 fill-current" /> Browse Videos
+                </button>
+              )}
+              <Link
+                to="/videos/$id"
+                params={{ id: featured.id }}
+                className="inline-flex items-center gap-2 border border-background/30 px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-background/10"
+              >
+                Details
+              </Link>
             </div>
+          </div>
+          <div
+            className="relative aspect-video w-full overflow-hidden border border-background/20 cursor-pointer"
+            onClick={() =>
+              featured.video_url && setPlaying({ src: featured.video_url, title: featured.title })
+            }
+          >
+            {featured.thumbnail ? (
+              <img
+                src={featured.thumbnail}
+                alt={featured.title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 grid place-items-center">
+                <div className="grid h-20 w-20 place-items-center rounded-full bg-primary">
+                  <Play className="h-8 w-8 fill-current text-primary-foreground" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       <section id="videos-section" className="container-x py-12">
         {VIDEO_CATS.map((c) => (
-          <VideoRow key={c} category={c} videos={videos} />
+          <VideoRow key={c} category={c} videos={videos} onPlay={setPlaying} />
         ))}
       </section>
     </>
@@ -89,9 +134,11 @@ function VideosPage() {
 function VideoRow({
   category,
   videos,
+  onPlay,
 }: {
   category: (typeof VIDEO_CATS)[number];
   videos: typeof VIDEOS;
+  onPlay: (v: { src: string; title: string } | null) => void;
 }) {
   const vids = videos.filter((v) => v.category === category);
   if (vids.length === 0) return null;
@@ -103,25 +150,47 @@ function VideoRow({
       </h2>
       <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
         {vids.map((v) => (
-          <VideoCard key={v.id} v={v} />
+          <VideoCard key={v.id} v={v} onPlay={onPlay} />
         ))}
       </div>
     </div>
   );
 }
 
-function VideoCard({ v }: { v: (typeof VIDEOS)[number] }) {
+function VideoCard({
+  v,
+  onPlay,
+}: {
+  v: (typeof VIDEOS)[number];
+  onPlay: (v: { src: string; title: string } | null) => void;
+}) {
   return (
     <div className="group w-72 shrink-0">
-      <div className="relative aspect-video overflow-hidden border border-border bg-foreground/10">
-        <div className="absolute inset-0 opacity-90 transition-opacity group-hover:opacity-100">
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-pulse bg-primary/20" />
-        </div>
-        <div className="absolute inset-0 grid place-items-center">
-          <div className="grid h-14 w-14 place-items-center rounded-full bg-primary transition-transform group-hover:scale-110">
-            <Play className="h-6 w-6 fill-current text-primary-foreground" />
-          </div>
-        </div>
+      <div
+        className="relative aspect-video overflow-hidden border border-border bg-foreground/10 cursor-pointer"
+        onClick={() => v.video_url && onPlay({ src: v.video_url, title: v.title })}
+      >
+        {v.thumbnail ? (
+          <>
+            <img src={v.thumbnail} alt={v.title} className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity group-hover:opacity-100 grid place-items-center">
+              <div className="grid h-14 w-14 place-items-center rounded-full bg-primary transition-transform group-hover:scale-110">
+                <Play className="h-6 w-6 fill-current text-primary-foreground" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 opacity-90 transition-opacity group-hover:opacity-100">
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-pulse bg-primary/20" />
+            </div>
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="grid h-14 w-14 place-items-center rounded-full bg-primary transition-transform group-hover:scale-110">
+                <Play className="h-6 w-6 fill-current text-primary-foreground" />
+              </div>
+            </div>
+          </>
+        )}
         <span className="absolute bottom-2 right-2 bg-foreground/80 px-1.5 py-0.5 font-mono text-xs text-background">
           {v.duration}
         </span>
@@ -129,7 +198,13 @@ function VideoCard({ v }: { v: (typeof VIDEOS)[number] }) {
           {v.category}
         </span>
       </div>
-      <p className="mt-2 text-sm font-semibold group-hover:text-primary">{v.title}</p>
+      <Link
+        to="/videos/$id"
+        params={{ id: v.id }}
+        className="mt-2 block text-sm font-semibold hover:text-primary"
+      >
+        {v.title}
+      </Link>
       <p className="text-xs text-muted-foreground">{v.views} views</p>
     </div>
   );

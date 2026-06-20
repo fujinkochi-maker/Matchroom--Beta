@@ -128,7 +128,7 @@ Persistent WS for status presence, `GUILD_MEMBER_ADD` welcome DM, message dedup.
 
 ## Database
 
-Run `supabase-migration.sql` in Supabase Studio. Tables: `fighters` (PK=username), `fight_history`, `events` (PK=slug), `event_cards`, `articles`, `article_fighters`, `videos`, `video_fighters`, `products`, `event_signups`, `fighter_follows`, `posts`, `post_tags`, `post_likes`, `notifications`. FK constraints on event fighter columns are **dropped** (free-text). Storage buckets: `{fighter,event,article,product}-images`, `post-images`.
+Run `supabase-migration.sql` in Supabase Studio. Tables: `fighters` (PK=username), `fight_history`, `events` (PK=slug), `event_cards`, `articles`, `article_fighters`, `videos`, `video_fighters`, `products`, `event_signups`, `fighter_follows`, `posts`, `post_tags`, `post_likes`, `notifications`. FK constraints on event fighter columns are **dropped** (free-text). Storage buckets: `{fighter,event,article,product}-images`, `post-images`, `videos`.
 
 ---
 

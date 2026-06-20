@@ -124,6 +124,8 @@ export interface Video {
   duration: string;
   fighters: string[];
   views: string;
+  video_url?: string;
+  thumbnail?: string;
 }
 
 export interface Post {

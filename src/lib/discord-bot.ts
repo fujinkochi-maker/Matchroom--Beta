@@ -6,15 +6,18 @@ import {
   FIGHTERS,
   EVENTS,
   ARTICLES,
+  VIDEOS,
   PREDICTIONS,
   getRanked,
   getChampions,
   getByUsername,
   getArticleBySlug,
+  getVideoById,
   loadDataFromSupabase,
   ensureSignupsLoaded,
   ensureArticlesLoaded,
   ensureEventsLoaded,
+  ensureVideosLoaded,
   upcomingEvents,
   nextEvent,
   getSignupsForEvent,
@@ -1483,6 +1486,7 @@ export function createHandler(
       "",
       "**Info**",
       "`/news` — Latest boxing news",
+      "`/video [id]` — Watch a video from the library",
       "`/ask [question]` — Ask the AI assistant anything",
       "`/emojistealbulk` — Bulk-steal custom emojis from other servers",
       "`/help` — Show this message",
@@ -1664,6 +1668,81 @@ export function createHandler(
                 style: 3,
                 label: "✍️ Sign Up & Open Ticket",
                 custom_id: `signup_${event.slug}`,
+              },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  async function handleVideoCommand(interaction: any): Promise<Response> {
+    await ensureVideosLoaded();
+    const siteUrl = env.VITE_SITE_URL ?? "https://matchroom-beta.vercel.app";
+    const id = getOptionValue(interaction.data.options, "id");
+
+    if (!id) {
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          content: "Please provide a video ID: `/video <id>`",
+          flags: 64,
+        },
+      });
+    }
+
+    const video = getVideoById(id);
+    if (!video) {
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: { content: `Video **${id}** not found.`, flags: 64 },
+      });
+    }
+
+    const embed: any = {
+      title: video.title,
+      url: `${siteUrl}/videos/${video.id}`,
+      color: BRAND_COLOR,
+      description: [
+        `🏷️ **Category:** ${video.category}`,
+        `⏱️ **Duration:** ${video.duration}`,
+        `👁️ **Views:** ${video.views}`,
+        video.fighters.length > 0 ? `🥊 **Fighters:** ${video.fighters.join(", ")}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      author: {
+        name: "📺 Matchroom Boxing Videos",
+        icon_url:
+          "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+      },
+      footer: {
+        text: "Matchroom Boxing Beta",
+        icon_url:
+          "https://cdn.discordapp.com/emojis/1516827130934071456.webp?size=40&quality=lossless",
+      },
+    };
+
+    if (video.video_url) {
+      embed.video = { url: video.video_url };
+    }
+    if (video.thumbnail) {
+      embed.image = { url: video.thumbnail };
+    }
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        embeds: [embed],
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 2,
+                style: 5,
+                label: "🎬 Watch on Website",
+                url: `${siteUrl}/videos/${video.id}`,
               },
             ],
           },
@@ -1866,6 +1945,7 @@ export function createHandler(
         if (commandName === "achievement") return await handleAchievementCommand(interaction);
         if (commandName === "predict") return handlePredictCommand(interaction);
         if (commandName === "predictions") return handlePredictionsCommand(interaction);
+        if (commandName === "video") return handleVideoCommand(interaction);
       }
 
       if (
