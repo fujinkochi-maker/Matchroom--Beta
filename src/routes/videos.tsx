@@ -28,6 +28,14 @@ export const Route = createFileRoute("/videos")({
   component: VideosPage,
 });
 
+function hashHue(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 360;
+}
+
 function VideosPage() {
   const { videos } = Route.useLoaderData();
   const featured = videos[0];
@@ -59,15 +67,19 @@ function VideosPage() {
         open={!!playing}
         onClose={closePlayer}
       />
-      <section className="relative isolate bg-surface text-foreground">
-        <div className="container-x grid items-center gap-8 py-14 md:grid-cols-[1.4fr_1fr]">
+      <section
+        className="relative isolate overflow-hidden text-white"
+        style={{ backgroundColor: `oklch(0.35 ${0.12 + (hashHue(featured.id) % 30) / 100} ${hashHue(featured.id)})` }}
+      >
+        <div className="absolute inset-0 bg-black/30" />
+        <div className="container-x relative grid items-center gap-8 py-14 md:grid-cols-[1.4fr_1fr]">
           <div>
             <p className="eyebrow">
-              <span className="h-px w-7 bg-foreground" />
+              <span className="h-px w-7 bg-white/70" />
               Watch Now
             </p>
             <h1 className="mt-2 font-display text-5xl uppercase md:text-7xl">{featured.title}</h1>
-            <p className="mt-3 text-muted-foreground">
+            <p className="mt-3 text-white/70">
               {featured.category} &bull; {featured.views} views
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -93,14 +105,14 @@ function VideosPage() {
               <Link
                 to="/videos/$id"
                 params={{ id: featured.id }}
-                className="inline-flex items-center gap-2 border border-border px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-muted"
+                className="inline-flex items-center gap-2 border border-white/30 px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-white/10"
               >
                 Details
               </Link>
             </div>
           </div>
           <div
-            className="relative aspect-video w-full overflow-hidden border border-border cursor-pointer"
+            className="relative aspect-video w-full overflow-hidden border border-white/20 cursor-pointer"
             onClick={() =>
               featured.video_url && setPlaying({ src: featured.video_url, title: featured.title })
             }
