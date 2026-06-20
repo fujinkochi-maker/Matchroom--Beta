@@ -121,9 +121,9 @@ export interface Video {
     | "Training"
     | "Faceoffs"
     | "Press Conferences";
-  duration: string;
   fighters: string[];
   views: string;
+  hue: string;
   video_url?: string;
   thumbnail?: string;
 }

@@ -68,7 +68,7 @@ function VideosPage() {
             </p>
             <h1 className="mt-2 font-display text-5xl uppercase md:text-7xl">{featured.title}</h1>
             <p className="mt-3 text-background/70">
-              {featured.category} &bull; {featured.duration} &bull; {featured.views} views
+              {featured.category} &bull; {featured.views} views
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {featured.video_url ? (
@@ -191,9 +191,6 @@ function VideoCard({
             </div>
           </>
         )}
-        <span className="absolute bottom-2 right-2 bg-foreground/80 px-1.5 py-0.5 font-mono text-xs text-background">
-          {v.duration}
-        </span>
         <span className="absolute left-2 top-2 bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
           {v.category}
         </span>

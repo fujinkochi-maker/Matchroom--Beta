@@ -1705,7 +1705,6 @@ export function createHandler(
       color: BRAND_COLOR,
       description: [
         `🏷️ **Category:** ${video.category}`,
-        `⏱️ **Duration:** ${video.duration}`,
         `👁️ **Views:** ${video.views}`,
         video.fighters.length > 0 ? `🥊 **Fighters:** ${video.fighters.join(", ")}` : null,
       ]

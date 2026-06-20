@@ -80,8 +80,10 @@ CREATE TABLE IF NOT EXISTS videos (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   category TEXT NOT NULL,
-  duration TEXT NOT NULL,
-  views TEXT NOT NULL
+  views TEXT NOT NULL,
+  hue TEXT NOT NULL DEFAULT '0',
+  video_url TEXT,
+  thumbnail TEXT
 );
 
 CREATE TABLE IF NOT EXISTS video_fighters (

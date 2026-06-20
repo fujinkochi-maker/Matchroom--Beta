@@ -132,7 +132,7 @@ function NewVideo() {
   const [id, setId] = useState("");
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>(CATEGORIES[0]);
-  const [duration, setDuration] = useState("");
+  const [hue, setHue] = useState("0");
   const [views, setViews] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [thumbnail, setThumbnail] = useState("");
@@ -162,7 +162,7 @@ function NewVideo() {
           id,
           title,
           category,
-          duration,
+          hue,
           views,
           video_url: videoUrl,
           thumbnail: thumbnail || undefined,
@@ -229,11 +229,14 @@ function NewVideo() {
             </div>{" "}
             <div>
               {" "}
-              <label className={ADMIN_LABEL}>Duration</label>{" "}
+              <label className={ADMIN_LABEL}>Hue (0–360)</label>{" "}
               <input
                 className={ADMIN_INPUT}
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+                type="number"
+                min="0"
+                max="360"
+                value={hue}
+                onChange={(e) => setHue(e.target.value)}
                 required
               />{" "}
             </div>{" "}

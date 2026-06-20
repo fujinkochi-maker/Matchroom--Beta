@@ -134,7 +134,7 @@ function EditVideo() {
   if (!video) throw notFound();
   const [title, setTitle] = useState(video.title);
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>(video.category);
-  const [duration, setDuration] = useState(video.duration);
+  const [hue, setHue] = useState(video.hue ?? "0");
   const [views, setViews] = useState(video.views);
   const [videoUrl, setVideoUrl] = useState(video.video_url ?? "");
   const [thumbnail, setThumbnail] = useState(video.thumbnail ?? "");
@@ -160,7 +160,7 @@ function EditVideo() {
           id,
           title,
           category,
-          duration,
+          hue,
           views,
           video_url: videoUrl || undefined,
           thumbnail: thumbnail || undefined,
@@ -219,11 +219,14 @@ function EditVideo() {
             </div>{" "}
             <div>
               {" "}
-              <label className={ADMIN_LABEL}>Duration</label>{" "}
+              <label className={ADMIN_LABEL}>Hue (0–360)</label>{" "}
               <input
                 className={ADMIN_INPUT}
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+                type="number"
+                min="0"
+                max="360"
+                value={hue}
+                onChange={(e) => setHue(e.target.value)}
                 required
               />{" "}
             </div>{" "}

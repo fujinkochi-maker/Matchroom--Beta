@@ -85,7 +85,6 @@ function VideoDetailPage() {
           </span>
           <h1 className="mt-3 font-display text-3xl uppercase md:text-5xl">{video.title}</h1>
           <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
-            <span>&#9201; {video.duration}</span>
             <span>&#128065; {video.views} views</span>
           </div>
         </div>
