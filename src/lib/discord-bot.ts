@@ -1722,34 +1722,29 @@ export function createHandler(
       },
     };
 
-    if (video.thumbnail) {
-      embed.image = { url: video.thumbnail };
-    }
-
-    const buttons: any[] = [];
-    buttons.push({
-      type: 2,
-      style: 5,
-      label: "📄 Details",
-      url: `${siteUrl}/videos/${video.id}`,
-    });
-
-    if (video.video_url) {
-      return jsonResponse({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: {
-          content: video.video_url,
-          embeds: [embed],
-          components: [{ type: 1, components: buttons }],
-        },
-      });
-    }
+    const content = [
+      `🎬 **Matchroom Highlights** <:matchroomlogo:1516827130934071456>`,
+      "",
+      `[▶ Watch Video](${video.video_url})`,
+    ].join("\n");
 
     return jsonResponse({
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
-        embeds: [embed],
-        components: [{ type: 1, components: buttons }],
+        content,
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 2,
+                style: 5,
+                label: "📄 Website",
+                url: `${siteUrl}/videos/${video.id}`,
+              },
+            ],
+          },
+        ],
       },
     });
   }
