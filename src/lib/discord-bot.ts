@@ -2184,6 +2184,20 @@ export function createHandler(
           },
         ],
       },
+      {
+        name: "video",
+        description: "Watch a video from the library",
+        type: 1,
+        contexts: [0, 1, 2],
+        options: [
+          {
+            type: 3,
+            name: "id",
+            description: "Video ID (slug) to watch",
+            required: true,
+          },
+        ],
+      },
     ];
 
     const maxRetries = 3;
