@@ -125,6 +125,7 @@ export interface Video {
   views: string;
   video_url?: string;
   thumbnail?: string;
+  excerpt?: string;
 }
 
 export interface Post {

@@ -551,6 +551,7 @@ function rowToVideoFromRow(row: any): Video {
     views: row.views,
     video_url: row.video_url ?? undefined,
     thumbnail: row.thumbnail ?? undefined,
+    excerpt: row.excerpt ?? undefined,
   };
 }
 

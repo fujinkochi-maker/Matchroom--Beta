@@ -137,6 +137,7 @@ function EditVideo() {
   const [views, setViews] = useState(video.views);
   const [videoUrl, setVideoUrl] = useState(video.video_url ?? "");
   const [thumbnail, setThumbnail] = useState(video.thumbnail ?? "");
+  const [excerpt, setExcerpt] = useState(video.excerpt ?? "");
   const [selectedFighters, setSelectedFighters] = useState<string[]>(video.fighters);
   const [error, setError] = useState("");
   const toggleFighter = (username: string) => {
@@ -162,6 +163,7 @@ function EditVideo() {
           views,
           video_url: videoUrl || undefined,
           thumbnail: thumbnail || undefined,
+          excerpt,
           fighters: selectedFighters,
         },
       });
@@ -244,6 +246,15 @@ function EditVideo() {
               value={thumbnail}
               onChange={setThumbnail}
               uploadingLabel="Uploading thumbnail..."
+            />
+          </div>
+          <div>
+            <label className={ADMIN_LABEL}>Excerpt</label>
+            <textarea
+              className={ADMIN_INPUT + " min-h-[80px]"}
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              maxLength={500}
             />
           </div>
           <div>

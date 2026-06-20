@@ -135,6 +135,7 @@ function NewVideo() {
   const [views, setViews] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [thumbnail, setThumbnail] = useState("");
+  const [excerpt, setExcerpt] = useState("");
   const [selectedFighters, setSelectedFighters] = useState<string[]>([]);
   const [error, setError] = useState("");
   const toggleFighter = (username: string) => {
@@ -164,6 +165,7 @@ function NewVideo() {
           views,
           video_url: videoUrl,
           thumbnail: thumbnail || undefined,
+          excerpt,
           fighters: selectedFighters,
         },
       });
@@ -254,6 +256,15 @@ function NewVideo() {
               value={thumbnail}
               onChange={setThumbnail}
               uploadingLabel="Uploading thumbnail..."
+            />
+          </div>
+          <div>
+            <label className={ADMIN_LABEL}>Excerpt</label>
+            <textarea
+              className={ADMIN_INPUT + " min-h-[80px]"}
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              maxLength={500}
             />
           </div>
           <div>

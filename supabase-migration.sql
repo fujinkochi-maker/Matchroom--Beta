@@ -82,7 +82,8 @@ CREATE TABLE IF NOT EXISTS videos (
   category TEXT NOT NULL,
   views TEXT NOT NULL,
   video_url TEXT,
-  thumbnail TEXT
+  thumbnail TEXT,
+  excerpt TEXT
 );
 
 CREATE TABLE IF NOT EXISTS video_fighters (

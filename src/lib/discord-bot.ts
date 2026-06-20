@@ -1722,11 +1722,16 @@ export function createHandler(
       },
     };
 
+    const excerptLine = video.excerpt ? video.excerpt : null;
+
     const content = [
       `🎬 **Matchroom Highlights**`,
+      excerptLine ? `*${excerptLine}*` : null,
       "",
       `[▶ Watch Video](${video.video_url})`,
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     return jsonResponse({
       type: InteractionResponseType.ChannelMessageWithSource,

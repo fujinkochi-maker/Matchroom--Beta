@@ -937,6 +937,7 @@ const videoSchema = z.object({
   fighters: z.array(z.string()).default([]),
   video_url: z.string().optional(),
   thumbnail: z.string().optional(),
+  excerpt: z.string().max(500).default(""),
 });
 
 export const createVideo = createServerFn({ method: "POST" })
@@ -951,6 +952,7 @@ export const createVideo = createServerFn({ method: "POST" })
       views: data.views,
       video_url: data.video_url ?? null,
       thumbnail: data.thumbnail ?? null,
+      excerpt: data.excerpt || null,
     });
     if (vErr) throw new Error(vErr.message);
 
@@ -975,6 +977,7 @@ export const updateVideo = createServerFn({ method: "POST" })
       views: data.views,
       video_url: data.video_url ?? null,
       thumbnail: data.thumbnail ?? null,
+      excerpt: data.excerpt || null,
     });
     if (vErr) throw new Error(vErr.message);
 
