@@ -29,15 +29,13 @@ const SIDEBAR = [
 export function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const location = useLocation();
-  const token = getAdminToken();
 
   useEffect(() => {
+    const token = getAdminToken();
     if (!token && location.pathname !== "/admin/login") {
       router.navigate({ to: "/admin/login" });
     }
-  }, [token, location.pathname, router]);
-
-  if (!token && location.pathname !== "/admin/login") return null;
+  }, [location.pathname, router]);
 
   const handleLogout = () => {
     clearAdminToken();
