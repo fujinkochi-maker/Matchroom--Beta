@@ -1724,8 +1724,7 @@ export function createHandler(
 
     if (video.video_url) {
       embed.video = { url: video.video_url };
-    }
-    if (video.thumbnail) {
+    } else if (video.thumbnail) {
       embed.image = { url: video.thumbnail };
     }
 
