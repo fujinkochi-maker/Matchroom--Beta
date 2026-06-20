@@ -1722,29 +1722,31 @@ export function createHandler(
       },
     };
 
-    if (video.video_url) {
-      embed.video = { url: video.video_url };
-    } else if (video.thumbnail) {
+    if (video.thumbnail) {
       embed.image = { url: video.thumbnail };
     }
+
+    const buttons: any[] = [];
+    if (video.video_url) {
+      buttons.push({
+        type: 2,
+        style: 5,
+        label: "▶ Play Video",
+        url: video.video_url,
+      });
+    }
+    buttons.push({
+      type: 2,
+      style: 5,
+      label: "📄 Details",
+      url: `${siteUrl}/videos/${video.id}`,
+    });
 
     return jsonResponse({
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
         embeds: [embed],
-        components: [
-          {
-            type: 1,
-            components: [
-              {
-                type: 2,
-                style: 5,
-                label: "🎬 Watch on Website",
-                url: `${siteUrl}/videos/${video.id}`,
-              },
-            ],
-          },
-        ],
+        components: [{ type: 1, components: buttons }],
       },
     });
   }
