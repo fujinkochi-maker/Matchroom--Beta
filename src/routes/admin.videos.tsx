@@ -86,9 +86,6 @@ function AdminVideos() {
         case "category":
           cmp = a.category.localeCompare(b.category);
           break;
-        case "hue":
-          cmp = Number(a.hue) - Number(b.hue);
-          break;
         case "views":
           cmp = Number(a.views) - Number(b.views);
           break;
@@ -180,7 +177,6 @@ function AdminVideos() {
               <SortTh label="ID" sortKey="id" />
               <SortTh label="Title" sortKey="title" />
               <SortTh label="Category" sortKey="category" />
-              <SortTh label="Hue" sortKey="hue" />
               <SortTh label="Views" sortKey="views" />
               <th className="px-4 py-3" />
             </tr>
@@ -191,7 +187,6 @@ function AdminVideos() {
                 <td className="px-4 py-3 font-medium">{v.id}</td>
                 <td className="px-4 py-3">{v.title}</td>
                 <td className="px-4 py-3 text-muted-foreground">{v.category}</td>
-                <td className="px-4 py-3 text-muted-foreground">{v.hue}</td>
                 <td className="px-4 py-3 text-muted-foreground">{v.views}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -214,7 +209,7 @@ function AdminVideos() {
             ))}
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                   No videos yet.
                 </td>
               </tr>

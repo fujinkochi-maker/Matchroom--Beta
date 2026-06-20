@@ -123,7 +123,6 @@ export interface Video {
     | "Press Conferences";
   fighters: string[];
   views: string;
-  hue: string;
   video_url?: string;
   thumbnail?: string;
 }

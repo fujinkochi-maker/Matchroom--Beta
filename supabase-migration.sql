@@ -81,7 +81,6 @@ CREATE TABLE IF NOT EXISTS videos (
   title TEXT NOT NULL,
   category TEXT NOT NULL,
   views TEXT NOT NULL,
-  hue TEXT NOT NULL DEFAULT '0',
   video_url TEXT,
   thumbnail TEXT
 );

@@ -549,7 +549,6 @@ function rowToVideoFromRow(row: any): Video {
     category: row.category,
     fighters: [],
     views: row.views,
-    hue: row.hue ?? "0",
     video_url: row.video_url ?? undefined,
     thumbnail: row.thumbnail ?? undefined,
   };

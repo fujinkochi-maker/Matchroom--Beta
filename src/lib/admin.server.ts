@@ -934,7 +934,6 @@ const videoSchema = z.object({
     "Press Conferences",
   ]),
   views: z.string().min(1).max(20),
-  hue: z.string().min(1).max(3).default("0"),
   fighters: z.array(z.string()).default([]),
   video_url: z.string().optional(),
   thumbnail: z.string().optional(),
@@ -950,7 +949,6 @@ export const createVideo = createServerFn({ method: "POST" })
       title: data.title,
       category: data.category,
       views: data.views,
-      hue: data.hue,
       video_url: data.video_url ?? null,
       thumbnail: data.thumbnail ?? null,
     });
@@ -975,7 +973,6 @@ export const updateVideo = createServerFn({ method: "POST" })
       title: data.title,
       category: data.category,
       views: data.views,
-      hue: data.hue,
       video_url: data.video_url ?? null,
       thumbnail: data.thumbnail ?? null,
     });
