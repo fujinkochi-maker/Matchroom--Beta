@@ -1725,7 +1725,7 @@ export function createHandler(
     const excerptLine = video.excerpt ? video.excerpt : null;
 
     const content = [
-      `🎬 **Matchroom Highlights**`,
+      `🎬 **${video.title}**`,
       excerptLine ? `*${excerptLine}*` : null,
       "",
       `[▶ Watch Video](${video.video_url})`,
