@@ -1727,20 +1727,23 @@ export function createHandler(
     }
 
     const buttons: any[] = [];
-    if (video.video_url) {
-      buttons.push({
-        type: 2,
-        style: 5,
-        label: "▶ Play Video",
-        url: video.video_url,
-      });
-    }
     buttons.push({
       type: 2,
       style: 5,
       label: "📄 Details",
       url: `${siteUrl}/videos/${video.id}`,
     });
+
+    if (video.video_url) {
+      return jsonResponse({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          content: video.video_url,
+          embeds: [embed],
+          components: [{ type: 1, components: buttons }],
+        },
+      });
+    }
 
     return jsonResponse({
       type: InteractionResponseType.ChannelMessageWithSource,
