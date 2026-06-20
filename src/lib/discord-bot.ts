@@ -1723,7 +1723,7 @@ export function createHandler(
     };
 
     const content = [
-      `🎬 **Matchroom Highlights** <:matchroomlogo:1516827130934071456>`,
+      `🎬 **Matchroom Highlights**`,
       "",
       `[▶ Watch Video](${video.video_url})`,
     ].join("\n");
