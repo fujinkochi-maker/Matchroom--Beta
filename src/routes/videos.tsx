@@ -38,14 +38,14 @@ function VideosPage() {
   if (!featured) {
     return (
       <>
-        <section className="bg-foreground text-background">
+        <section className="bg-surface text-foreground">
           <div className="container-x py-14">
             <p className="eyebrow">
-              <span className="h-px w-7 bg-background" />
+              <span className="h-px w-7 bg-foreground" />
               Videos
             </p>
             <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">No videos yet</h1>
-            <p className="mt-3 text-background/70">Fight highlights and knockouts coming soon.</p>
+            <p className="mt-3 text-muted-foreground">Fight highlights and knockouts coming soon.</p>
           </div>
         </section>
       </>
@@ -59,15 +59,15 @@ function VideosPage() {
         open={!!playing}
         onClose={closePlayer}
       />
-      <section className="relative isolate bg-foreground/10 text-background">
+      <section className="relative isolate bg-surface text-foreground">
         <div className="container-x grid items-center gap-8 py-14 md:grid-cols-[1.4fr_1fr]">
           <div>
             <p className="eyebrow">
-              <span className="h-px w-7 bg-background" />
+              <span className="h-px w-7 bg-foreground" />
               Watch Now
             </p>
             <h1 className="mt-2 font-display text-5xl uppercase md:text-7xl">{featured.title}</h1>
-            <p className="mt-3 text-background/70">
+            <p className="mt-3 text-muted-foreground">
               {featured.category} &bull; {featured.views} views
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -93,14 +93,14 @@ function VideosPage() {
               <Link
                 to="/videos/$id"
                 params={{ id: featured.id }}
-                className="inline-flex items-center gap-2 border border-background/30 px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-background/10"
+                className="inline-flex items-center gap-2 border border-border px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-muted"
               >
                 Details
               </Link>
             </div>
           </div>
           <div
-            className="relative aspect-video w-full overflow-hidden border border-background/20 cursor-pointer"
+            className="relative aspect-video w-full overflow-hidden border border-border cursor-pointer"
             onClick={() =>
               featured.video_url && setPlaying({ src: featured.video_url, title: featured.title })
             }
@@ -210,7 +210,7 @@ function VideoCard({
 function VideosSkeleton() {
   return (
     <>
-      <section className="bg-foreground/10 text-background">
+      <section className="bg-surface text-foreground">
         <div className="container-x py-14">
           <Skeleton className="h-3 w-24" />
           <Skeleton className="mt-2 h-12 w-72" />
