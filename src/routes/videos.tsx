@@ -46,7 +46,9 @@ function VideosPage() {
               Videos
             </p>
             <h1 className="mt-2 font-display text-6xl uppercase md:text-7xl">No videos yet</h1>
-            <p className="mt-3 text-muted-foreground">Fight highlights and knockouts coming soon.</p>
+            <p className="mt-3 text-muted-foreground">
+              Fight highlights and knockouts coming soon.
+            </p>
           </div>
         </section>
       </>

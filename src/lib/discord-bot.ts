@@ -1054,7 +1054,7 @@ export function createHandler(
 
         const { data: fighter, error: lookupErr } = await supabase
           .from("fighters")
-          .select("display_name, guild_id, division")
+          .select("display_name, guild_id, division, rank")
           .eq("discord_id", discordId)
           .single();
 

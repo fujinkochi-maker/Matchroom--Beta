@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { createVideo } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
+import { autoGenerateThumbnail } from "@/lib/video-thumbnail-upload";
 import { ArrowLeft, Upload, X, ImageIcon } from "lucide-react";
 import {
   ADMIN_INPUT,
@@ -138,6 +139,15 @@ function NewVideo() {
   const [excerpt, setExcerpt] = useState("");
   const [selectedFighters, setSelectedFighters] = useState<string[]>([]);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (videoUrl && !thumbnail) {
+      autoGenerateThumbnail(videoUrl, id || "pending").then((url) => {
+        if (url) setThumbnail(url);
+      });
+    }
+  }, [videoUrl, id, thumbnail]);
+
   const toggleFighter = (username: string) => {
     setSelectedFighters((prev) =>
       prev.includes(username) ? prev.filter((u) => u !== username) : [...prev, username],

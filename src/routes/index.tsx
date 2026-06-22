@@ -453,11 +453,22 @@ function FeaturedVideos({ videos }: { videos: typeof VIDEOS }) {
         {videos.map((v) => (
           <Link key={v.id} to="/videos" className="group block">
             <div className="relative aspect-video overflow-hidden border border-border bg-foreground/10">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-110">
-                  <Play className="h-6 w-6 fill-current" />
+              {v.thumbnail ? (
+                <>
+                  <img src={v.thumbnail} alt={v.title} className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center">
+                    <div className="grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-110">
+                      <Play className="h-6 w-6 fill-current" />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-110">
+                    <Play className="h-6 w-6 fill-current" />
+                  </div>
                 </div>
-              </div>
+              )}
               <span className="absolute bottom-2 right-2 bg-foreground/80 px-1.5 py-0.5 font-mono text-xs text-background">
                 {v.duration}
               </span>

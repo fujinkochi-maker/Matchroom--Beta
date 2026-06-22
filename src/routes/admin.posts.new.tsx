@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { createPost } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import {
   ADMIN_INPUT,
@@ -29,6 +29,12 @@ function NewPost() {
   const [imageUrl, setImageUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [selectedFighters, setSelectedFighters] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredFighters = fighters.filter(
+    (f) =>
+      f.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      f.username.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
   const [error, setError] = useState("");
 
   const toggleFighter = (username: string) => {
@@ -101,8 +107,21 @@ function NewPost() {
 
           <div>
             <label className={ADMIN_LABEL}>Tag Fighters</label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {fighters.map((f) => (
+            <div className="relative mb-2">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                className={ADMIN_INPUT + " pl-9"}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search fighters by name or username..."
+              />
+            </div>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Showing {filteredFighters.length} of {fighters.length} fighters
+              {selectedFighters.length > 0 && ` (${selectedFighters.length} selected)`}
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 max-h-80 overflow-y-auto">
+              {filteredFighters.map((f) => (
                 <label key={f.username} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"

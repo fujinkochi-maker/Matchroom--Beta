@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useRouter, notFound } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { updateVideo } from "@/lib/admin.server";
 import { getAdminToken } from "@/lib/admin-auth";
 import { ensureFightersLoaded, ensureVideosLoaded, FIGHTERS, VIDEOS } from "@/data/fighters";
+import { autoGenerateThumbnail } from "@/lib/video-thumbnail-upload";
 import { ArrowLeft, Upload, X, ImageIcon } from "lucide-react";
 import {
   ADMIN_INPUT,
