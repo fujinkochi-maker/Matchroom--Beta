@@ -1,7 +1,7 @@
 import { getAdminSupabase } from "@/lib/supabase-admin";
 import type { Fighter, Division } from "./types";
 
-const BODIES = ["WBC", "WBA", "IBF", "WBO", "OVERALL"] as const;
+const BODIES = ["WBC", "WBA", "IBF", "WBO", "IBO", "RING", "OVERALL"] as const;
 export type RankingBody = (typeof BODIES)[number];
 
 interface FighterRow {
@@ -31,6 +31,8 @@ const FORMULAS: Record<
   WBA: (f) => f.wins * 12 - f.losses * 10,
   IBF: (f) => f.wins * 8 + f.kos * 3 - f.losses * 10,
   WBO: (f) => f.wins * 10 + streakBonus(f.streak) - f.losses * 7,
+  IBO: (f) => f.wins * 13 + f.kos * 8 - f.losses * 3,
+  RING: (f) => f.wins * 7 + f.kos * 1 - f.losses * 15,
 };
 
 function calculatePoints(

@@ -7,7 +7,7 @@ import { DIVISIONS, REGIONS, type Division } from "@/data/types";
 import { getRanked, ensureFightersLoaded, FIGHTERS } from "@/data/fighters";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const BODIES = ["OVERALL", "WBC", "WBA", "IBF", "WBO"] as const;
+const BODIES = ["OVERALL", "WBC", "WBA", "IBF", "WBO", "IBO", "RING"] as const;
 type Body = (typeof BODIES)[number];
 
 export const Route = createFileRoute("/rankings")({
@@ -153,6 +153,8 @@ function RankingTable({
     IBF: (f) => f.wins * 8 + f.kos * 3 - f.losses * 10,
     WBO: (f) =>
       f.wins * 10 + (parseInt(f.streak, 10) || 0) * (f.streak.endsWith("W") ? 3 : 0) - f.losses * 7,
+    IBO: (f) => f.wins * 13 + f.kos * 8 - f.losses * 3,
+    RING: (f) => f.wins * 7 + f.kos * 1 - f.losses * 15,
   };
 
   const calcPoints = FORMULAS[body];
@@ -321,7 +323,7 @@ function RankingsSkeleton() {
           ))}
         </div>
         <div className="mt-4 flex gap-1.5">
-          {[1, 2, 3, 4, 5].map((b) => (
+          {[1, 2, 3, 4, 5, 6, 7].map((b) => (
             <Skeleton key={b} className="h-7 w-20 rounded-full" />
           ))}
         </div>

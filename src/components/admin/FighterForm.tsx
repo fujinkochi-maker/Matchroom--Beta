@@ -210,7 +210,7 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
         </div>
         <Field label="Belts Held">
           <div className="flex flex-wrap gap-4">
-            {["WBC", "WBA", "WBO", "IBF"].map((b) => (
+            {["WBC", "WBA", "WBO", "IBF", "IBO", "RING"].map((b) => (
               <label key={b} className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"

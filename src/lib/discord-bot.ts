@@ -96,6 +96,8 @@ export function createHandler(
     WBA: "<:wba:1516824069876482120>",
     IBF: "<:ibf:1516824066856587454>",
     WBO: "<:wbo:1516824074502930653>",
+    IBO: "", // TODO: add Discord emoji ID
+    RING: "", // TODO: add Discord emoji ID
   };
 
   function formatBelts(beltsHeld: string): string | null {
@@ -1141,7 +1143,7 @@ export function createHandler(
     if (!discordId) return ephemeral("Could not identify you.");
 
     const customId = interaction.data.custom_id;
-    const region = customId.replace("reg_", "").toUpperCase().replace(/-/g, " ");
+    const region = customId.replace("reg_", "").toUpperCase().replace(/_/g, " ");
 
     const VALID_REGIONS = ["ASIA", "EUROPE", "NORTH AMERICA"];
     if (!VALID_REGIONS.includes(region)) return ephemeral("Invalid region.");

@@ -59,6 +59,14 @@ const BELT_ROLES: Record<string, string> = {
   WBA: "1511958114986098748",
   IBF: "1511958120014942300",
   WBO: "1511958030353305600",
+  IBO: "1518879544898097253",
+  RING: "1518879565940785162",
+};
+
+const REGION_ROLES: Record<string, string> = {
+  ASIA: "1512287388498657360",
+  EUROPE: "1512287401534427289",
+  "NORTH AMERICA": "1512287406609535146",
 };
 
 async function discordAddRole(guildId: string, userId: string, roleId: string) {
@@ -357,7 +365,7 @@ export const updateFighter = createServerFn({ method: "POST" })
     // Update Discord nickname with new record
     const { data: updated } = await supabase
       .from("fighters")
-      .select("discord_id, display_name, wins, losses, draws, kos, guild_id, belts_held")
+      .select("discord_id, display_name, wins, losses, draws, kos, guild_id, belts_held, region")
       .eq("username", data.username)
       .single();
     if (updated?.discord_id) {
@@ -397,6 +405,15 @@ export const updateFighter = createServerFn({ method: "POST" })
           }
         } else if (hadBelts) {
           await discordAddRole(updated.guild_id, updated.discord_id, FORMER_WORLD_CHAMPION_ROLE);
+        }
+
+        // Sync region role
+        for (const roleId of Object.values(REGION_ROLES)) {
+          await discordRemoveRole(updated.guild_id, updated.discord_id, roleId);
+        }
+        const region = updated.region ?? data.region;
+        if (region && REGION_ROLES[region]) {
+          await discordAddRole(updated.guild_id, updated.discord_id, REGION_ROLES[region]);
         }
       }
     }
