@@ -177,9 +177,9 @@ function RankingTable({
       <table className="w-full text-sm">
         <thead className="bg-surface text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="w-16 px-4 py-3 text-left">{body} Rank</th>
-            <th className="px-4 py-3 text-left">Fighter</th>
-            <th className="px-4 py-3 text-left">Record</th>
+            <th className="w-16 px-4 py-3 text-left max-sm:px-2 max-sm:py-2">{body} Rank</th>
+            <th className="px-4 py-3 text-left max-sm:px-2 max-sm:py-2">Fighter</th>
+            <th className="px-4 py-3 text-left max-sm:px-2 max-sm:py-2">Record</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -190,7 +190,7 @@ function RankingTable({
                 key={`${r.fighter.username}-${body}`}
                 className={isChamp ? "bg-primary/5" : "bg-card"}
               >
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 max-sm:px-2 max-sm:py-2">
                   {isChamp ? (
                     <span className="inline-flex items-center gap-1 bg-primary px-2 py-0.5 text-xs font-bold uppercase text-primary-foreground">
                       <Trophy className="h-3 w-3" /> C
@@ -199,7 +199,7 @@ function RankingTable({
                     <span className="font-mono text-base font-bold">#{r.rank}</span>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 max-sm:px-2 max-sm:py-2">
                   <Link
                     to="/boxers/$username"
                     params={{ username: r.fighter.username }}
@@ -216,7 +216,7 @@ function RankingTable({
                     </div>
                   </Link>
                 </td>
-                <td className="px-4 py-3 font-mono">
+                <td className="px-4 py-3 font-mono max-sm:px-2 max-sm:py-2">
                   {r.fighter.wins}-{r.fighter.losses}-{r.fighter.draws}
                 </td>
               </tr>
@@ -250,11 +250,15 @@ function OverallTable({
       <table className="w-full text-sm">
         <thead className="bg-surface text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="w-16 px-4 py-3 text-left">Rank</th>
-            <th className="px-4 py-3 text-left">Fighter</th>
-            <th className="px-4 py-3 text-left">Record</th>
-            <th className="hidden px-4 py-3 text-left md:table-cell">Streak</th>
-            <th className="hidden px-4 py-3 text-left md:table-cell">KO %</th>
+            <th className="w-16 px-4 py-3 text-left max-sm:px-2 max-sm:py-2">Rank</th>
+            <th className="px-4 py-3 text-left max-sm:px-2 max-sm:py-2">Fighter</th>
+            <th className="px-4 py-3 text-left max-sm:px-2 max-sm:py-2">Record</th>
+            <th className="hidden px-4 py-3 text-left md:table-cell max-sm:px-2 max-sm:py-2">
+              Streak
+            </th>
+            <th className="hidden px-4 py-3 text-left md:table-cell max-sm:px-2 max-sm:py-2">
+              KO %
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -263,7 +267,7 @@ function OverallTable({
             const kos = Math.round((f.kos / Math.max(f.wins, 1)) * 100);
             return (
               <tr key={f.username} className={isChamp ? "bg-primary/5" : "bg-card"}>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 max-sm:px-2 max-sm:py-2">
                   {isChamp ? (
                     <span className="inline-flex items-center gap-1 bg-primary px-2 py-0.5 text-xs font-bold uppercase text-primary-foreground">
                       <Trophy className="h-3 w-3" /> C
@@ -272,7 +276,7 @@ function OverallTable({
                     <span className="font-mono text-base font-bold">{f.displayRank}</span>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 max-sm:px-2 max-sm:py-2">
                   <Link
                     to="/boxers/$username"
                     params={{ username: f.username }}
@@ -289,15 +293,17 @@ function OverallTable({
                     </div>
                   </Link>
                 </td>
-                <td className="px-4 py-3 font-mono">
+                <td className="px-4 py-3 font-mono max-sm:px-2 max-sm:py-2">
                   {f.wins}-{f.losses}-{f.draws}
                 </td>
-                <td className="hidden px-4 py-3 md:table-cell">
+                <td className="hidden px-4 py-3 md:table-cell max-sm:px-2 max-sm:py-2">
                   <span className="bg-foreground px-2 py-0.5 text-xs font-bold text-background">
                     {f.streak}
                   </span>
                 </td>
-                <td className="hidden px-4 py-3 font-mono text-primary md:table-cell">{kos}%</td>
+                <td className="hidden px-4 py-3 font-mono text-primary md:table-cell max-sm:px-2 max-sm:py-2">
+                  {kos}%
+                </td>
               </tr>
             );
           })}

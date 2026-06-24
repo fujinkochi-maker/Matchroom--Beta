@@ -121,7 +121,7 @@ function Hero({ fighterCount, eventCount }: { fighterCount: number; eventCount: 
       />
       <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/70 to-foreground/20" />
       <div className="absolute inset-y-0 left-0 w-1 bg-primary md:w-2" />
-      <div className="container-x relative grid min-h-[78vh] items-center gap-10 py-20 lg:grid-cols-[1.2fr_1fr]">
+      <div className="container-x relative grid min-h-[60vh] items-center gap-10 py-20 md:min-h-[78vh] lg:grid-cols-[1.2fr_1fr]">
         <div>
           <p className="eyebrow animate-fade-in">
             <span className="h-px w-8 bg-background" /> Matchroom Presents
@@ -160,7 +160,7 @@ function Hero({ fighterCount, eventCount }: { fighterCount: number; eventCount: 
               Upcoming Events <Calendar className="h-4 w-4" />
             </Link>
           </div>
-          <div className="mt-10 grid max-w-md grid-cols-3 gap-6 border-t border-background/15 pt-6">
+          <div className="mt-10 grid max-w-md grid-cols-3 gap-3 border-t border-background/15 pt-6 md:gap-6">
             <Stat n={String(DIVISIONS.length)} l="Divisions" />
             <Stat n={String(fighterCount)} l="Pro Fighters" />
             <Stat n={String(eventCount)} l="Events" />
@@ -211,12 +211,20 @@ function ChampionsStrip({ champs }: { champs: ReturnType<typeof getChampions> })
         eyebrow="Reigning Kings"
         title="Current Champions"
         action={
-          <Link
-            to="/champions"
-            className="hidden text-sm font-bold uppercase tracking-wider text-primary hover:underline md:inline-flex"
-          >
-            View All →
-          </Link>
+          <>
+            <Link
+              to="/champions"
+              className="hidden text-sm font-bold uppercase tracking-wider text-primary hover:underline md:inline-flex"
+            >
+              View All →
+            </Link>
+            <Link
+              to="/champions"
+              className="text-xs font-bold uppercase tracking-wider text-primary hover:underline md:hidden"
+            >
+              View All →
+            </Link>
+          </>
         }
       />
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3">
@@ -325,12 +333,20 @@ function RankingsTeaser({
         eyebrow="Pound for Pound"
         title="Top Rankings"
         action={
-          <Link
-            to="/rankings"
-            className="hidden text-sm font-bold uppercase tracking-wider text-primary hover:underline md:inline-flex"
-          >
-            All Divisions →
-          </Link>
+          <>
+            <Link
+              to="/rankings"
+              className="hidden text-sm font-bold uppercase tracking-wider text-primary hover:underline md:inline-flex"
+            >
+              All Divisions →
+            </Link>
+            <Link
+              to="/rankings"
+              className="text-xs font-bold uppercase tracking-wider text-primary hover:underline md:hidden"
+            >
+              All Divisions →
+            </Link>
+          </>
         }
       />
       <div className="grid gap-6 md:grid-cols-3">

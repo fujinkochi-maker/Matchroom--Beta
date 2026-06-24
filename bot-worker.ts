@@ -102,6 +102,38 @@ async function registerCommands() {
       ],
     },
     {
+      name: "divisionrankings",
+      description: "Show top 10 division rankings as an image",
+      type: 1,
+      default_member_permissions: "8",
+      contexts: [0],
+      options: [
+        {
+          type: 3,
+          name: "division",
+          description: "Choose a weight division",
+          required: true,
+          choices: [
+            { name: "Flyweight", value: "Flyweight" },
+            { name: "Bantamweight", value: "Bantamweight" },
+            { name: "Featherweight", value: "Featherweight" },
+            { name: "Lightweight", value: "Lightweight" },
+            { name: "Welterweight", value: "Welterweight" },
+            { name: "Middleweight", value: "Middleweight" },
+            { name: "Cruiserweight", value: "Cruiserweight" },
+            { name: "Heavyweight", value: "Heavyweight" },
+          ],
+        },
+      ],
+    },
+    {
+      name: "p4prankings",
+      description: "Show pound-for-pound rankings as an image",
+      type: 1,
+      default_member_permissions: "8",
+      contexts: [0],
+    },
+    {
       name: "emojistealbulk",
       description: "Bulk-steal custom emojis from other servers by pasting emoji references",
       type: 1,

@@ -227,6 +227,55 @@ export default {
       }
     }
 
+    if (request.method === "GET" && url.pathname.startsWith("/rankings-card/")) {
+      const rest = url.pathname.replace("/rankings-card/", "").replace(/\.png$/, "");
+      if (!rest) return new Response("Missing parameter", { status: 400 });
+
+      setSupabaseEnv(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
+      const { loadDataFromSupabase, FIGHTERS, getRanked } = await import("./data/fighters");
+      await loadDataFromSupabase().catch(() => {});
+
+      const isP4P = rest === "p4p";
+
+      if (isP4P) {
+        const { renderP4PRankingsSVG } = await import("./lib/rankings-card");
+        const svg = renderP4PRankingsSVG(FIGHTERS);
+        try {
+          await ensureResvg();
+          await ensureFonts();
+          const resvg = await Resvg.async(svg, getFontOpts());
+          const pngData = resvg.render();
+          const pngBuffer = pngData.asPng();
+          return new Response(pngBuffer as any, {
+            status: 200,
+            headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=300" },
+          });
+        } catch (err) {
+          return new Response(`PNG error: ${err instanceof Error ? err.message : String(err)}`, { status: 500 });
+        }
+      }
+
+      const division = rest;
+      const fighters = getRanked(division as any).slice(0, 10);
+      if (!fighters.length) return new Response("No fighters found", { status: 404 });
+
+      const { renderDivisionRankingsSVG } = await import("./lib/rankings-card");
+      const svg = renderDivisionRankingsSVG(division, fighters);
+      try {
+        await ensureResvg();
+        await ensureFonts();
+        const resvg = await Resvg.async(svg, getFontOpts());
+        const pngData = resvg.render();
+        const pngBuffer = pngData.asPng();
+        return new Response(pngBuffer as any, {
+          status: 200,
+          headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=300" },
+        });
+      } catch (err) {
+        return new Response(`PNG error: ${err instanceof Error ? err.message : String(err)}`, { status: 500 });
+      }
+    }
+
     if (request.method !== "POST") {
       return new Response("OK", { status: 200 });
     }

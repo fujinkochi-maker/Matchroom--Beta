@@ -42,11 +42,11 @@ export const FighterCard = memo(function FighterCard({
             <p className="text-xs text-background/70">@{fighter.username}</p>
           </div>
         </div>
-        <div className="flex flex-col gap-0.5 border-t border-border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-0.5 border-t border-border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between max-sm:px-2 max-sm:py-1.5">
           <span className="font-semibold uppercase tracking-wider text-muted-foreground">
             {fighter.division}
           </span>
-          <span className="flex items-center gap-2">
+          <span className="flex flex-wrap items-center gap-2">
             {fighter.region && <span className="text-muted-foreground">{fighter.region}</span>}
             <span className="font-mono text-foreground">
               {fighter.wins}-{fighter.losses}-{fighter.draws}

@@ -331,7 +331,7 @@ function PostComposer({
             </div>
           )}
 
-          <div className="flex items-center justify-between border-t border-border pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -445,8 +445,8 @@ function PostCard({
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {post.authorUsername ? (
                 <Link
                   to="/boxers/$username"

@@ -802,6 +802,33 @@ export function createHandler(
     });
   }
 
+  async function handleDivisionRankingsCommand(interaction: any): Promise<Response> {
+    if (!workerOrigin) return ephemeral("Rankings image not available in this mode.");
+
+    const division = getOptionValue(interaction.data.options, "division");
+    if (!division) return ephemeral("Please choose a division.");
+
+    const cacheBuster = Date.now();
+    const imageUrl = `${workerOrigin}/rankings-card/${encodeURIComponent(division)}.png?r=${cacheBuster}`;
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: { content: imageUrl },
+    });
+  }
+
+  async function handleP4PRankingsCommand(): Promise<Response> {
+    if (!workerOrigin) return ephemeral("Rankings image not available in this mode.");
+
+    const cacheBuster = Date.now();
+    const imageUrl = `${workerOrigin}/rankings-card/p4p.png?r=${cacheBuster}`;
+
+    return jsonResponse({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: { content: imageUrl },
+    });
+  }
+
   async function handleChampionsCommand(interaction: any): Promise<Response> {
     await ensureFightersLoaded();
     const champs = getChampions();
@@ -1939,6 +1966,8 @@ export function createHandler(
 
         if (commandName === "stats") return handleStatsCommand(interaction);
         if (commandName === "rankings") return handleRankingsCommand(interaction);
+        if (commandName === "divisionrankings") return handleDivisionRankingsCommand(interaction);
+        if (commandName === "p4prankings") return handleP4PRankingsCommand();
         if (commandName === "champions") return handleChampionsCommand(interaction);
         if (commandName === "fighter") return await handleFighterCommand(interaction);
         if (commandName === "unregister") return handleUnregisterCommand(interaction);
@@ -2175,6 +2204,38 @@ export function createHandler(
             required: true,
           },
         ],
+      },
+      {
+        name: "divisionrankings",
+        description: "Show top 10 division rankings as an image",
+        type: 1,
+        default_member_permissions: "8",
+        contexts: [0],
+        options: [
+          {
+            type: 3,
+            name: "division",
+            description: "Choose a weight division",
+            required: true,
+            choices: [
+              { name: "Flyweight", value: "Flyweight" },
+              { name: "Bantamweight", value: "Bantamweight" },
+              { name: "Featherweight", value: "Featherweight" },
+              { name: "Lightweight", value: "Lightweight" },
+              { name: "Welterweight", value: "Welterweight" },
+              { name: "Middleweight", value: "Middleweight" },
+              { name: "Cruiserweight", value: "Cruiserweight" },
+              { name: "Heavyweight", value: "Heavyweight" },
+            ],
+          },
+        ],
+      },
+      {
+        name: "p4prankings",
+        description: "Show pound-for-pound rankings as an image",
+        type: 1,
+        default_member_permissions: "8",
+        contexts: [0],
       },
       {
         name: "emojistealbulk",

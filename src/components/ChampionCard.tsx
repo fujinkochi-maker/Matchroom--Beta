@@ -30,16 +30,16 @@ export const ChampionCard = memo(function ChampionCard({
               {getChampionTitle(fighter.beltsHeld)}
             </div>
           )}
-          <div className="absolute inset-x-0 bottom-0 p-4">
+          <div className="absolute inset-x-0 bottom-0 p-3 md:p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
               {fighter.division}
             </p>
-            <h3 className="mt-1 font-display text-2xl uppercase leading-none text-background">
+            <h3 className="mt-1 font-display text-lg uppercase leading-none text-background md:text-2xl">
               {fighter.displayName}
             </h3>
             <p className="mt-1 text-xs italic text-background/70">"{fighter.nickname}"</p>
 
-            <div className="mt-3 grid grid-cols-3 gap-2 border-t border-background/20 pt-3">
+            <div className="mt-2 grid grid-cols-3 gap-1 border-t border-background/20 pt-2 md:mt-3 md:gap-2 md:pt-3">
               <Stat label="Record" value={`${fighter.wins}-${fighter.losses}-${fighter.draws}`} />
               <Stat label="KO %" value={`${kos}%`} />
               <Stat

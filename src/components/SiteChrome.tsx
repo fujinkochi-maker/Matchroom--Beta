@@ -1,5 +1,6 @@
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import { Menu, ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { isFighterLoggedIn, clearFighterSession, getFighterSession } from "@/lib/discord-auth";
 import { NotificationBell } from "./NotificationBell";
 import { Sheet, SheetTrigger, SheetContent, SheetClose } from "@/components/ui/sheet";
@@ -48,6 +49,7 @@ export function SiteHeader() {
   const router = useRouter();
   const loggedIn = isFighterLoggedIn();
   const session = getFighterSession();
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   return (
     <header className="sticky top-0 z-50 border-b border-background/10 bg-foreground text-background">
@@ -79,6 +81,8 @@ export function SiteHeader() {
             return (
               <div key={n.label} className="group relative">
                 <button
+                  onClick={() => setOpenDropdown(openDropdown === n.label ? null : n.label)}
+                  onBlur={() => setOpenDropdown(null)}
                   className={`relative flex items-center gap-1 px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
                     childActive ? "text-background" : "text-background/70 hover:text-background"
                   }`}
@@ -89,7 +93,11 @@ export function SiteHeader() {
                     <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-background" />
                   )}
                 </button>
-                <div className="absolute left-0 top-full min-w-[180px] origin-top scale-y-0 border border-border bg-background shadow-lg opacity-0 transition-all group-hover:scale-y-100 group-hover:opacity-100">
+                <div
+                  className={`absolute left-0 top-full min-w-[180px] origin-top scale-y-0 border border-border bg-background shadow-lg opacity-0 transition-all group-hover:scale-y-100 group-hover:opacity-100 ${
+                    openDropdown === n.label ? "scale-y-100 opacity-100" : ""
+                  }`}
+                >
                   <div className="py-1">
                     {n.children.map((c) => {
                       const active = isActive(path, c.to);
@@ -97,6 +105,7 @@ export function SiteHeader() {
                         <Link
                           key={c.to}
                           to={c.to}
+                          onClick={() => setOpenDropdown(null)}
                           className={`block px-4 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
                             active
                               ? "bg-primary/10 text-primary"
@@ -237,7 +246,7 @@ export function SiteHeader() {
 export function SiteFooter() {
   return (
     <footer className="mt-20 border-t border-border bg-foreground text-background">
-      <div className="container-x grid gap-10 py-12 md:grid-cols-4">
+      <div className="container-x grid gap-8 py-10 md:gap-10 md:py-12">
         <div>
           <div className="inline-block bg-primary px-2 py-1 font-display text-lg leading-none text-primary-foreground">
             MATCHROOM

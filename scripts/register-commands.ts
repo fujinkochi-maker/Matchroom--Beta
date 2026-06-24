@@ -105,6 +105,29 @@ const commands: Command[] = [
     contexts: [0, 1, 2],
   },
   {
+    name: "divisionrankings",
+    description: "Show top 10 division rankings as an image",
+    type: 1,
+    default_member_permissions: "8",
+    contexts: [0],
+    options: [
+      {
+        type: 3,
+        name: "division",
+        description: "Choose a weight division",
+        required: true,
+        choices: DIVISION_CHOICES,
+      },
+    ],
+  },
+  {
+    name: "p4prankings",
+    description: "Show pound-for-pound rankings as an image",
+    type: 1,
+    default_member_permissions: "8",
+    contexts: [0],
+  },
+  {
     name: "emojistealbulk",
     description: "Bulk-steal custom emojis from other servers by pasting emoji references",
     type: 1,
