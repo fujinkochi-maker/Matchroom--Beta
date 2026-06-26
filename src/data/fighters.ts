@@ -33,8 +33,13 @@ const _fighterFollows: FighterFollow[] = [];
 /* ============ Public exports ============ */
 
 export const FIGHTERS = _fighters;
-export const getChampion = (division: Division) =>
-  FIGHTERS.find((f) => f.division === division && f.rank === 0);
+export const getChampion = (division: Division) => {
+  const candidates = FIGHTERS.filter(
+    (f) => f.division === division && (f.rank === 0 || f.beltsHeld),
+  );
+  if (candidates.length === 0) return undefined;
+  return candidates.find((f) => f.rank === 0) ?? candidates[0];
+};
 export const getChampions = () => DIVISIONS.map((d) => getChampion(d)).filter(Boolean) as Fighter[];
 export const getChampionTitle = (beltsHeld: string): string => {
   const count = beltsHeld ? beltsHeld.split(",").filter(Boolean).length : 0;
@@ -51,8 +56,10 @@ export const getRanked = (division: Division, source?: Fighter[], region?: strin
   const fighters = pool
     .filter((f) => f.division === division && (!region || region === "all" || f.region === region))
     .sort((a, b) => {
-      if (a.rank === 0) return -1;
-      if (b.rank === 0) return 1;
+      const aChamp = a.rank === 0 || !!a.beltsHeld;
+      const bChamp = b.rank === 0 || !!b.beltsHeld;
+      if (aChamp && !bChamp) return -1;
+      if (bChamp && !aChamp) return 1;
       if (b.wins !== a.wins) return b.wins - a.wins;
       if (a.losses !== b.losses) return a.losses - b.losses;
       return a.rank - b.rank;
@@ -60,7 +67,7 @@ export const getRanked = (division: Division, source?: Fighter[], region?: strin
   let displayRank = 1;
   return fighters.map((f) => ({
     ...f,
-    displayRank: f.rank === 0 ? 0 : displayRank++,
+    displayRank: f.rank === 0 || !!f.beltsHeld ? 0 : displayRank++,
   }));
 };
 
