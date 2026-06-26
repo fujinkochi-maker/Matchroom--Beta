@@ -40,7 +40,8 @@ export const getChampion = (division: Division) => {
   if (candidates.length === 0) return undefined;
   return candidates.find((f) => f.rank === 0) ?? candidates[0];
 };
-export const getChampions = () => DIVISIONS.map((d) => getChampion(d)).filter(Boolean) as Fighter[];
+export const getChampions = () =>
+  FIGHTERS.filter((f) => f.rank === 0 || !!f.beltsHeld) as Fighter[];
 export const getChampionTitle = (beltsHeld: string): string => {
   const count = beltsHeld ? beltsHeld.split(",").filter(Boolean).length : 0;
   if (count === 0) return "Champion";
