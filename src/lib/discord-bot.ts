@@ -467,13 +467,8 @@ export function createHandler(
     if (!fighter)
       return ephemeral("You're not registered yet! Use `/register` to create your fighter.");
 
-    if (fighter.wins >= 3) {
-      const promoGuildId = fighter.guildId || interaction.guild_id;
-      if (promoGuildId) {
-        addRole(promoGuildId, discordId, PRO_BOXER_ROLE);
-        removeRole(promoGuildId, discordId, AMATEUR_ROLE);
-      }
-    }
+    const promoGuildId = fighter.guildId || interaction.guild_id;
+    await checkPromotion(promoGuildId, discordId, fighter.wins);
 
     const cacheBuster = `${fighter.wins}-${fighter.losses}-${fighter.draws}-${fighter.kos}-${Date.now()}`;
     const imageUrl = workerOrigin

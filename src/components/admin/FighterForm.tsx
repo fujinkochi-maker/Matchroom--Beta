@@ -55,7 +55,7 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
     displayName: defaultValues?.displayName ?? "",
     nickname: defaultValues?.nickname ?? "",
     division: defaultValues?.division || DIVISIONS[0],
-    rank: defaultValues?.rank ?? 0,
+    rank: defaultValues?.beltsHeld ? 0 : defaultValues?.rank ?? 0,
     wins: defaultValues?.wins ?? 0,
     losses: defaultValues?.losses ?? 0,
     draws: defaultValues?.draws ?? 0,
@@ -73,6 +73,12 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
     const held = defaultValues?.beltsHeld;
     return held ? held.split(",").filter(Boolean) : [];
   });
+  useEffect(() => {
+    if (activeBelts.length > 0) {
+      setForm((f) => ({ ...f, rank: 0 }));
+    }
+  }, [activeBelts.length]);
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -219,7 +225,6 @@ export function FighterForm({ defaultValues, onSubmit, submitLabel }: FighterFor
                     setActiveBelts((prev) =>
                       prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b],
                     );
-                    if (!activeBelts.includes(b)) set("rank", 0);
                   }}
                   className="h-4 w-4 accent-primary"
                 />

@@ -295,7 +295,7 @@ export const updateFighter = createServerFn({ method: "POST" })
       display_name: data.displayName,
       nickname: data.nickname,
       division: data.division,
-      rank: data.rank,
+      rank: data.beltsHeld ? 0 : data.rank,
       wins: data.wins,
       losses: data.losses,
       draws: data.draws,
